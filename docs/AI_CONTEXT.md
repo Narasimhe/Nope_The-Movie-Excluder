@@ -2,27 +2,109 @@
 
 Current Version: v0.2
 
+---
+
+# Project Summary
+
+Movie Excluder is a Windows desktop application that helps users discover movies by excluding titles they have already watched, blacklisted, or filtered out based on personal preferences.
+
+SQLite is the application's source of truth.
+
+TMDB is used only as a metadata provider.
+
+---
+
+# Current Status
+
 ## Completed
-- Git setup
+
+- Git repository initialized
 - Project documentation
-- TMDB integration
-- SQLite database
+- TMDB API integration
+- SQLite database initialized
+- Database schema designed
+- Data ownership defined
+- Repository standardized to `main`
 
 ## Current Focus
-- Exclusion engine
 
-## Next
-- Movie blacklist
-- Filter pipeline
+Connecting TMDB with SQLite so every retrieved movie is stored locally before being used by the application.
 
-## Known Issues
-- No caching yet
+## Next Development Step
 
-## Current Development Status
+Build the local movie cache.
 
-### Project Structure
+Expected workflow:
 
-```text
+1. Search TMDB
+2. Select a movie
+3. Fetch complete metadata
+4. Insert or update the `movies` table
+5. Retrieve movies from SQLite
+
+---
+
+# Architecture
+
+```
+TMDB
+      │
+      ▼
+SQLite Database
+      │
+      ▼
+Application Logic
+      │
+      ▼
+Future Desktop UI
+```
+
+---
+
+# Data Ownership
+
+## TMDB owns
+
+- Movie metadata
+- Posters
+- Backdrops
+- Release dates
+- Overviews
+- Ratings
+
+## SQLite owns
+
+- Cached movie metadata
+- Application database
+
+## User owns
+
+- Watched status
+- Blacklist
+- Watchlist
+- Personal rating
+- Review
+- Notes
+
+The two database tables are linked using `tmdb_id`.
+
+---
+
+# Database
+
+## movies
+
+Stores factual movie information retrieved from TMDB.
+
+## user_movie_data
+
+Stores the user's personal interaction with each movie.
+
+---
+
+# Project Structure
+
+```
 movie-excluder/
 ├── app/
 │   ├── __init__.py
@@ -40,3 +122,22 @@ movie-excluder/
 ├── .gitignore
 ├── movie_excluder.db
 └── README.md
+```
+
+---
+
+# Git Status
+
+- Active branch: `main`
+- Remote tracking branch: `origin/main`
+- Repository is synchronized.
+
+---
+
+# Future Roadmap
+
+1. Local movie cache
+2. User movie status management
+3. Exclusion engine
+4. Recommendation pipeline
+5. Desktop UI

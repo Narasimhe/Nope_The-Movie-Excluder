@@ -1,7 +1,12 @@
 import sqlite3
 from pathlib import Path
 
-DATABASE_PATH = Path("movie_excluder.db")
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+DATA_DIR = BASE_DIR / "data"
+DATA_DIR.mkdir(exist_ok=True)
+
+DATABASE_PATH = DATA_DIR / "movie_excluder.db"
 
 
 def get_connection() -> sqlite3.Connection:
@@ -26,16 +31,21 @@ def initialize_database() -> None:
                 fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
-            CREATE TABLE IF NOT EXISTS user_movie_data (
-                tmdb_id INTEGER PRIMARY KEY,
-                watched INTEGER NOT NULL DEFAULT 0,
-                blacklisted INTEGER NOT NULL DEFAULT 0,
-                watchlisted INTEGER NOT NULL DEFAULT 0,
-                personal_rating REAL,
-                review TEXT,
-                notes TEXT,
-                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (tmdb_id) REFERENCES movies (tmdb_id)
-            );
+           CREATE TABLE IF NOT EXISTS user_movie_data (
+    tmdb_id INTEGER PRIMARY KEY,
+    watchlisted INTEGER NOT NULL DEFAULT 0,
+    watched INTEGER NOT NULL DEFAULT 0,
+    rewatch INTEGER NOT NULL DEFAULT 0,
+    excluded INTEGER NOT NULL DEFAULT 0,
+    verdict REAL,
+    notes TEXT,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tmdb_id) REFERENCES movies (tmdb_id)
+);
             """
         )
+
+
+if __name__ == "__main__":
+    print(f"Using database: {DATABASE_PATH}")
+    initialize_database()
