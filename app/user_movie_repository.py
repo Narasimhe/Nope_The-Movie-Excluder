@@ -23,7 +23,7 @@ class UserMovieRepository:
             connection.execute(
                 """
                 UPDATE user_movie_data
-                SET watchlisted = ?,
+                SET watchlist = ?,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE tmdb_id = ?
                 """,
@@ -111,7 +111,7 @@ class UserMovieRepository:
                 """
                 SELECT
                     tmdb_id,
-                    watchlisted,
+                    watchlist,
                     watched,
                     rewatch,
                     excluded,
@@ -129,7 +129,7 @@ class UserMovieRepository:
 
         result = dict(row)
 
-        for field in ("watchlisted", "watched", "rewatch", "excluded"):
+        for field in ("watchlist", "watched", "rewatch", "excluded"):
             result[field] = bool(result[field])
 
         return result

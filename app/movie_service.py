@@ -110,3 +110,15 @@ class MovieService:
             self.user_repository.set_notes(tmdb_id, notes.strip())
 
         return self.user_repository.get_user_movie_data(tmdb_id)
+    
+    def get_watched_movies(self) -> list[dict]:
+        return self.movie_repository.get_watched_movies()  
+    
+    def get_watchlist_movies(self) -> list[dict]:
+        return self.movie_repository.get_watchlist_movies()
+    
+    def get_rewatch_movies(self) -> list[dict]:
+        return self.movie_repository.get_rewatch_movies()
+
+    def get_excluded_movies(self) -> list[dict]:
+        return self.movie_repository.get_excluded_movies()

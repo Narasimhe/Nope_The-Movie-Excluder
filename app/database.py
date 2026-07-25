@@ -33,7 +33,7 @@ def initialize_database() -> None:
 
            CREATE TABLE IF NOT EXISTS user_movie_data (
     tmdb_id INTEGER PRIMARY KEY,
-    watchlisted INTEGER NOT NULL DEFAULT 0,
+    watchlist INTEGER NOT NULL DEFAULT 0,
     watched INTEGER NOT NULL DEFAULT 0,
     rewatch INTEGER NOT NULL DEFAULT 0,
     excluded INTEGER NOT NULL DEFAULT 0,

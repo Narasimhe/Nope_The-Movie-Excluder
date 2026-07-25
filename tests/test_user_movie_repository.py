@@ -40,7 +40,7 @@ def main() -> None:
 
     assert result is not None
     assert result["tmdb_id"] == 78
-    assert result["watchlisted"] is True
+    assert result["watchlist"] is True
     assert result["watched"] is True
     assert result["rewatch"] is True
     assert result["excluded"] is False

@@ -130,3 +130,22 @@ Date: 2026-07-25
 ### Architecture
 - Discovery filtering is now enforced by the service layer rather than the UI.
 - All search paths (SQLite cache and TMDB API) now follow the same filtering pipeline.
+
+Added
+Added repository methods to retrieve:
+Watched movies
+Watchlist movies
+Rewatch movies
+Excluded movies
+Added corresponding MovieService retrieval methods.
+Implemented SQL JOIN queries to return full movie details from user collections.
+Added unit tests for all four collection retrieval methods.
+Changed
+Renamed database column watchlisted to watchlist for consistent naming.
+Updated repositories, services, SQL queries, and tests to use the new column name.
+Test setup now initializes the database before resetting test data.
+Verified
+All collection retrieval tests pass successfully.
+Retrieval pipeline verified end-to-end:
+Service → Repository → SQLite → Tests.
+

@@ -72,3 +72,62 @@ class MovieRepository:
             ).fetchall()
 
         return [dict(row) for row in rows]
+    def get_watched_movies(self) -> list[dict]:
+        with get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT m.*
+                FROM movies m
+                JOIN user_movie_data u 
+                    ON m.tmdb_id = u.tmdb_id
+                WHERE u.watched = 1
+                ORDER BY m.title
+                """
+            ).fetchall()
+
+        return [dict(row) for row in rows]
+
+    def get_watchlist_movies(self) -> list[dict]:
+        with get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT m.*
+                FROM movies m
+                JOIN user_movie_data u 
+                    ON m.tmdb_id = u.tmdb_id
+                WHERE u.watchlist = 1
+                ORDER BY m.title
+                """
+            ).fetchall()
+
+        return [dict(row) for row in rows]
+    
+    def get_rewatch_movies(self) -> list[dict]:
+        with get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT m.*
+                FROM movies m
+                JOIN user_movie_data u 
+                    ON m.tmdb_id = u.tmdb_id
+                WHERE u.rewatch = 1
+                ORDER BY m.title
+                """
+            ).fetchall()
+
+        return [dict(row) for row in rows]
+
+    def get_excluded_movies(self) -> list[dict]:
+        with get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT m.*
+                FROM movies m
+                JOIN user_movie_data u 
+                    ON m.tmdb_id = u.tmdb_id
+                WHERE u.excluded = 1
+                ORDER BY m.title
+                """
+            ).fetchall()
+
+        return [dict(row) for row in rows]
