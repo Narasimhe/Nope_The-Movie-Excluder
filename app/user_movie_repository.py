@@ -133,3 +133,27 @@ class UserMovieRepository:
             result[field] = bool(result[field])
 
         return result
+
+    def get_watched_movie_ids(self) -> set[int]:
+        with get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT tmdb_id
+                FROM user_movie_data
+                WHERE watched = 1
+                """
+            ).fetchall()
+
+        return {row[0] for row in rows}
+
+    def get_excluded_movie_ids(self) -> set[int]:
+        with get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT tmdb_id
+                FROM user_movie_data
+                WHERE excluded = 1
+                """
+            ).fetchall()
+
+        return {row[0] for row in rows}

@@ -113,3 +113,20 @@ Date: 2026-07-25
 - Rewatch logic
 - Excluded (NOPE) logic
 - Service layer refinement
+
+## [Milestone 4] - Discovery Filtering Pipeline
+
+### Added
+- Added `UserMovieRepository.get_watched_movie_ids()`.
+- Added `UserMovieRepository.get_excluded_movie_ids()`.
+- Added `MovieService._filter_discovery_results()` to remove watched and excluded movies from discovery results.
+- Added business-rule tests for repository query methods.
+- Added end-to-end search filtering tests using a fake repository.
+
+### Changed
+- `MovieService.search_movies()` now filters both cached and TMDB search results before returning them.
+- Discovery searches now automatically hide movies marked as Watched or NOPE.
+
+### Architecture
+- Discovery filtering is now enforced by the service layer rather than the UI.
+- All search paths (SQLite cache and TMDB API) now follow the same filtering pipeline.
