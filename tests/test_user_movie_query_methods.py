@@ -1,4 +1,5 @@
 from app.database import initialize_database
+from app.movie_status import MovieStatus
 from app.user_movie_repository import UserMovieRepository
 
 
@@ -11,11 +12,11 @@ def main() -> None:
     excluded_id = 910002
     normal_id = 910003
 
-    repository.set_watched(watched_id, True)
-    repository.set_excluded(excluded_id, True)
+    repository.set_status(watched_id, MovieStatus.WATCHED)
+    repository.set_status(excluded_id, MovieStatus.EXCLUDED)
 
     # Create a normal record that should appear in neither set.
-    repository.set_watchlist(normal_id, True)
+    repository.set_status(normal_id, MovieStatus.WATCH_LATER)
 
     watched_ids = repository.get_watched_movie_ids()
     excluded_ids = repository.get_excluded_movie_ids()

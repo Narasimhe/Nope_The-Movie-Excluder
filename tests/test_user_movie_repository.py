@@ -1,5 +1,6 @@
 from app.database import initialize_database
 from app.movie_repository import MovieRepository
+from app.movie_status import MovieStatus
 from app.user_movie_repository import UserMovieRepository
 
 
@@ -24,10 +25,7 @@ def main() -> None:
         }
     )
 
-    user_repository.set_watchlist(78, True)
-    user_repository.set_watched(78, True)
-    user_repository.set_rewatch(78, True)
-    user_repository.set_excluded(78, False)
+    user_repository.set_status(78, MovieStatus.REWATCH)
     user_repository.set_verdict(78, 9.0)
     user_repository.set_notes(
         78,
@@ -40,10 +38,7 @@ def main() -> None:
 
     assert result is not None
     assert result["tmdb_id"] == 78
-    assert result["watchlist"] is True
-    assert result["watched"] is True
-    assert result["rewatch"] is True
-    assert result["excluded"] is False
+    assert result["status"] == MovieStatus.REWATCH.value
     assert result["verdict"] == 9.0
     assert result["notes"] == (
         "Excellent atmosphere and production design."

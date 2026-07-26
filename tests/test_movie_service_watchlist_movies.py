@@ -9,7 +9,7 @@ def reset_database() -> None:
         connection.execute("DELETE FROM movies")
 
 
-def test_get_rewatch_movies() -> None:
+def test_get_watchlist_movies() -> None:
     reset_database()
 
     service = MovieService()
@@ -50,14 +50,14 @@ def test_get_rewatch_movies() -> None:
     for movie in movies:
         service.movie_repository.save_movie(movie)
 
-    service.mark_for_rewatch(100)
-    service.mark_for_rewatch(300)
+    service.add_to_watchlist(100)
+    service.add_to_watchlist(300)
 
-    rewatch_movies = service.get_rewatch_movies()
+    watchlist_movies = service.get_watchlist_movies()
 
-    rewatch_ids = {
+    watchlist_ids = {
         movie["tmdb_id"]
-        for movie in rewatch_movies
+        for movie in watchlist_movies
     }
 
-    assert rewatch_ids == {100, 300}
+    assert watchlist_ids == {100, 300}

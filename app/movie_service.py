@@ -1,4 +1,5 @@
 from app.movie_repository import MovieRepository
+from app.movie_status import MovieStatus
 from app.tmdb_client import TMDBClient
 from app.user_movie_repository import UserMovieRepository
 
@@ -77,41 +78,23 @@ class MovieService:
         return results
 
     def mark_as_watched(self, tmdb_id: int) -> dict:
-        """
-        Mark a movie as watched.
-
-        A watched movie should no longer remain in the watchlist.
-        If it was previously marked NOPE, that exclusion is removed.
-        """
-        self.user_repository.set_watched(tmdb_id, True)
-        self.user_repository.set_watchlist(tmdb_id, False)
-        self.user_repository.set_excluded(tmdb_id, False)
-
-        return self.user_repository.get_user_movie_data(tmdb_id)
+        return self.set_movie_status(tmdb_id, MovieStatus.WATCHED)
 
     def add_to_watchlist(self, tmdb_id: int) -> dict:
-        """
-        Add a movie to the watchlist.
-
-        A NOPE movie cannot simultaneously remain in the watchlist.
-        """
-        self.user_repository.set_watchlist(tmdb_id, True)
-        self.user_repository.set_excluded(tmdb_id, False)
-
-        return self.user_repository.get_user_movie_data(tmdb_id)
+        return self.set_movie_status(tmdb_id, MovieStatus.WATCH_LATER)
 
     def mark_for_rewatch(self, tmdb_id: int) -> dict:
-        """
-        Mark a movie for rewatching.
+        return self.set_movie_status(tmdb_id, MovieStatus.REWATCH)
 
-        Rewatch implies that the movie has already been watched.
-        """
-        self.user_repository.set_rewatch(tmdb_id, True)
-        self.user_repository.set_watched(tmdb_id, True)
-        self.user_repository.set_watchlist(tmdb_id, False)
-        self.user_repository.set_excluded(tmdb_id, False)
+    def mark_as_new_discovery(self, tmdb_id: int) -> dict:
+        return self.set_movie_status(tmdb_id, MovieStatus.NEW_DISCOVERY)
 
-        return self.user_repository.get_user_movie_data(tmdb_id)
+    def set_movie_status(
+        self,
+        tmdb_id: int,
+        status: str | MovieStatus,
+    ) -> dict:
+        return self.user_repository.set_status(tmdb_id, status)
 
     def _filter_discovery_results(self, movies: list[dict]) -> list[dict]:
         watched_ids = self.user_repository.get_watched_movie_ids()
@@ -130,15 +113,7 @@ class MovieService:
         return filtered_movies  
 
     def exclude_movie(self, tmdb_id: int, notes: str | None = None) -> dict:
-        """
-        Mark a movie as NOPE.
-
-        NOPE movies must not remain in the watchlist or rewatch list.
-        Watched history is preserved if the movie was already watched.
-        """
-        self.user_repository.set_excluded(tmdb_id, True)
-        self.user_repository.set_watchlist(tmdb_id, False)
-        self.user_repository.set_rewatch(tmdb_id, False)
+        self.user_repository.set_status(tmdb_id, MovieStatus.EXCLUDED)
 
         if notes is not None:
             self.user_repository.set_notes(tmdb_id, notes.strip())
@@ -156,3 +131,6 @@ class MovieService:
 
     def get_excluded_movies(self) -> list[dict]:
         return self.movie_repository.get_excluded_movies()
+
+    def get_new_discovery_movies(self) -> list[dict]:
+        return self.movie_repository.get_new_discovery_movies()

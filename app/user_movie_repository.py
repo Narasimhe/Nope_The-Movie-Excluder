@@ -2,6 +2,7 @@ import sqlite3
 from typing import Any
 
 from app.database import get_connection
+from app.movie_status import MovieStatus, validate_movie_status
 
 
 class UserMovieRepository:
@@ -9,68 +10,39 @@ class UserMovieRepository:
         with get_connection() as connection:
             connection.execute(
                 """
-                INSERT INTO user_movie_data (tmdb_id)
-                VALUES (?)
+                INSERT INTO user_movie_data (tmdb_id, status)
+                VALUES (?, ?)
                 ON CONFLICT(tmdb_id) DO NOTHING
                 """,
-                (tmdb_id,),
+                (tmdb_id, MovieStatus.NEW_DISCOVERY.value),
             )
 
-    def set_watchlist(self, tmdb_id: int, value: bool) -> None:
-        self._ensure_record(tmdb_id)
-
+    def set_status(
+        self,
+        tmdb_id: int,
+        status: str | MovieStatus,
+    ) -> dict[str, Any]:
+        validated_status = validate_movie_status(status)
         with get_connection() as connection:
             connection.execute(
                 """
-                UPDATE user_movie_data
-                SET watchlist = ?,
+                INSERT INTO user_movie_data (tmdb_id, status)
+                VALUES (?, ?)
+                ON CONFLICT(tmdb_id) DO UPDATE SET
+                    status = excluded.status,
                     updated_at = CURRENT_TIMESTAMP
-                WHERE tmdb_id = ?
                 """,
-                (int(value), tmdb_id),
+                (tmdb_id, validated_status),
             )
 
-    def set_watched(self, tmdb_id: int, value: bool) -> None:
-        self._ensure_record(tmdb_id)
+        result = self.get_user_movie_data(tmdb_id)
 
-        with get_connection() as connection:
-            connection.execute(
-                """
-                UPDATE user_movie_data
-                SET watched = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE tmdb_id = ?
-                """,
-                (int(value), tmdb_id),
+        if result is None:
+            raise RuntimeError(
+                f"Could not read personal data for TMDB movie {tmdb_id}."
             )
 
-    def set_rewatch(self, tmdb_id: int, value: bool) -> None:
-        self._ensure_record(tmdb_id)
-
-        with get_connection() as connection:
-            connection.execute(
-                """
-                UPDATE user_movie_data
-                SET rewatch = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE tmdb_id = ?
-                """,
-                (int(value), tmdb_id),
-            )
-
-    def set_excluded(self, tmdb_id: int, value: bool) -> None:
-        self._ensure_record(tmdb_id)
-
-        with get_connection() as connection:
-            connection.execute(
-                """
-                UPDATE user_movie_data
-                SET excluded = ?,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE tmdb_id = ?
-                """,
-                (int(value), tmdb_id),
-            )
+        return result
 
     def set_verdict(self, tmdb_id: int, verdict: float | None) -> None:
         self._ensure_record(tmdb_id)
@@ -111,10 +83,7 @@ class UserMovieRepository:
                 """
                 SELECT
                     tmdb_id,
-                    watchlist,
-                    watched,
-                    rewatch,
-                    excluded,
+                    status,
                     verdict,
                     notes,
                     updated_at
@@ -127,12 +96,7 @@ class UserMovieRepository:
         if row is None:
             return None
 
-        result = dict(row)
-
-        for field in ("watchlist", "watched", "rewatch", "excluded"):
-            result[field] = bool(result[field])
-
-        return result
+        return dict(row)
 
     def get_watched_movie_ids(self) -> set[int]:
         with get_connection() as connection:
@@ -140,8 +104,12 @@ class UserMovieRepository:
                 """
                 SELECT tmdb_id
                 FROM user_movie_data
-                WHERE watched = 1
-                """
+                WHERE status IN (?, ?)
+                """,
+                (
+                    MovieStatus.WATCHED.value,
+                    MovieStatus.REWATCH.value,
+                ),
             ).fetchall()
 
         return {row[0] for row in rows}
@@ -152,8 +120,9 @@ class UserMovieRepository:
                 """
                 SELECT tmdb_id
                 FROM user_movie_data
-                WHERE excluded = 1
-                """
+                WHERE status = ?
+                """,
+                (MovieStatus.EXCLUDED.value,),
             ).fetchall()
 
         return {row[0] for row in rows}
@@ -173,10 +142,7 @@ class UserMovieRepository:
                 f"""
                 SELECT
                     tmdb_id,
-                    watchlist,
-                    watched,
-                    rewatch,
-                    excluded,
+                    status,
                     verdict,
                     notes,
                     updated_at
@@ -190,10 +156,6 @@ class UserMovieRepository:
 
         for row in rows:
             movie_data = dict(row)
-
-            for field in ("watchlist", "watched", "rewatch", "excluded"):
-                movie_data[field] = bool(movie_data[field])
-
             results[movie_data["tmdb_id"]] = movie_data
 
         return results

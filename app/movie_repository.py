@@ -1,6 +1,7 @@
 from typing import Any
 
 from app.database import get_connection
+from app.movie_status import MovieStatus
 
 
 class MovieRepository:
@@ -78,11 +79,15 @@ class MovieRepository:
                 """
                 SELECT m.*
                 FROM movies m
-                JOIN user_movie_data u 
+                JOIN user_movie_data u
                     ON m.tmdb_id = u.tmdb_id
-                WHERE u.watched = 1
+                WHERE u.status IN (?, ?)
                 ORDER BY m.title
-                """
+                """,
+                (
+                    MovieStatus.WATCHED.value,
+                    MovieStatus.REWATCH.value,
+                ),
             ).fetchall()
 
         return [dict(row) for row in rows]
@@ -93,11 +98,12 @@ class MovieRepository:
                 """
                 SELECT m.*
                 FROM movies m
-                JOIN user_movie_data u 
+                JOIN user_movie_data u
                     ON m.tmdb_id = u.tmdb_id
-                WHERE u.watchlist = 1
+                WHERE u.status = ?
                 ORDER BY m.title
-                """
+                """,
+                (MovieStatus.WATCH_LATER.value,),
             ).fetchall()
 
         return [dict(row) for row in rows]
@@ -108,11 +114,12 @@ class MovieRepository:
                 """
                 SELECT m.*
                 FROM movies m
-                JOIN user_movie_data u 
+                JOIN user_movie_data u
                     ON m.tmdb_id = u.tmdb_id
-                WHERE u.rewatch = 1
+                WHERE u.status = ?
                 ORDER BY m.title
-                """
+                """,
+                (MovieStatus.REWATCH.value,),
             ).fetchall()
 
         return [dict(row) for row in rows]
@@ -123,11 +130,28 @@ class MovieRepository:
                 """
                 SELECT m.*
                 FROM movies m
-                JOIN user_movie_data u 
+                JOIN user_movie_data u
                     ON m.tmdb_id = u.tmdb_id
-                WHERE u.excluded = 1
+                WHERE u.status = ?
                 ORDER BY m.title
+                """,
+                (MovieStatus.EXCLUDED.value,),
+            ).fetchall()
+
+        return [dict(row) for row in rows]
+
+    def get_new_discovery_movies(self) -> list[dict]:
+        with get_connection() as connection:
+            rows = connection.execute(
                 """
+                SELECT m.*
+                FROM movies m
+                JOIN user_movie_data u
+                    ON m.tmdb_id = u.tmdb_id
+                WHERE u.status = ?
+                ORDER BY m.title
+                """,
+                (MovieStatus.NEW_DISCOVERY.value,),
             ).fetchall()
 
         return [dict(row) for row in rows]
