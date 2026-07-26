@@ -2,6 +2,7 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from app.advanced_filters import AdvancedMovieFilters
 from app.config import TMDB_READ_ACCESS_TOKEN
 
 BASE_URL = "https://api.themoviedb.org/3"
@@ -50,3 +51,23 @@ class TMDBClient:
         )
         response.raise_for_status()
         return response.json().get("results", [])
+
+    def discover_movies(
+        self,
+        filters: AdvancedMovieFilters,
+        page: int = 1,
+    ) -> dict:
+        if page < 1:
+            raise ValueError("TMDB page must be at least 1.")
+
+        params = filters.to_tmdb_params()
+        params["page"] = page
+
+        response = self.session.get(
+            f"{BASE_URL}/discover/movie",
+            headers=self.headers,
+            params=params,
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
