@@ -42,6 +42,15 @@ class TMDBClient:
         response.raise_for_status()
         return response.json()
 
+    def get_movie_filter_details(self, movie_id: int) -> dict:
+        response = self.session.get(
+            f"{BASE_URL}/movie/{movie_id}",
+            headers=self.headers,
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+
     def search_movies(self, query: str) -> list[dict]:
         response = self.session.get(
             f"{BASE_URL}/search/movie",

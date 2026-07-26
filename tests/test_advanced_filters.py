@@ -110,6 +110,20 @@ class AdvancedMovieFiltersTests(unittest.TestCase):
 
         self.assertFalse(filters.matches_local_rules(movie))
 
+    def test_origin_and_production_countries_are_combined(self) -> None:
+        filters = AdvancedMovieFilters(
+            include_origin_countries=["US"],
+            exclude_origin_countries=["IN"],
+        )
+        movie = {
+            "origin_country": ["US"],
+            "production_countries": [
+                {"iso_3166_1": "IN", "name": "India"}
+            ],
+        }
+
+        self.assertFalse(filters.matches_local_rules(movie))
+
     def test_missing_country_data_is_detected(self) -> None:
         filters = AdvancedMovieFilters(
             exclude_origin_countries=["IN"],

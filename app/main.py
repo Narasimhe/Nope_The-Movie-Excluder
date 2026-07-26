@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from app.advanced_filters import FilterLogic
+from app.advanced_search_service import AdvancedSearchService
 from app.movie_service import MovieService
 from app.search_preference_repository import (
     SearchPreferenceRepository,
@@ -13,6 +14,7 @@ app = FastAPI(
 )
 
 movie_service = MovieService()
+advanced_search_service = AdvancedSearchService()
 search_preference_repository = SearchPreferenceRepository()
 
 
@@ -131,6 +133,32 @@ def search_movies(query: str):
     except Exception as e:
         print(f"SEARCH ERROR: {type(e).__name__}: {e}", flush=True)
         raise
+
+
+@app.get(
+    "/movies/discover/advanced",
+    tags=["movies"],
+    summary="Run Advanced Search",
+)
+def advanced_search(
+    preference_id: int | None = None,
+    page: int = 1,
+):
+    try:
+        return advanced_search_service.search(
+            preference_id=preference_id,
+            page=page,
+        )
+    except LookupError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        ) from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
 
 
 @app.get(

@@ -5,16 +5,14 @@ from app.tmdb_client import BASE_URL, TMDBClient
 
 
 class FakeResponse:
+    def __init__(self, payload: dict) -> None:
+        self.payload = payload
+
     def raise_for_status(self) -> None:
         pass
 
     def json(self) -> dict:
-        return {
-            "page": 2,
-            "results": [{"id": 603, "title": "The Matrix"}],
-            "total_pages": 10,
-            "total_results": 200,
-        }
+        return self.payload
 
 
 class FakeSession:
@@ -26,7 +24,31 @@ class FakeSession:
             "url": url,
             **kwargs,
         }
-        return FakeResponse()
+
+        if url.endswith("/discover/movie"):
+            return FakeResponse(
+                {
+                    "page": 2,
+                    "results": [
+                        {"id": 603, "title": "The Matrix"}
+                    ],
+                    "total_pages": 10,
+                    "total_results": 200,
+                }
+            )
+
+        return FakeResponse(
+            {
+                "id": 603,
+                "origin_country": ["US"],
+                "production_countries": [
+                    {
+                        "iso_3166_1": "US",
+                        "name": "United States of America",
+                    }
+                ],
+            }
+        )
 
 
 class TMDBClientAdvancedDiscoveryTests(unittest.TestCase):
@@ -65,6 +87,21 @@ class TMDBClientAdvancedDiscoveryTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             client.discover_movies(AdvancedMovieFilters(), page=0)
+
+    def test_filter_details_do_not_append_keywords(self) -> None:
+        client = TMDBClient.__new__(TMDBClient)
+        client.headers = {"Authorization": "Bearer test"}
+        client.session = FakeSession()
+
+        result = client.get_movie_filter_details(603)
+
+        request = client.session.last_request
+        self.assertEqual(
+            request["url"],
+            f"{BASE_URL}/movie/603",
+        )
+        self.assertNotIn("params", request)
+        self.assertEqual(result["origin_country"], ["US"])
 
 
 if __name__ == "__main__":

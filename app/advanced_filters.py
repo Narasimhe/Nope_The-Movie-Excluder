@@ -436,24 +436,31 @@ class AdvancedMovieFilters:
     def _movie_country_codes(
         movie: dict[str, Any],
     ) -> set[str] | None:
-        if "origin_country" in movie:
-            raw_countries = movie.get("origin_country") or []
-        elif "origin_countries" in movie:
-            raw_countries = movie.get("origin_countries") or []
-        elif "production_countries" in movie:
-            raw_countries = movie.get("production_countries") or []
-        else:
+        country_fields = (
+            "origin_country",
+            "origin_countries",
+            "production_countries",
+        )
+        found_country_field = any(
+            field_name in movie
+            for field_name in country_fields
+        )
+
+        if not found_country_field:
             return None
 
         country_codes = set()
 
-        for country in raw_countries:
-            if isinstance(country, dict):
-                code = country.get("iso_3166_1")
-            else:
-                code = country
+        for field_name in country_fields:
+            raw_countries = movie.get(field_name) or []
 
-            if code:
-                country_codes.add(str(code).upper())
+            for country in raw_countries:
+                if isinstance(country, dict):
+                    code = country.get("iso_3166_1")
+                else:
+                    code = country
+
+                if code:
+                    country_codes.add(str(code).upper())
 
         return country_codes
