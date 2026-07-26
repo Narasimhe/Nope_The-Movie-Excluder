@@ -33,18 +33,48 @@ class MovieService:
         if not query:
             return []
 
-        local_results = self.movie_repository.search_movies(query)
-
-        if local_results:
-            return self._filter_discovery_results(local_results)
-
         tmdb_results = self.tmdb_client.search_movies(query)
 
-        for movie in tmdb_results:
-            self.movie_repository.save_movie(movie)
+        tmdb_ids = [
+            movie["id"]
+            for movie in tmdb_results
+            if movie.get("id") is not None
+        ]
 
-        results = self.movie_repository.search_movies(query)
-        return self._filter_discovery_results(results)
+        user_data_by_id = self.user_repository.get_user_movie_data_bulk(
+            tmdb_ids
+        )
+
+        results = []
+
+        for movie in tmdb_results:
+            tmdb_id = movie.get("id")
+
+            if tmdb_id is None:
+                continue
+
+            release_date = movie.get("release_date") or ""
+            release_year = release_date[:4] if release_date else None
+
+            results.append(
+                {
+                    "tmdb_id": tmdb_id,
+                    "title": movie.get("title"),
+                    "original_title": movie.get("original_title"),
+                    "release_year": release_year,
+                    "release_date": release_date or None,
+                    "overview": movie.get("overview"),
+                    "poster_path": movie.get("poster_path"),
+                    "backdrop_path": movie.get("backdrop_path"),
+                    "rating": movie.get("vote_average"),
+                    "vote_count": movie.get("vote_count"),
+                    "genre_ids": movie.get("genre_ids", []),
+                    "original_language": movie.get("original_language"),
+                    "user_data": user_data_by_id.get(tmdb_id),
+                }
+            )
+
+        return results
 
     def mark_as_watched(self, tmdb_id: int) -> dict:
         """
@@ -89,11 +119,15 @@ class MovieService:
 
         hidden_ids = watched_ids | excluded_ids
 
-        return [
-            movie
-            for movie in movies
-            if movie["id"] not in hidden_ids
-        ]
+        filtered_movies = []
+
+        for movie in movies:
+            movie_id = movie.get("tmdb_id", movie.get("id"))
+
+            if movie_id is not None and movie_id not in hidden_ids:
+                filtered_movies.append(movie)
+
+        return filtered_movies  
 
     def exclude_movie(self, tmdb_id: int, notes: str | None = None) -> dict:
         """

@@ -157,3 +157,43 @@ class UserMovieRepository:
             ).fetchall()
 
         return {row[0] for row in rows}
+
+    def get_user_movie_data_bulk(
+        self,
+        tmdb_ids: list[int],
+    ) -> dict[int, dict[str, Any]]:
+        if not tmdb_ids:
+            return {}
+
+        placeholders = ",".join("?" for _ in tmdb_ids)
+
+        with get_connection() as connection:
+            connection.row_factory = sqlite3.Row
+            rows = connection.execute(
+                f"""
+                SELECT
+                    tmdb_id,
+                    watchlist,
+                    watched,
+                    rewatch,
+                    excluded,
+                    verdict,
+                    notes,
+                    updated_at
+                FROM user_movie_data
+                WHERE tmdb_id IN ({placeholders})
+                """,
+                tmdb_ids,
+            ).fetchall()
+
+        results: dict[int, dict[str, Any]] = {}
+
+        for row in rows:
+            movie_data = dict(row)
+
+            for field in ("watchlist", "watched", "rewatch", "excluded"):
+                movie_data[field] = bool(movie_data[field])
+
+            results[movie_data["tmdb_id"]] = movie_data
+
+        return results
