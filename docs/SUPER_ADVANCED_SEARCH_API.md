@@ -18,7 +18,8 @@ Default request:
     "watch_later"
   ],
   "include_untracked": true,
-  "notes_query": null
+  "notes_query": null,
+  "favorite_only": false
 }
 ```
 
@@ -39,6 +40,11 @@ Every stored status is independently selectable:
 partial search inside personal notes. Untracked movies cannot match a notes
 query because they have no personal record.
 
+`favorite_only` is optional and defaults to `false`. When it is `true`, only
+movies whose personal data has `is_favorite = true` can match. Favorites are
+always `watched` or `rewatch`, so those statuses must be selected. Notes
+filters still apply.
+
 Examples:
 
 Fresh movies only:
@@ -49,7 +55,8 @@ Fresh movies only:
   "page": 1,
   "included_statuses": [],
   "include_untracked": true,
-  "notes_query": null
+  "notes_query": null,
+  "favorite_only": false
 }
 ```
 
@@ -64,7 +71,8 @@ Watched and rewatch movies only:
     "rewatch"
   ],
   "include_untracked": false,
-  "notes_query": null
+  "notes_query": null,
+  "favorite_only": false
 }
 ```
 
@@ -79,7 +87,24 @@ Notes containing "cold ambience" within the default visible statuses:
     "watch_later"
   ],
   "include_untracked": false,
-  "notes_query": "cold ambience"
+  "notes_query": "cold ambience",
+  "favorite_only": false
+}
+```
+
+Favorites within selected statuses:
+
+```json
+{
+  "preference_id": null,
+  "page": 1,
+  "included_statuses": [
+    "watched",
+    "rewatch"
+  ],
+  "include_untracked": false,
+  "notes_query": null,
+  "favorite_only": true
 }
 ```
 

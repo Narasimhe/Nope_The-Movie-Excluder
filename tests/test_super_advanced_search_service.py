@@ -37,26 +37,31 @@ class FakeUserMovieRepository:
                 "tmdb_id": 202,
                 "status": MovieStatus.NEW_DISCOVERY.value,
                 "notes": "Cold ambience and quiet pacing.",
+                "is_favorite": False,
             },
             303: {
                 "tmdb_id": 303,
                 "status": MovieStatus.WATCH_LATER.value,
                 "notes": "Bright and energetic.",
+                "is_favorite": False,
             },
             404: {
                 "tmdb_id": 404,
                 "status": MovieStatus.WATCHED.value,
                 "notes": "Cold ambience, already watched.",
+                "is_favorite": True,
             },
             505: {
                 "tmdb_id": 505,
                 "status": MovieStatus.REWATCH.value,
                 "notes": None,
+                "is_favorite": True,
             },
             606: {
                 "tmdb_id": 606,
                 "status": MovieStatus.EXCLUDED.value,
                 "notes": "Not interested.",
+                "is_favorite": False,
             },
         }
 
@@ -256,6 +261,52 @@ class SuperAdvancedSearchServiceTests(unittest.TestCase):
     def test_blank_notes_query_is_rejected_before_tmdb_call(self) -> None:
         with self.assertRaises(ValueError):
             self.service.search(notes_query="   ")
+
+        self.assertFalse(self.tmdb_client.discover_called)
+
+    def test_favorite_only_excludes_untracked_and_nonfavorites(
+        self,
+    ) -> None:
+        result = self.service.search(
+            included_statuses=[
+                MovieStatus.WATCHED,
+                MovieStatus.REWATCH,
+            ],
+            favorite_only=True,
+        )
+
+        self.assertEqual(
+            [movie["id"] for movie in result["results"]],
+            [404, 505],
+        )
+        self.assertTrue(
+            result["favorite_filter"]["favorite_only"]
+        )
+
+    def test_favorite_only_combines_with_selected_statuses(
+        self,
+    ) -> None:
+        result = self.service.search(
+            included_statuses=[
+                MovieStatus.NEW_DISCOVERY,
+                MovieStatus.WATCH_LATER,
+                MovieStatus.WATCHED,
+                MovieStatus.REWATCH,
+                MovieStatus.EXCLUDED,
+            ],
+            favorite_only=True,
+        )
+
+        self.assertEqual(
+            [movie["id"] for movie in result["results"]],
+            [404, 505],
+        )
+
+    def test_invalid_favorite_only_is_rejected_before_tmdb_call(
+        self,
+    ) -> None:
+        with self.assertRaises(ValueError):
+            self.service.search(favorite_only=1)
 
         self.assertFalse(self.tmdb_client.discover_called)
 

@@ -15,7 +15,7 @@ from app.super_advanced_search_service import (
 
 app = FastAPI(
     title="Movie Excluder API",
-    version="0.8.0",
+    version="0.9.0",
 )
 
 movie_service = MovieService()
@@ -39,6 +39,10 @@ class MovieStatusRequest(BaseModel):
 
 class MovieNotesRequest(BaseModel):
     notes: str | None = None
+
+
+class FavoriteRequest(BaseModel):
+    is_favorite: bool
 
 
 class AdvancedFiltersRequest(BaseModel):
@@ -107,6 +111,7 @@ class SuperAdvancedSearchRequest(BaseModel):
     )
     include_untracked: bool = True
     notes_query: str | None = None
+    favorite_only: bool = False
 
 
 def _filter_request_to_dict(
@@ -266,6 +271,15 @@ def search_movie_notes(query: str):
 
 
 @app.get(
+    "/movies/favorites",
+    tags=["movies"],
+    summary="List favorite movies",
+)
+def get_favorite_movies():
+    return movie_service.get_favorite_movies()
+
+
+@app.get(
     "/movies/discover/advanced",
     tags=["movies"],
     summary="Run Advanced Search",
@@ -306,6 +320,7 @@ def super_advanced_search(
             included_statuses=request.included_statuses,
             include_untracked=request.include_untracked,
             notes_query=request.notes_query,
+            favorite_only=request.favorite_only,
         )
     except LookupError as error:
         raise HTTPException(
@@ -350,6 +365,36 @@ def set_movie_notes(
 
     return {
         "message": "Movie notes updated",
+        "user_movie_data": user_movie_data,
+    }
+
+
+@app.put(
+    "/movies/{tmdb_id}/favorite",
+    tags=["movies"],
+    summary="Favorite or unfavorite a movie",
+)
+def set_movie_favorite(
+    tmdb_id: int,
+    request: FavoriteRequest,
+):
+    try:
+        user_movie_data = movie_service.set_movie_favorite(
+            tmdb_id,
+            request.is_favorite,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    return {
+        "message": (
+            "Movie added to favorites"
+            if request.is_favorite
+            else "Movie removed from favorites"
+        ),
         "user_movie_data": user_movie_data,
     }
 

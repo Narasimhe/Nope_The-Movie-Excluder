@@ -58,6 +58,14 @@ class PersonalMovieStatusTests(unittest.TestCase):
         self.repository.set_status(101, MovieStatus.EXCLUDED)
         self.repository.set_notes(101, "Wrong Arrival movie")
         self.repository.set_verdict(101, 2.5)
+        self.repository.set_status(101, MovieStatus.WATCHED)
+        self.repository.set_favorite(101, True)
+
+        rewatch = self.repository.set_status(
+            101,
+            MovieStatus.REWATCH,
+        )
+        self.assertTrue(rewatch["is_favorite"])
 
         self.repository.set_status(101, MovieStatus.NEW_DISCOVERY)
         changed = self.repository.set_status(
@@ -71,6 +79,7 @@ class PersonalMovieStatusTests(unittest.TestCase):
         )
         self.assertEqual(changed["notes"], "Wrong Arrival movie")
         self.assertEqual(changed["verdict"], 2.5)
+        self.assertFalse(changed["is_favorite"])
 
         restored = self.repository.set_status(
             101,
@@ -83,6 +92,7 @@ class PersonalMovieStatusTests(unittest.TestCase):
         )
         self.assertEqual(restored["notes"], "Wrong Arrival movie")
         self.assertEqual(restored["verdict"], 2.5)
+        self.assertFalse(restored["is_favorite"])
 
     def test_notes_create_a_new_discovery_record(self) -> None:
         self.repository.set_notes(101, "Undecided")
@@ -177,6 +187,7 @@ class PersonalMovieStatusTests(unittest.TestCase):
             )
             self.assertEqual(result["verdict"], 1.5)
             self.assertEqual(result["notes"], "Keep this note")
+            self.assertFalse(result["is_favorite"])
 
             with database.get_connection() as connection:
                 column_names = {
@@ -187,7 +198,58 @@ class PersonalMovieStatusTests(unittest.TestCase):
                 }
 
         self.assertIn("status", column_names)
+        self.assertIn("is_favorite", column_names)
         self.assertNotIn("watchlist", column_names)
+
+    def test_existing_status_database_adds_favorite_safely(self) -> None:
+        existing_path = (
+            Path(self.temporary_directory.name)
+            / "existing_status_database.db"
+        )
+
+        with closing(sqlite3.connect(existing_path)) as connection:
+            with connection:
+                connection.executescript(
+                    """
+                    CREATE TABLE movies (
+                        tmdb_id INTEGER PRIMARY KEY,
+                        title TEXT NOT NULL,
+                        fetched_at TEXT NOT NULL
+                            DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    CREATE TABLE user_movie_data (
+                        tmdb_id INTEGER PRIMARY KEY,
+                        status TEXT NOT NULL,
+                        verdict REAL,
+                        notes TEXT,
+                        updated_at TEXT NOT NULL
+                            DEFAULT CURRENT_TIMESTAMP
+                    );
+
+                    INSERT INTO movies (tmdb_id, title)
+                    VALUES (101, 'Existing Movie');
+
+                    INSERT INTO user_movie_data (
+                        tmdb_id,
+                        status,
+                        notes
+                    )
+                    VALUES (
+                        101,
+                        'watched',
+                        'Keep existing data'
+                    );
+                    """
+                )
+
+        with patch.object(database, "DATABASE_PATH", existing_path):
+            initialize_database()
+            result = UserMovieRepository().get_user_movie_data(101)
+
+        self.assertEqual(result["status"], "watched")
+        self.assertEqual(result["notes"], "Keep existing data")
+        self.assertFalse(result["is_favorite"])
 
 
 if __name__ == "__main__":

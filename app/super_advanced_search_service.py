@@ -38,6 +38,7 @@ class SuperAdvancedSearchService(AdvancedSearchService):
         included_statuses: list[str | MovieStatus] | None = None,
         include_untracked: bool = True,
         notes_query: str | None = None,
+        favorite_only: bool = False,
     ) -> dict:
         if page < 1:
             raise ValueError(
@@ -46,6 +47,8 @@ class SuperAdvancedSearchService(AdvancedSearchService):
 
         if not isinstance(include_untracked, bool):
             raise ValueError("include_untracked must be true or false.")
+        if not isinstance(favorite_only, bool):
+            raise ValueError("favorite_only must be true or false.")
 
         selected_statuses = self._validate_statuses(
             included_statuses
@@ -101,6 +104,12 @@ class SuperAdvancedSearchService(AdvancedSearchService):
             elif user_data.get("status") not in selected_statuses:
                 continue
 
+            if favorite_only and (
+                user_data is None
+                or not user_data.get("is_favorite", False)
+            ):
+                continue
+
             if normalized_notes_query is not None:
                 if user_data is None:
                     continue
@@ -150,6 +159,9 @@ class SuperAdvancedSearchService(AdvancedSearchService):
             },
             "notes_filter": {
                 "query": normalized_notes_query,
+            },
+            "favorite_filter": {
+                "favorite_only": favorite_only,
             },
             "page": tmdb_response.get("page", page),
             "tmdb_total_pages": tmdb_response.get(

@@ -30,9 +30,19 @@ class UserMovieRepository:
                 VALUES (?, ?)
                 ON CONFLICT(tmdb_id) DO UPDATE SET
                     status = excluded.status,
+                    is_favorite = CASE
+                        WHEN excluded.status IN (?, ?)
+                            THEN user_movie_data.is_favorite
+                        ELSE 0
+                    END,
                     updated_at = CURRENT_TIMESTAMP
                 """,
-                (tmdb_id, validated_status),
+                (
+                    tmdb_id,
+                    validated_status,
+                    MovieStatus.WATCHED.value,
+                    MovieStatus.REWATCH.value,
+                ),
             )
 
         result = self.get_user_movie_data(tmdb_id)
@@ -72,6 +82,50 @@ class UserMovieRepository:
                 (notes, tmdb_id),
             )
 
+    def set_favorite(
+        self,
+        tmdb_id: int,
+        is_favorite: bool,
+    ) -> dict[str, Any]:
+        if not isinstance(is_favorite, bool):
+            raise ValueError("is_favorite must be true or false.")
+
+        existing = self.get_user_movie_data(tmdb_id)
+
+        if existing is None:
+            raise ValueError(
+                "Only watched or rewatch movies can be favorited."
+            )
+
+        if existing["status"] not in {
+            MovieStatus.WATCHED.value,
+            MovieStatus.REWATCH.value,
+        }:
+            raise ValueError(
+                "Only watched or rewatch movies can be favorited."
+            )
+
+        with get_connection() as connection:
+            connection.execute(
+                """
+                UPDATE user_movie_data
+                SET
+                    is_favorite = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE tmdb_id = ?
+                """,
+                (int(is_favorite), tmdb_id),
+            )
+
+        result = self.get_user_movie_data(tmdb_id)
+
+        if result is None:
+            raise RuntimeError(
+                "Favorite status was saved but could not be read."
+            )
+
+        return result
+
     def get_user_movie_data(
         self,
         tmdb_id: int,
@@ -86,6 +140,7 @@ class UserMovieRepository:
                     status,
                     verdict,
                     notes,
+                    is_favorite,
                     updated_at
                 FROM user_movie_data
                 WHERE tmdb_id = ?
@@ -96,7 +151,9 @@ class UserMovieRepository:
         if row is None:
             return None
 
-        return dict(row)
+        result = dict(row)
+        result["is_favorite"] = bool(result["is_favorite"])
+        return result
 
     def get_watched_movie_ids(self) -> set[int]:
         with get_connection() as connection:
@@ -145,6 +202,7 @@ class UserMovieRepository:
                     status,
                     verdict,
                     notes,
+                    is_favorite,
                     updated_at
                 FROM user_movie_data
                 WHERE tmdb_id IN ({placeholders})
@@ -156,6 +214,9 @@ class UserMovieRepository:
 
         for row in rows:
             movie_data = dict(row)
+            movie_data["is_favorite"] = bool(
+                movie_data["is_favorite"]
+            )
             results[movie_data["tmdb_id"]] = movie_data
 
         return results
@@ -187,6 +248,7 @@ class UserMovieRepository:
                     status,
                     verdict,
                     notes,
+                    is_favorite,
                     updated_at
                 FROM user_movie_data
                 WHERE notes IS NOT NULL
@@ -197,4 +259,11 @@ class UserMovieRepository:
                 (f"%{escaped_query}%",),
             ).fetchall()
 
-        return [dict(row) for row in rows]
+        results = []
+
+        for row in rows:
+            result = dict(row)
+            result["is_favorite"] = bool(result["is_favorite"])
+            results.append(result)
+
+        return results

@@ -206,6 +206,19 @@ class MovieService:
         movies = self.movie_repository.get_movies_by_ids(tmdb_ids)
         return self._enrich_movie_list(movies)
 
+    def set_movie_favorite(
+        self,
+        tmdb_id: int,
+        is_favorite: bool,
+    ) -> dict:
+        if not isinstance(is_favorite, bool):
+            raise ValueError("is_favorite must be true or false.")
+
+        return self.user_repository.set_favorite(
+            tmdb_id,
+            is_favorite,
+        )
+
     def set_movie_status(
         self,
         tmdb_id: int,
@@ -263,6 +276,11 @@ class MovieService:
     def get_excluded_movies(self) -> list[dict]:
         return self._enrich_movie_list(
             self.movie_repository.get_excluded_movies()
+        )
+
+    def get_favorite_movies(self) -> list[dict]:
+        return self._enrich_movie_list(
+            self.movie_repository.get_favorite_movies()
         )
 
     def get_new_discovery_movies(self) -> list[dict]:

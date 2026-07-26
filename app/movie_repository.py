@@ -171,6 +171,26 @@ class MovieRepository:
 
         return [dict(row) for row in rows]
 
+    def get_favorite_movies(self) -> list[dict]:
+        with get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT m.*
+                FROM movies m
+                JOIN user_movie_data u
+                    ON m.tmdb_id = u.tmdb_id
+                WHERE u.is_favorite = 1
+                  AND u.status IN (?, ?)
+                ORDER BY m.title
+                """,
+                (
+                    MovieStatus.WATCHED.value,
+                    MovieStatus.REWATCH.value,
+                ),
+            ).fetchall()
+
+        return [dict(row) for row in rows]
+
     def get_new_discovery_movies(self) -> list[dict]:
         with get_connection() as connection:
             rows = connection.execute(

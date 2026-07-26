@@ -45,9 +45,66 @@ def _create_user_movie_data_table(connection: sqlite3.Connection) -> None:
                 ),
             verdict REAL,
             notes TEXT,
+            is_favorite INTEGER NOT NULL DEFAULT 0
+                CHECK (is_favorite IN (0, 1))
+                CHECK (
+                    is_favorite = 0
+                    OR status IN (
+                        '{MovieStatus.WATCHED.value}',
+                        '{MovieStatus.REWATCH.value}'
+                    )
+                ),
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (tmdb_id) REFERENCES movies (tmdb_id)
         )
+        """
+    )
+
+
+def _ensure_user_movie_favorite_column(
+    connection: sqlite3.Connection,
+) -> None:
+    columns = {
+        row["name"]
+        for row in connection.execute(
+            "PRAGMA table_info(user_movie_data)"
+        ).fetchall()
+    }
+
+    if "is_favorite" not in columns:
+        connection.execute(
+            f"""
+            ALTER TABLE user_movie_data
+            ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0
+                CHECK (is_favorite IN (0, 1))
+                CHECK (
+                    is_favorite = 0
+                    OR status IN (
+                        '{MovieStatus.WATCHED.value}',
+                        '{MovieStatus.REWATCH.value}'
+                    )
+                )
+            """
+        )
+
+    connection.execute(
+        """
+        UPDATE user_movie_data
+        SET is_favorite = 0
+        WHERE is_favorite = 1
+          AND status NOT IN (?, ?)
+        """,
+        (
+            MovieStatus.WATCHED.value,
+            MovieStatus.REWATCH.value,
+        ),
+    )
+
+    connection.execute(
+        """
+        CREATE INDEX IF NOT EXISTS idx_user_movie_favorites
+        ON user_movie_data (is_favorite)
+        WHERE is_favorite = 1
         """
     )
 
@@ -231,6 +288,7 @@ def initialize_database() -> None:
 
         _migrate_legacy_user_movie_data(connection)
         _create_user_movie_data_table(connection)
+        _ensure_user_movie_favorite_column(connection)
         _create_movie_metadata_tables(connection)
         _create_search_preferences_table(connection)
 
