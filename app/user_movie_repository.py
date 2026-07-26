@@ -159,3 +159,42 @@ class UserMovieRepository:
             results[movie_data["tmdb_id"]] = movie_data
 
         return results
+
+    def search_notes(
+        self,
+        query: str,
+    ) -> list[dict[str, Any]]:
+        if not isinstance(query, str):
+            raise ValueError("Notes search query must be text.")
+
+        cleaned_query = " ".join(query.split())
+
+        if not cleaned_query:
+            raise ValueError("Notes search query cannot be empty.")
+
+        escaped_query = (
+            cleaned_query
+            .replace("!", "!!")
+            .replace("%", "!%")
+            .replace("_", "!_")
+        )
+
+        with get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    tmdb_id,
+                    status,
+                    verdict,
+                    notes,
+                    updated_at
+                FROM user_movie_data
+                WHERE notes IS NOT NULL
+                  AND TRIM(notes) <> ''
+                  AND notes LIKE ? ESCAPE '!' COLLATE NOCASE
+                ORDER BY updated_at DESC, tmdb_id
+                """,
+                (f"%{escaped_query}%",),
+            ).fetchall()
+
+        return [dict(row) for row in rows]

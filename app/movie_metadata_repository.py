@@ -25,6 +25,16 @@ class MovieMetadataRepository:
 
         return cleaned_name
 
+    def _validate_keyword_id(self, keyword_id: int) -> None:
+        if (
+            isinstance(keyword_id, bool)
+            or not isinstance(keyword_id, int)
+        ):
+            raise ValueError("Keyword ID must be an integer.")
+
+        if keyword_id <= 0:
+            raise ValueError("Keyword ID must be greater than zero.")
+
     def _normalize_tmdb_items(
         self,
         items: list[dict[str, Any]],
@@ -316,9 +326,7 @@ class MovieMetadataRepository:
         keyword_id: int,
     ) -> bool:
         self._validate_movie_id(tmdb_id)
-
-        if isinstance(keyword_id, bool) or not isinstance(keyword_id, int):
-            raise ValueError("Keyword ID must be an integer.")
+        self._validate_keyword_id(keyword_id)
 
         with get_connection() as connection:
             cursor = connection.execute(
@@ -350,6 +358,62 @@ class MovieMetadataRepository:
             )
 
         return removed
+
+    def delete_custom_keyword(
+        self,
+        keyword_id: int,
+    ) -> dict | None:
+        self._validate_keyword_id(keyword_id)
+
+        with get_connection() as connection:
+            keyword = connection.execute(
+                """
+                SELECT
+                    keyword_id,
+                    name
+                FROM keywords
+                WHERE keyword_id = ?
+                  AND is_custom = 1
+                """,
+                (keyword_id,),
+            ).fetchone()
+
+            if keyword is None:
+                return None
+
+            affected_movie_count = connection.execute(
+                """
+                SELECT COUNT(*)
+                FROM movie_keywords
+                WHERE keyword_id = ?
+                """,
+                (keyword_id,),
+            ).fetchone()[0]
+
+            # Delete links explicitly because SQLite foreign-key cascades
+            # may be disabled in an existing local database connection.
+            connection.execute(
+                """
+                DELETE FROM movie_keywords
+                WHERE keyword_id = ?
+                """,
+                (keyword_id,),
+            )
+            connection.execute(
+                """
+                DELETE FROM keywords
+                WHERE keyword_id = ?
+                  AND is_custom = 1
+                """,
+                (keyword_id,),
+            )
+
+        return {
+            "keyword_id": keyword["keyword_id"],
+            "name": keyword["name"],
+            "is_custom": True,
+            "affected_movie_count": affected_movie_count,
+        }
 
     def _get_movie_keyword(
         self,

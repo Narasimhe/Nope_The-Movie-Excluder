@@ -59,6 +59,37 @@ class MovieRepository:
 
         return dict(row)
 
+    def get_movies_by_ids(
+        self,
+        tmdb_ids: list[int],
+    ) -> list[dict]:
+        unique_ids = list(dict.fromkeys(tmdb_ids))
+
+        if not unique_ids:
+            return []
+
+        placeholders = ",".join("?" for _ in unique_ids)
+
+        with get_connection() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT *
+                FROM movies
+                WHERE tmdb_id IN ({placeholders})
+                """,
+                unique_ids,
+            ).fetchall()
+
+        movies_by_id = {
+            row["tmdb_id"]: dict(row)
+            for row in rows
+        }
+        return [
+            movies_by_id[tmdb_id]
+            for tmdb_id in unique_ids
+            if tmdb_id in movies_by_id
+        ]
+
     def search_movies(self, query: str) -> list[dict]:
         with get_connection() as connection:
             rows = connection.execute(

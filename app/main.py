@@ -4,17 +4,23 @@ from pydantic import BaseModel, Field
 from app.advanced_filters import FilterLogic
 from app.advanced_search_service import AdvancedSearchService
 from app.movie_service import MovieService
+from app.movie_status import MovieStatus
 from app.search_preference_repository import (
     SearchPreferenceRepository,
+)
+from app.super_advanced_search_service import (
+    DEFAULT_INCLUDED_STATUSES,
+    SuperAdvancedSearchService,
 )
 
 app = FastAPI(
     title="Movie Excluder API",
-    version="0.7.0",
+    version="0.8.0",
 )
 
 movie_service = MovieService()
 advanced_search_service = AdvancedSearchService()
+super_advanced_search_service = SuperAdvancedSearchService()
 search_preference_repository = SearchPreferenceRepository()
 tmdb_lookup_client = advanced_search_service.tmdb_client
 
@@ -29,6 +35,10 @@ class CustomKeywordRequest(BaseModel):
 
 class MovieStatusRequest(BaseModel):
     status: str
+
+
+class MovieNotesRequest(BaseModel):
+    notes: str | None = None
 
 
 class AdvancedFiltersRequest(BaseModel):
@@ -84,6 +94,19 @@ class SearchPreferenceCreateRequest(BaseModel):
 class SearchPreferenceUpdateRequest(BaseModel):
     name: str
     filters: AdvancedFiltersRequest
+
+
+class SuperAdvancedSearchRequest(BaseModel):
+    preference_id: int | None = None
+    page: int = 1
+    included_statuses: list[MovieStatus] = Field(
+        default_factory=lambda: [
+            MovieStatus(status)
+            for status in DEFAULT_INCLUDED_STATUSES
+        ]
+    )
+    include_untracked: bool = True
+    notes_query: str | None = None
 
 
 def _filter_request_to_dict(
@@ -228,6 +251,21 @@ def search_companies(query: str, page: int = 1):
 
 
 @app.get(
+    "/movies/notes/search",
+    tags=["movies"],
+    summary="Search personal movie notes",
+)
+def search_movie_notes(query: str):
+    try:
+        return movie_service.search_movie_notes(query)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+
+@app.get(
     "/movies/discover/advanced",
     tags=["movies"],
     summary="Run Advanced Search",
@@ -253,6 +291,34 @@ def advanced_search(
         ) from error
 
 
+@app.post(
+    "/movies/discover/super-advanced",
+    tags=["movies"],
+    summary="Run Super Advanced Search",
+)
+def super_advanced_search(
+    request: SuperAdvancedSearchRequest,
+):
+    try:
+        return super_advanced_search_service.search(
+            preference_id=request.preference_id,
+            page=request.page,
+            included_statuses=request.included_statuses,
+            include_untracked=request.include_untracked,
+            notes_query=request.notes_query,
+        )
+    except LookupError as error:
+        raise HTTPException(
+            status_code=404,
+            detail=str(error),
+        ) from error
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+
 @app.get(
     "/movies/{tmdb_id}",
     tags=["movies"],
@@ -260,6 +326,32 @@ def advanced_search(
 )
 def get_movie_details(tmdb_id: int):
     return movie_service.get_movie(tmdb_id)
+
+
+@app.put(
+    "/movies/{tmdb_id}/notes",
+    tags=["movies"],
+    summary="Set or clear personal movie notes",
+)
+def set_movie_notes(
+    tmdb_id: int,
+    request: MovieNotesRequest,
+):
+    try:
+        user_movie_data = movie_service.set_movie_notes(
+            tmdb_id,
+            request.notes,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    return {
+        "message": "Movie notes updated",
+        "user_movie_data": user_movie_data,
+    }
 
 
 @app.post(
@@ -291,7 +383,7 @@ def add_custom_keyword(
 @app.delete(
     "/movies/{tmdb_id}/keywords/custom/{keyword_id}",
     tags=["movies"],
-    summary="Remove a custom keyword",
+    summary="Remove a custom keyword from one movie",
 )
 def remove_custom_keyword(
     tmdb_id: int,
@@ -308,7 +400,35 @@ def remove_custom_keyword(
             detail="Custom keyword link was not found.",
         )
 
-    return {"message": "Custom keyword removed"}
+    return {
+        "message": "Custom keyword removed from this movie"
+    }
+
+
+@app.delete(
+    "/keywords/custom/{keyword_id}",
+    tags=["movies"],
+    summary="Delete a custom keyword from every movie",
+)
+def delete_custom_keyword(keyword_id: int):
+    try:
+        deleted = movie_service.delete_custom_keyword(keyword_id)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    if deleted is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Custom keyword was not found.",
+        )
+
+    return {
+        "message": "Custom keyword deleted from every movie",
+        "deleted_keyword": deleted,
+    }
 
 
 @app.put(

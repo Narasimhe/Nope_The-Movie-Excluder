@@ -165,6 +165,47 @@ class MovieService:
             keyword_id,
         )
 
+    def delete_custom_keyword(
+        self,
+        keyword_id: int,
+    ) -> dict | None:
+        return self.metadata_repository.delete_custom_keyword(
+            keyword_id
+        )
+
+    def set_movie_notes(
+        self,
+        tmdb_id: int,
+        notes: str | None,
+    ) -> dict:
+        if notes is not None and not isinstance(notes, str):
+            raise ValueError("Movie notes must be text or null.")
+
+        cleaned_notes = notes.strip() if notes is not None else None
+
+        if not cleaned_notes:
+            cleaned_notes = None
+
+        if self.movie_repository.get_movie(tmdb_id) is None:
+            self._fetch_and_save_movie_metadata(tmdb_id)
+
+        self.user_repository.set_notes(tmdb_id, cleaned_notes)
+        result = self.user_repository.get_user_movie_data(tmdb_id)
+
+        if result is None:
+            raise RuntimeError("Movie notes were saved but not found.")
+
+        return result
+
+    def search_movie_notes(self, query: str) -> list[dict]:
+        matching_user_data = self.user_repository.search_notes(query)
+        tmdb_ids = [
+            user_data["tmdb_id"]
+            for user_data in matching_user_data
+        ]
+        movies = self.movie_repository.get_movies_by_ids(tmdb_ids)
+        return self._enrich_movie_list(movies)
+
     def set_movie_status(
         self,
         tmdb_id: int,

@@ -206,6 +206,45 @@ class MovieMetadataRepositoryTests(unittest.TestCase):
             1,
         )
 
+    def test_custom_keyword_can_be_deleted_from_every_movie(self) -> None:
+        custom = self.repository.add_custom_keyword(
+            101,
+            "cold ambience",
+        )
+        self.repository.add_custom_keyword(202, "cold ambience")
+
+        deleted = self.repository.delete_custom_keyword(
+            custom["keyword_id"]
+        )
+
+        self.assertEqual(deleted["name"], "cold ambience")
+        self.assertEqual(deleted["affected_movie_count"], 2)
+        self.assertEqual(
+            self.repository.get_custom_keywords(101),
+            [],
+        )
+        self.assertEqual(
+            self.repository.get_custom_keywords(202),
+            [],
+        )
+
+    def test_official_keyword_cannot_be_globally_deleted(self) -> None:
+        self.repository.replace_tmdb_keywords(
+            101,
+            [{"id": 1001, "name": "alien"}],
+        )
+        official = self.repository.get_tmdb_keywords(101)[0]
+
+        deleted = self.repository.delete_custom_keyword(
+            official["keyword_id"]
+        )
+
+        self.assertIsNone(deleted)
+        self.assertEqual(
+            len(self.repository.get_tmdb_keywords(101)),
+            1,
+        )
+
     def test_blank_custom_keyword_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "cannot be empty"):
             self.repository.add_custom_keyword(101, "   ")
