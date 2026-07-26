@@ -120,6 +120,53 @@ class MovieMetadataRepository:
 
         return [dict(row) for row in rows]
 
+    def get_movie_genres_bulk(
+        self,
+        tmdb_ids: list[int],
+    ) -> dict[int, list[dict]]:
+        unique_ids = list(dict.fromkeys(tmdb_ids))
+
+        if not unique_ids:
+            return {}
+
+        for tmdb_id in unique_ids:
+            self._validate_movie_id(tmdb_id)
+
+        placeholders = ",".join("?" for _ in unique_ids)
+
+        with get_connection() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    mg.tmdb_id,
+                    g.tmdb_genre_id,
+                    g.name
+                FROM movie_genres mg
+                JOIN genres g
+                    ON mg.tmdb_genre_id = g.tmdb_genre_id
+                WHERE mg.tmdb_id IN ({placeholders})
+                ORDER BY
+                    mg.tmdb_id,
+                    g.name COLLATE NOCASE
+                """,
+                unique_ids,
+            ).fetchall()
+
+        results = {
+            tmdb_id: []
+            for tmdb_id in unique_ids
+        }
+
+        for row in rows:
+            results[row["tmdb_id"]].append(
+                {
+                    "tmdb_genre_id": row["tmdb_genre_id"],
+                    "name": row["name"],
+                }
+            )
+
+        return results
+
     def replace_tmdb_keywords(
         self,
         tmdb_id: int,

@@ -30,6 +30,16 @@ If an old row contains multiple active flags, this priority is used:
 
 The migration retains the TMDB ID, notes, personal rating, and update time.
 
+## Status API
+
+`PUT /movies/{tmdb_id}/status` accepts one of the five status values. If the
+movie is not already saved locally, selecting a valid status first fetches and
+caches its movie details, genres, and official TMDB keywords.
+
+Changing a status for an already cached movie does not fetch the movie again.
+Invalid statuses are rejected before any TMDB request or database write.
+`GET /movies/{tmdb_id}` returns the current record as `user_data`.
+
 ## Verification
 
 Run the focused tests from the project root:

@@ -8,6 +8,7 @@ from app.database import initialize_database
 from app.movie_metadata_repository import MovieMetadataRepository
 from app.movie_repository import MovieRepository
 from app.movie_service import MovieService
+from app.movie_status import MovieStatus
 from app.user_movie_repository import UserMovieRepository
 
 
@@ -152,6 +153,49 @@ class MovieServiceMetadataIntegrationTests(unittest.TestCase):
         self.assertEqual(
             self.metadata_repository.get_custom_keywords(329865),
             [],
+        )
+
+    def test_status_selection_caches_an_uncached_movie(self) -> None:
+        result = self.service.set_movie_status(
+            329865,
+            MovieStatus.WATCH_LATER,
+        )
+
+        self.assertEqual(
+            result["status"],
+            MovieStatus.WATCH_LATER.value,
+        )
+        self.assertEqual(self.tmdb_client.movie_detail_calls, 1)
+        self.assertIsNotNone(
+            self.movie_repository.get_movie(329865)
+        )
+
+        changed = self.service.set_movie_status(
+            329865,
+            MovieStatus.EXCLUDED,
+        )
+
+        self.assertEqual(
+            changed["status"],
+            MovieStatus.EXCLUDED.value,
+        )
+        self.assertEqual(self.tmdb_client.movie_detail_calls, 1)
+
+        movie_details = self.service.get_movie(329865)
+
+        self.assertEqual(
+            movie_details["user_data"]["status"],
+            MovieStatus.EXCLUDED.value,
+        )
+        self.assertEqual(self.tmdb_client.movie_detail_calls, 1)
+
+    def test_invalid_status_does_not_fetch_the_movie(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Invalid movie status"):
+            self.service.set_movie_status(329865, "maybe")
+
+        self.assertEqual(self.tmdb_client.movie_detail_calls, 0)
+        self.assertIsNone(
+            self.movie_repository.get_movie(329865)
         )
 
 
