@@ -21,10 +21,6 @@ def health_check():
     return {"status": "ok"}
 
 
-@app.get("/movies/watched")
-def get_watched_movies():
-    return movie_service.get_watched_movies()
-
 
 @app.post("/movies/watched")
 def add_watched_movie(request: WatchedRequest):
@@ -46,3 +42,12 @@ def search_movies(query: str):
     except Exception as e:
         print(f"SEARCH ERROR: {type(e).__name__}: {e}", flush=True)
         raise
+
+
+@app.get(
+    "/movies/{tmdb_id}",
+    tags=["movies"],
+    summary="Get movie details",
+)
+def get_movie_details(tmdb_id: int):
+    return movie_service.get_movie(tmdb_id)

@@ -35,6 +35,7 @@ class TMDBClient:
         response = self.session.get(
             f"{BASE_URL}/movie/{movie_id}",
             headers=self.headers,
+            params={"append_to_response": "keywords"},
             timeout=10,
         )
         response.raise_for_status()

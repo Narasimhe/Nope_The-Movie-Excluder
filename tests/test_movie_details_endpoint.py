@@ -1,0 +1,59 @@
+import unittest
+from unittest.mock import patch
+
+from app import main
+
+
+class FakeMovieService:
+    def __init__(self) -> None:
+        self.requested_id: int | None = None
+
+    def get_movie(self, tmdb_id: int) -> dict:
+        self.requested_id = tmdb_id
+        return {
+            "tmdb_id": tmdb_id,
+            "title": "The Matrix",
+            "genres": [
+                {
+                    "tmdb_genre_id": 878,
+                    "name": "Science Fiction",
+                }
+            ],
+            "keywords": [
+                {
+                    "keyword_id": 1,
+                    "tmdb_keyword_id": 123,
+                    "name": "artificial reality",
+                    "is_custom": False,
+                    "position": 1,
+                }
+            ],
+        }
+
+
+class MovieDetailsEndpointTests(unittest.TestCase):
+    def test_movie_details_route_is_registered(self) -> None:
+        route_paths = {
+            route.path
+            for route in main.app.routes
+        }
+
+        self.assertIn("/movies/{tmdb_id}", route_paths)
+
+    def test_movie_details_calls_movie_service(self) -> None:
+        fake_service = FakeMovieService()
+
+        with patch.object(main, "movie_service", fake_service):
+            result = main.get_movie_details(603)
+
+        self.assertEqual(fake_service.requested_id, 603)
+        self.assertEqual(result["tmdb_id"], 603)
+        self.assertEqual(result["genres"][0]["name"], "Science Fiction")
+        self.assertEqual(
+            result["keywords"][0]["name"],
+            "artificial reality",
+        )
+
+
+if __name__ == "__main__":
+    unittest.main()

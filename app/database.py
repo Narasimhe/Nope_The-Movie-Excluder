@@ -186,10 +186,26 @@ def initialize_database() -> None:
                 poster_path TEXT,
                 backdrop_path TEXT,
                 vote_average REAL,
-                fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                metadata_fetched_at TEXT
             )
             """
         )
+        movie_columns = {
+            row["name"]
+            for row in connection.execute(
+                "PRAGMA table_info(movies)"
+            ).fetchall()
+        }
+
+        if "metadata_fetched_at" not in movie_columns:
+            connection.execute(
+                """
+                ALTER TABLE movies
+                ADD COLUMN metadata_fetched_at TEXT
+                """
+            )
+
         _migrate_legacy_user_movie_data(connection)
         _create_user_movie_data_table(connection)
         _create_movie_metadata_tables(connection)

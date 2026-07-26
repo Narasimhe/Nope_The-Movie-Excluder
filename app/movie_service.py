@@ -1,3 +1,4 @@
+from app.movie_metadata_repository import MovieMetadataRepository
 from app.movie_repository import MovieRepository
 from app.movie_status import MovieStatus
 from app.tmdb_client import TMDBClient
@@ -5,28 +6,79 @@ from app.user_movie_repository import UserMovieRepository
 
 
 class MovieService:
-    def __init__(self) -> None:
-        self.movie_repository = MovieRepository()
-        self.user_repository = UserMovieRepository()
-        self.tmdb_client = TMDBClient()
+    def __init__(
+        self,
+        movie_repository: MovieRepository | None = None,
+        user_repository: UserMovieRepository | None = None,
+        metadata_repository: MovieMetadataRepository | None = None,
+        tmdb_client: TMDBClient | None = None,
+    ) -> None:
+        self.movie_repository = (
+            movie_repository
+            if movie_repository is not None
+            else MovieRepository()
+        )
+        self.user_repository = (
+            user_repository
+            if user_repository is not None
+            else UserMovieRepository()
+        )
+        self.metadata_repository = (
+            metadata_repository
+            if metadata_repository is not None
+            else MovieMetadataRepository()
+        )
+        self.tmdb_client = (
+            tmdb_client
+            if tmdb_client is not None
+            else TMDBClient()
+        )
 
     def get_movie(self, tmdb_id: int) -> dict:
         local_movie = self.movie_repository.get_movie(tmdb_id)
 
-        if local_movie is not None:
-            return local_movie
+        if (
+            local_movie is None
+            or local_movie.get("metadata_fetched_at") is None
+        ):
+            self._fetch_and_save_movie_metadata(tmdb_id)
+            local_movie = self.movie_repository.get_movie(tmdb_id)
 
-        tmdb_movie = self.tmdb_client.get_movie(tmdb_id)
-        self.movie_repository.save_movie(tmdb_movie)
-
-        saved_movie = self.movie_repository.get_movie(tmdb_id)
-
-        if saved_movie is None:
+        if local_movie is None:
             raise RuntimeError(
                 "Movie was fetched but could not be read from SQLite."
             )
 
-        return saved_movie
+        result = dict(local_movie)
+        result["genres"] = self.metadata_repository.get_movie_genres(
+            tmdb_id
+        )
+        result["keywords"] = (
+            self.metadata_repository.get_movie_keywords(tmdb_id)
+        )
+        return result
+
+    def _fetch_and_save_movie_metadata(self, tmdb_id: int) -> None:
+        tmdb_movie = self.tmdb_client.get_movie(tmdb_id)
+        self.movie_repository.save_movie(tmdb_movie)
+
+        genres = tmdb_movie.get("genres") or []
+        keyword_response = tmdb_movie.get("keywords") or {}
+
+        if isinstance(keyword_response, dict):
+            keywords = keyword_response.get("keywords") or []
+        else:
+            keywords = []
+
+        self.metadata_repository.replace_movie_genres(
+            tmdb_id,
+            genres,
+        )
+        self.metadata_repository.replace_tmdb_keywords(
+            tmdb_id,
+            keywords,
+        )
+        self.movie_repository.mark_metadata_fetched(tmdb_id)
 
     def search_movies(self, query: str) -> list[dict]:
         query = query.strip()

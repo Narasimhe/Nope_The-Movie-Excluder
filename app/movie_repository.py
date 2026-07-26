@@ -155,3 +155,14 @@ class MovieRepository:
             ).fetchall()
 
         return [dict(row) for row in rows]
+
+    def mark_metadata_fetched(self, tmdb_id: int) -> None:
+        with get_connection() as connection:
+            connection.execute(
+                """
+                UPDATE movies
+                SET metadata_fetched_at = CURRENT_TIMESTAMP
+                WHERE tmdb_id = ?
+                """,
+                (tmdb_id,),
+            )
