@@ -1,3 +1,5 @@
+from enum import Enum
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
@@ -43,6 +45,12 @@ class MovieNotesRequest(BaseModel):
 
 class FavoriteRequest(BaseModel):
     is_favorite: bool
+
+
+class KeywordType(str, Enum):
+    ALL = "all"
+    CUSTOM = "custom"
+    TMDB = "tmdb"
 
 
 class AdvancedFiltersRequest(BaseModel):
@@ -263,6 +271,27 @@ def search_companies(query: str, page: int = 1):
 def search_movie_notes(query: str):
     try:
         return movie_service.search_movie_notes(query)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+
+@app.get(
+    "/movies/keywords/search",
+    tags=["movies"],
+    summary="Search cached movies by keyword or custom tag",
+)
+def search_local_movies_by_keyword(
+    query: str,
+    keyword_type: KeywordType = KeywordType.ALL,
+):
+    try:
+        return movie_service.search_local_movies_by_keyword(
+            query,
+            keyword_type.value,
+        )
     except ValueError as error:
         raise HTTPException(
             status_code=400,

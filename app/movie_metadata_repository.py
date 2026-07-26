@@ -600,3 +600,77 @@ class MovieMetadataRepository:
             for keyword in self.get_movie_keywords(tmdb_id)
             if keyword["is_custom"]
         ]
+
+    def search_movie_keyword_links(
+        self,
+        query: str,
+        keyword_type: str = "all",
+    ) -> dict:
+        cleaned_query = self._clean_name(query, "Keyword search")
+
+        if not isinstance(keyword_type, str):
+            raise ValueError(
+                "Keyword type must be all, custom, or tmdb."
+            )
+
+        normalized_type = keyword_type.strip().casefold()
+
+        if normalized_type not in {"all", "custom", "tmdb"}:
+            raise ValueError(
+                "Keyword type must be all, custom, or tmdb."
+            )
+
+        escaped_query = (
+            cleaned_query
+            .replace("\\", "\\\\")
+            .replace("%", "\\%")
+            .replace("_", "\\_")
+        )
+        parameters: list[Any] = [f"%{escaped_query}%"]
+        type_condition = ""
+
+        if normalized_type == "custom":
+            type_condition = "AND k.is_custom = ?"
+            parameters.append(1)
+        elif normalized_type == "tmdb":
+            type_condition = "AND k.is_custom = ?"
+            parameters.append(0)
+
+        parameters.append(cleaned_query)
+
+        with get_connection() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    mk.tmdb_id,
+                    k.keyword_id,
+                    k.tmdb_keyword_id,
+                    k.name,
+                    k.is_custom,
+                    mk.position
+                FROM keywords k
+                JOIN movie_keywords mk
+                    ON k.keyword_id = mk.keyword_id
+                WHERE k.name LIKE ? ESCAPE '\\' COLLATE NOCASE
+                  {type_condition}
+                ORDER BY
+                    CASE
+                        WHEN k.name = ? COLLATE NOCASE THEN 0
+                        ELSE 1
+                    END,
+                    k.name COLLATE NOCASE,
+                    mk.tmdb_id
+                """,
+                parameters,
+            ).fetchall()
+
+        links = [dict(row) for row in rows]
+
+        for link in links:
+            link["is_custom"] = bool(link["is_custom"])
+
+        return {
+            "query": cleaned_query,
+            "keyword_type": normalized_type,
+            "links": links,
+        }

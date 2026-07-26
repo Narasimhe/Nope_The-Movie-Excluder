@@ -216,6 +216,89 @@ class MovieService:
         movies = self.movie_repository.get_movies_by_ids(tmdb_ids)
         return self._enrich_movie_list(movies)
 
+    def search_local_movies_by_keyword(
+        self,
+        query: str,
+        keyword_type: str = "all",
+    ) -> dict:
+        search_result = (
+            self.metadata_repository.search_movie_keyword_links(
+                query,
+                keyword_type,
+            )
+        )
+        links = search_result["links"]
+        movie_ids = list(
+            dict.fromkeys(link["tmdb_id"] for link in links)
+        )
+        movies = self.movie_repository.get_movies_by_ids(movie_ids)
+        movies.sort(
+            key=lambda movie: (
+                (movie.get("title") or "").casefold(),
+                movie["tmdb_id"],
+            )
+        )
+        enriched_movies = self._enrich_movie_list(movies)
+
+        matched_keywords_by_movie: dict[int, list[dict]] = {}
+        matched_keywords: dict[int, dict] = {}
+        movie_ids_by_keyword: dict[int, set[int]] = {}
+
+        for link in links:
+            keyword = {
+                "keyword_id": link["keyword_id"],
+                "tmdb_keyword_id": link["tmdb_keyword_id"],
+                "name": link["name"],
+                "is_custom": link["is_custom"],
+                "position": link["position"],
+            }
+            matched_keywords_by_movie.setdefault(
+                link["tmdb_id"],
+                [],
+            ).append(keyword)
+            matched_keywords.setdefault(
+                link["keyword_id"],
+                {
+                    "keyword_id": link["keyword_id"],
+                    "tmdb_keyword_id": link["tmdb_keyword_id"],
+                    "name": link["name"],
+                    "is_custom": link["is_custom"],
+                },
+            )
+            movie_ids_by_keyword.setdefault(
+                link["keyword_id"],
+                set(),
+            ).add(link["tmdb_id"])
+
+        for movie in enriched_movies:
+            movie["matched_keywords"] = (
+                matched_keywords_by_movie.get(
+                    movie["tmdb_id"],
+                    [],
+                )
+            )
+
+        keyword_summaries = []
+
+        for keyword_id, keyword in matched_keywords.items():
+            keyword_summaries.append(
+                {
+                    **keyword,
+                    "movie_count": len(
+                        movie_ids_by_keyword[keyword_id]
+                    ),
+                }
+            )
+
+        return {
+            "query": search_result["query"],
+            "keyword_type": search_result["keyword_type"],
+            "matched_keyword_count": len(keyword_summaries),
+            "movie_count": len(enriched_movies),
+            "matched_keywords": keyword_summaries,
+            "movies": enriched_movies,
+        }
+
     def set_movie_favorite(
         self,
         tmdb_id: int,
