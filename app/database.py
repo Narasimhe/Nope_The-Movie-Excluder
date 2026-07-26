@@ -52,6 +52,71 @@ def _create_user_movie_data_table(connection: sqlite3.Connection) -> None:
     )
 
 
+def _create_movie_metadata_tables(
+    connection: sqlite3.Connection,
+) -> None:
+    connection.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS genres (
+            tmdb_genre_id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS movie_genres (
+            tmdb_id INTEGER NOT NULL,
+            tmdb_genre_id INTEGER NOT NULL,
+            PRIMARY KEY (tmdb_id, tmdb_genre_id),
+            FOREIGN KEY (tmdb_id)
+                REFERENCES movies (tmdb_id)
+                ON DELETE CASCADE,
+            FOREIGN KEY (tmdb_genre_id)
+                REFERENCES genres (tmdb_genre_id)
+                ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS keywords (
+            keyword_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tmdb_keyword_id INTEGER UNIQUE,
+            name TEXT NOT NULL COLLATE NOCASE,
+            is_custom INTEGER NOT NULL
+                CHECK (is_custom IN (0, 1)),
+            CHECK (
+                (is_custom = 0 AND tmdb_keyword_id IS NOT NULL)
+                OR
+                (is_custom = 1 AND tmdb_keyword_id IS NULL)
+            )
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_unique_custom_keyword_name
+        ON keywords (name COLLATE NOCASE)
+        WHERE is_custom = 1;
+
+        CREATE TABLE IF NOT EXISTS movie_keywords (
+            tmdb_id INTEGER NOT NULL,
+            keyword_id INTEGER NOT NULL,
+            position INTEGER
+                CHECK (
+                    position IS NULL
+                    OR position BETWEEN 1 AND 5
+                ),
+            PRIMARY KEY (tmdb_id, keyword_id),
+            FOREIGN KEY (tmdb_id)
+                REFERENCES movies (tmdb_id)
+                ON DELETE CASCADE,
+            FOREIGN KEY (keyword_id)
+                REFERENCES keywords (keyword_id)
+                ON DELETE CASCADE
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_unique_official_keyword_position
+        ON movie_keywords (tmdb_id, position)
+        WHERE position IS NOT NULL;
+        """
+    )
+
+
 def _migrate_legacy_user_movie_data(
     connection: sqlite3.Connection,
 ) -> None:
@@ -127,6 +192,7 @@ def initialize_database() -> None:
         )
         _migrate_legacy_user_movie_data(connection)
         _create_user_movie_data_table(connection)
+        _create_movie_metadata_tables(connection)
 
 
 if __name__ == "__main__":
