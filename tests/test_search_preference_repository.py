@@ -49,6 +49,10 @@ class SearchPreferenceRepositoryTests(unittest.TestCase):
             "American Sci-Fi",
             {
                 "include_genre_ids": [878],
+                "include_actor_ids": [31],
+                "include_director_ids": [525],
+                "include_company_ids": [9993],
+                "exclude_company_ids": [420],
                 "include_origin_countries": ["us"],
                 "exclude_origin_countries": ["in", "pk"],
                 "minimum_rating": 7,
@@ -71,6 +75,18 @@ class SearchPreferenceRepositoryTests(unittest.TestCase):
         self.assertEqual(
             loaded["filters"]["include_genre_ids"],
             [878],
+        )
+        self.assertEqual(
+            loaded["filters"]["include_actor_ids"],
+            [31],
+        )
+        self.assertEqual(
+            loaded["filters"]["include_director_ids"],
+            [525],
+        )
+        self.assertEqual(
+            loaded["filters"]["include_company_ids"],
+            [9993],
         )
 
     def test_preference_accepts_filter_model(self) -> None:

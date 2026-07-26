@@ -1,4 +1,4 @@
-from app.advanced_filters import AdvancedMovieFilters
+from app.advanced_filters import AdvancedMovieFilters, FilterLogic
 from app.search_preference_repository import (
     SearchPreferenceRepository,
 )
@@ -37,20 +37,28 @@ class AdvancedSearchService:
             page=page,
         )
         candidates = tmdb_response.get("results") or []
+        (
+            directed_movie_ids,
+            director_credit_lookups,
+        ) = self._get_directed_movie_ids(filters)
         results = []
         country_detail_lookups = 0
 
         for movie in candidates:
             candidate = dict(movie)
+            movie_id = candidate.get("id")
+
+            if (
+                directed_movie_ids is not None
+                and (
+                    not self._is_valid_tmdb_id(movie_id)
+                    or movie_id not in directed_movie_ids
+                )
+            ):
+                continue
 
             if filters.needs_country_details(candidate):
-                movie_id = candidate.get("id")
-
-                if (
-                    isinstance(movie_id, bool)
-                    or not isinstance(movie_id, int)
-                    or movie_id <= 0
-                ):
+                if not self._is_valid_tmdb_id(movie_id):
                     continue
 
                 details = (
@@ -87,8 +95,56 @@ class AdvancedSearchService:
             "candidate_count": len(candidates),
             "result_count": len(results),
             "country_detail_lookups": country_detail_lookups,
+            "director_credit_lookups": director_credit_lookups,
             "results": results,
         }
+
+    def _get_directed_movie_ids(
+        self,
+        filters: AdvancedMovieFilters,
+    ) -> tuple[set[int] | None, int]:
+        if not filters.include_director_ids:
+            return None, 0
+
+        movie_id_sets = []
+
+        for person_id in filters.include_director_ids:
+            credits = self.tmdb_client.get_person_movie_credits(
+                person_id
+            )
+            directed_movie_ids = set()
+
+            for credit in credits.get("crew") or []:
+                if (
+                    str(credit.get("job") or "").casefold()
+                    != "director"
+                ):
+                    continue
+
+                movie_id = credit.get("id")
+
+                if self._is_valid_tmdb_id(movie_id):
+                    directed_movie_ids.add(movie_id)
+
+            movie_id_sets.append(directed_movie_ids)
+
+        exact_ids = set(movie_id_sets[0])
+
+        for movie_ids in movie_id_sets[1:]:
+            if filters.director_logic == FilterLogic.AND:
+                exact_ids.intersection_update(movie_ids)
+            else:
+                exact_ids.update(movie_ids)
+
+        return exact_ids, len(movie_id_sets)
+
+    @staticmethod
+    def _is_valid_tmdb_id(value: object) -> bool:
+        return (
+            isinstance(value, int)
+            and not isinstance(value, bool)
+            and value > 0
+        )
 
     def _get_preference(
         self,

@@ -98,6 +98,10 @@ class SearchPreferenceEndpointTests(unittest.TestCase):
             name="American Sci-Fi",
             filters=main.AdvancedFiltersRequest(
                 include_genre_ids=[878],
+                include_actor_ids=[31],
+                include_director_ids=[525],
+                include_company_ids=[9993],
+                exclude_company_ids=[420],
                 include_origin_countries=["US"],
                 exclude_origin_countries=["IN", "PK"],
                 minimum_rating=7,
@@ -118,6 +122,14 @@ class SearchPreferenceEndpointTests(unittest.TestCase):
                 "exclude_origin_countries"
             ],
             ["IN", "PK"],
+        )
+        self.assertEqual(
+            repository.created["filters"]["include_director_ids"],
+            [525],
+        )
+        self.assertEqual(
+            repository.created["filters"]["include_company_ids"],
+            [9993],
         )
         self.assertEqual(
             result["preference"]["name"],

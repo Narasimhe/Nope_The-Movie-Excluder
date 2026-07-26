@@ -37,6 +37,50 @@ class FakeSession:
                 }
             )
 
+        if url.endswith("/search/person"):
+            return FakeResponse(
+                {
+                    "page": 1,
+                    "results": [
+                        {
+                            "id": 525,
+                            "name": "Christopher Nolan",
+                        }
+                    ],
+                    "total_pages": 1,
+                    "total_results": 1,
+                }
+            )
+
+        if url.endswith("/search/company"):
+            return FakeResponse(
+                {
+                    "page": 1,
+                    "results": [
+                        {
+                            "id": 9993,
+                            "name": "Syncopy",
+                        }
+                    ],
+                    "total_pages": 1,
+                    "total_results": 1,
+                }
+            )
+
+        if url.endswith("/person/525/movie_credits"):
+            return FakeResponse(
+                {
+                    "id": 525,
+                    "crew": [
+                        {
+                            "id": 27205,
+                            "title": "Inception",
+                            "job": "Director",
+                        }
+                    ],
+                }
+            )
+
         return FakeResponse(
             {
                 "id": 603,
@@ -102,6 +146,70 @@ class TMDBClientAdvancedDiscoveryTests(unittest.TestCase):
         )
         self.assertNotIn("params", request)
         self.assertEqual(result["origin_country"], ["US"])
+
+    def test_people_search_is_ready_for_autocomplete(self) -> None:
+        client = TMDBClient.__new__(TMDBClient)
+        client.headers = {"Authorization": "Bearer test"}
+        client.session = FakeSession()
+
+        result = client.search_people("  Nolan  ")
+
+        request = client.session.last_request
+        self.assertEqual(
+            request["url"],
+            f"{BASE_URL}/search/person",
+        )
+        self.assertEqual(request["params"]["query"], "Nolan")
+        self.assertFalse(request["params"]["include_adult"])
+        self.assertEqual(
+            result["results"][0]["name"],
+            "Christopher Nolan",
+        )
+
+    def test_company_search_is_ready_for_autocomplete(self) -> None:
+        client = TMDBClient.__new__(TMDBClient)
+        client.headers = {"Authorization": "Bearer test"}
+        client.session = FakeSession()
+
+        result = client.search_companies("Syncopy")
+
+        request = client.session.last_request
+        self.assertEqual(
+            request["url"],
+            f"{BASE_URL}/search/company",
+        )
+        self.assertEqual(request["params"]["query"], "Syncopy")
+        self.assertEqual(result["results"][0]["id"], 9993)
+
+    def test_person_movie_credits_are_available(self) -> None:
+        client = TMDBClient.__new__(TMDBClient)
+        client.headers = {"Authorization": "Bearer test"}
+        client.session = FakeSession()
+
+        result = client.get_person_movie_credits(525)
+
+        request = client.session.last_request
+        self.assertEqual(
+            request["url"],
+            f"{BASE_URL}/person/525/movie_credits",
+        )
+        self.assertEqual(result["crew"][0]["job"], "Director")
+
+    def test_lookup_inputs_are_validated(self) -> None:
+        client = TMDBClient.__new__(TMDBClient)
+        client.headers = {"Authorization": "Bearer test"}
+        client.session = FakeSession()
+
+        invalid_calls = [
+            lambda: client.search_people("   "),
+            lambda: client.search_companies("Syncopy", page=0),
+            lambda: client.get_person_movie_credits(0),
+        ]
+
+        for call in invalid_calls:
+            with self.subTest(call=call):
+                with self.assertRaises(ValueError):
+                    call()
 
 
 if __name__ == "__main__":

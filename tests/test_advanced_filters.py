@@ -15,6 +15,13 @@ class AdvancedMovieFiltersTests(unittest.TestCase):
             include_keyword_ids=[310, 456],
             exclude_keyword_ids=[999],
             keyword_logic="and",
+            include_actor_ids=[31, 287],
+            actor_logic="and",
+            include_director_ids=[525, 7467],
+            director_logic="or",
+            include_company_ids=[4, 9993],
+            exclude_company_ids=[420],
+            company_logic="or",
             include_original_languages=["EN"],
             include_origin_countries=["us"],
             minimum_rating=7,
@@ -33,6 +40,10 @@ class AdvancedMovieFiltersTests(unittest.TestCase):
         self.assertEqual(params["without_genres"], "27|10749")
         self.assertEqual(params["with_keywords"], "310,456")
         self.assertEqual(params["without_keywords"], "999")
+        self.assertEqual(params["with_cast"], "31,287")
+        self.assertEqual(params["with_crew"], "525|7467")
+        self.assertEqual(params["with_companies"], "4|9993")
+        self.assertEqual(params["without_companies"], "420")
         self.assertEqual(params["with_original_language"], "en")
         self.assertEqual(params["with_origin_country"], "US")
         self.assertEqual(params["vote_average.gte"], 7)
@@ -136,6 +147,9 @@ class AdvancedMovieFiltersTests(unittest.TestCase):
     def test_filter_config_is_ready_for_preference_storage(self) -> None:
         filters = AdvancedMovieFilters(
             include_genre_ids=[878],
+            include_actor_ids=[31],
+            include_director_ids=[525],
+            include_company_ids=[4],
             exclude_origin_countries=["in", "pk"],
             country_logic="or",
             minimum_rating=7,
@@ -156,6 +170,12 @@ class AdvancedMovieFiltersTests(unittest.TestCase):
                 "exclude_origin_countries": ["in"],
             },
             {"genre_logic": "maybe"},
+            {"include_actor_ids": [0]},
+            {"include_director_ids": [True]},
+            {
+                "include_company_ids": [4],
+                "exclude_company_ids": [4],
+            },
             {"sort_by": "random.desc"},
         ]
 

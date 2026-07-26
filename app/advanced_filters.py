@@ -38,6 +38,16 @@ class AdvancedMovieFilters:
     exclude_keyword_ids: list[int] = field(default_factory=list)
     keyword_logic: str | FilterLogic = FilterLogic.OR
 
+    include_actor_ids: list[int] = field(default_factory=list)
+    actor_logic: str | FilterLogic = FilterLogic.OR
+
+    include_director_ids: list[int] = field(default_factory=list)
+    director_logic: str | FilterLogic = FilterLogic.OR
+
+    include_company_ids: list[int] = field(default_factory=list)
+    exclude_company_ids: list[int] = field(default_factory=list)
+    company_logic: str | FilterLogic = FilterLogic.OR
+
     include_original_languages: list[str] = field(default_factory=list)
     exclude_original_languages: list[str] = field(default_factory=list)
 
@@ -66,6 +76,18 @@ class AdvancedMovieFilters:
             self.keyword_logic,
             "keyword_logic",
         )
+        self.actor_logic = self._normalize_logic(
+            self.actor_logic,
+            "actor_logic",
+        )
+        self.director_logic = self._normalize_logic(
+            self.director_logic,
+            "director_logic",
+        )
+        self.company_logic = self._normalize_logic(
+            self.company_logic,
+            "company_logic",
+        )
         self.country_logic = self._normalize_logic(
             self.country_logic,
             "country_logic",
@@ -86,6 +108,22 @@ class AdvancedMovieFilters:
         self.exclude_keyword_ids = self._normalize_ids(
             self.exclude_keyword_ids,
             "exclude_keyword_ids",
+        )
+        self.include_actor_ids = self._normalize_ids(
+            self.include_actor_ids,
+            "include_actor_ids",
+        )
+        self.include_director_ids = self._normalize_ids(
+            self.include_director_ids,
+            "include_director_ids",
+        )
+        self.include_company_ids = self._normalize_ids(
+            self.include_company_ids,
+            "include_company_ids",
+        )
+        self.exclude_company_ids = self._normalize_ids(
+            self.exclude_company_ids,
+            "exclude_company_ids",
         )
 
         self.include_original_languages = self._normalize_codes(
@@ -118,6 +156,11 @@ class AdvancedMovieFilters:
             self.include_keyword_ids,
             self.exclude_keyword_ids,
             "keyword",
+        )
+        self._validate_no_overlap(
+            self.include_company_ids,
+            self.exclude_company_ids,
+            "production company",
         )
         self._validate_no_overlap(
             self.include_original_languages,
@@ -185,6 +228,26 @@ class AdvancedMovieFilters:
             params["without_keywords"] = "|".join(
                 str(value)
                 for value in self.exclude_keyword_ids
+            )
+        if self.include_actor_ids:
+            params["with_cast"] = self._join_ids(
+                self.include_actor_ids,
+                self.actor_logic,
+            )
+        if self.include_director_ids:
+            params["with_crew"] = self._join_ids(
+                self.include_director_ids,
+                self.director_logic,
+            )
+        if self.include_company_ids:
+            params["with_companies"] = self._join_ids(
+                self.include_company_ids,
+                self.company_logic,
+            )
+        if self.exclude_company_ids:
+            params["without_companies"] = "|".join(
+                str(value)
+                for value in self.exclude_company_ids
             )
 
         # TMDB accepts one original-language or origin-country value
@@ -288,6 +351,19 @@ class AdvancedMovieFilters:
             "include_keyword_ids": list(self.include_keyword_ids),
             "exclude_keyword_ids": list(self.exclude_keyword_ids),
             "keyword_logic": self.keyword_logic.value,
+            "include_actor_ids": list(self.include_actor_ids),
+            "actor_logic": self.actor_logic.value,
+            "include_director_ids": list(
+                self.include_director_ids
+            ),
+            "director_logic": self.director_logic.value,
+            "include_company_ids": list(
+                self.include_company_ids
+            ),
+            "exclude_company_ids": list(
+                self.exclude_company_ids
+            ),
+            "company_logic": self.company_logic.value,
             "include_original_languages": list(
                 self.include_original_languages
             ),

@@ -15,6 +15,12 @@ class FakePreferenceRepository:
                     "minimum_rating": 7,
                 },
             ),
+            3: self._preference(
+                3,
+                filters={
+                    "include_director_ids": [525],
+                },
+            ),
         }
 
     @staticmethod
@@ -96,6 +102,29 @@ class FakeTMDBClient:
         }
         return countries[movie_id]
 
+    def get_person_movie_credits(self, person_id: int) -> dict:
+        self.asserted_person_id = person_id
+        return {
+            "id": person_id,
+            "crew": [
+                {
+                    "id": 101,
+                    "title": "American Film",
+                    "job": "Director",
+                },
+                {
+                    "id": 202,
+                    "title": "American-Indian Co-production",
+                    "job": "Producer",
+                },
+                {
+                    "id": 303,
+                    "title": "Different Language",
+                    "job": "director",
+                },
+            ],
+        }
+
 
 class AdvancedSearchServiceTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -144,6 +173,16 @@ class AdvancedSearchServiceTests(unittest.TestCase):
             "not found",
         ):
             self.service.search(preference_id=999)
+
+    def test_director_filter_uses_exact_director_credits(self) -> None:
+        result = self.service.search(preference_id=3)
+
+        self.assertEqual(
+            [movie["id"] for movie in result["results"]],
+            [101, 303],
+        )
+        self.assertEqual(result["director_credit_lookups"], 1)
+        self.assertEqual(self.tmdb_client.asserted_person_id, 525)
 
     def test_missing_default_preference_is_rejected(self) -> None:
         self.preference_repository.default_preference = None

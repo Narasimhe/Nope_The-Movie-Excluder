@@ -10,12 +10,13 @@ from app.search_preference_repository import (
 
 app = FastAPI(
     title="Movie Excluder API",
-    version="0.6.0",
+    version="0.7.0",
 )
 
 movie_service = MovieService()
 advanced_search_service = AdvancedSearchService()
 search_preference_repository = SearchPreferenceRepository()
+tmdb_lookup_client = advanced_search_service.tmdb_client
 
 
 class WatchedRequest(BaseModel):
@@ -38,6 +39,14 @@ class AdvancedFiltersRequest(BaseModel):
     include_keyword_ids: list[int] = Field(default_factory=list)
     exclude_keyword_ids: list[int] = Field(default_factory=list)
     keyword_logic: FilterLogic = FilterLogic.OR
+
+    include_actor_ids: list[int] = Field(default_factory=list)
+    actor_logic: FilterLogic = FilterLogic.OR
+    include_director_ids: list[int] = Field(default_factory=list)
+    director_logic: FilterLogic = FilterLogic.OR
+    include_company_ids: list[int] = Field(default_factory=list)
+    exclude_company_ids: list[int] = Field(default_factory=list)
+    company_logic: FilterLogic = FilterLogic.OR
 
     include_original_languages: list[str] = Field(
         default_factory=list
@@ -133,6 +142,89 @@ def search_movies(query: str):
     except Exception as e:
         print(f"SEARCH ERROR: {type(e).__name__}: {e}", flush=True)
         raise
+
+
+@app.get(
+    "/people/search",
+    tags=["TMDB lookup"],
+    summary="Search people for autocomplete",
+)
+def search_people(query: str, page: int = 1):
+    try:
+        response = tmdb_lookup_client.search_people(
+            query,
+            page=page,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    return {
+        "query": " ".join(query.split()),
+        "page": response.get("page", page),
+        "total_pages": response.get("total_pages", 0),
+        "total_results": response.get("total_results", 0),
+        "results": [
+            {
+                "id": person.get("id"),
+                "name": person.get("name"),
+                "known_for_department": person.get(
+                    "known_for_department"
+                ),
+                "profile_path": person.get("profile_path"),
+                "known_for_titles": [
+                    item.get("title")
+                    or item.get("name")
+                    or item.get("original_title")
+                    or item.get("original_name")
+                    for item in person.get("known_for") or []
+                    if (
+                        item.get("title")
+                        or item.get("name")
+                        or item.get("original_title")
+                        or item.get("original_name")
+                    )
+                ],
+            }
+            for person in response.get("results") or []
+        ],
+    }
+
+
+@app.get(
+    "/companies/search",
+    tags=["TMDB lookup"],
+    summary="Search production companies for autocomplete",
+)
+def search_companies(query: str, page: int = 1):
+    try:
+        response = tmdb_lookup_client.search_companies(
+            query,
+            page=page,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    return {
+        "query": " ".join(query.split()),
+        "page": response.get("page", page),
+        "total_pages": response.get("total_pages", 0),
+        "total_results": response.get("total_results", 0),
+        "results": [
+            {
+                "id": company.get("id"),
+                "name": company.get("name"),
+                "origin_country": company.get("origin_country"),
+                "logo_path": company.get("logo_path"),
+            }
+            for company in response.get("results") or []
+        ],
+    }
 
 
 @app.get(
