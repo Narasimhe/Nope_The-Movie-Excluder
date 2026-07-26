@@ -117,6 +117,29 @@ def _create_movie_metadata_tables(
     )
 
 
+def _create_search_preferences_table(
+    connection: sqlite3.Connection,
+) -> None:
+    connection.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS search_preferences (
+            preference_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+            filters_json TEXT NOT NULL,
+            is_default INTEGER NOT NULL DEFAULT 0
+                CHECK (is_default IN (0, 1)),
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS
+            idx_single_default_search_preference
+        ON search_preferences (is_default)
+        WHERE is_default = 1;
+        """
+    )
+
+
 def _migrate_legacy_user_movie_data(
     connection: sqlite3.Connection,
 ) -> None:
@@ -209,6 +232,7 @@ def initialize_database() -> None:
         _migrate_legacy_user_movie_data(connection)
         _create_user_movie_data_table(connection)
         _create_movie_metadata_tables(connection)
+        _create_search_preferences_table(connection)
 
 
 if __name__ == "__main__":
