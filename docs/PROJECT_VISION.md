@@ -42,3 +42,17 @@ TMDB Movie ID will be used as the permanent identifier for each movie.
 
 TMDB = movie information
 SQLite = user preferences and history
+
+## Completed
+
+- Project foundation
+- SQLite database
+- TMDB integration
+- Search V1
+- User state merging
+
+## Current Focus
+
+Movie Details
+
+Build a complete movie details workflow that combines TMDB metadata with the user's local movie state and prepares movies for classification.

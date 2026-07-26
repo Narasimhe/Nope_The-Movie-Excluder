@@ -141,3 +141,26 @@ movie-excluder/
 3. Exclusion engine
 4. Recommendation pipeline
 5. Desktop UI
+
+## Current Status
+
+Completed
+
+- SQLite database foundation
+- TMDB client
+- Repository layer
+- User movie data management
+- Search V1
+- TMDB search integration
+- Bulk user data merging
+
+Current Focus
+
+Movie Details endpoint
+
+Next
+
+- Movie details retrieval
+- Metadata caching
+- Classification actions
+- personal libraries

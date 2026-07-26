@@ -149,3 +149,29 @@ All collection retrieval tests pass successfully.
 Retrieval pipeline verified end-to-end:
 Service → Repository → SQLite → Tests.
 
+## v0.6.0 — Search V1 Complete
+
+### Completed
+
+- Refactored search architecture to use TMDB as the primary search source.
+- Removed cache-first search workflow.
+- Added bulk lookup of local user movie data.
+- Merged TMDB results with personal movie status.
+- Search now returns watched, watchlist, rewatch, excluded and new movies in a unified response.
+- General search no longer filters or caches results.
+- Fixed TMDB bearer token configuration issue.
+
+### Architecture
+
+Search Flow:
+
+User Search
+→ TMDB Search
+→ Bulk User Data Lookup
+→ Merge Results
+→ Return Response
+
+### Notes
+
+Movie metadata caching is deferred until the Movie Details workflow.
+Search remains read-only.
