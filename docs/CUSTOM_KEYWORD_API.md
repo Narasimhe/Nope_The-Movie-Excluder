@@ -32,5 +32,25 @@ This permanently deletes the custom tag and removes it from every linked
 movie. The response includes `affected_movie_count`. Official TMDB keywords
 cannot be deleted through this endpoint.
 
+## Rename or merge a custom keyword everywhere
+
+`PUT /keywords/custom/{keyword_id}`
+
+Request body:
+
+```json
+{
+  "name": "wintry atmosphere"
+}
+```
+
+If the new name is unused, the shared custom tag is renamed and every linked
+movie immediately shows the new name.
+
+If another custom tag already uses that name, the two tags are merged. All
+movie links are moved to the existing tag, duplicate links are avoided, and
+the old tag is deleted. Official TMDB keywords cannot be renamed or merged
+through this endpoint.
+
 `GET /movies/{tmdb_id}` returns the remaining official and custom keywords
 together.

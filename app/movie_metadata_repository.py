@@ -415,6 +415,117 @@ class MovieMetadataRepository:
             "affected_movie_count": affected_movie_count,
         }
 
+    def rename_custom_keyword(
+        self,
+        keyword_id: int,
+        name: str,
+    ) -> dict | None:
+        self._validate_keyword_id(keyword_id)
+        cleaned_name = self._clean_name(name, "Custom keyword")
+
+        with get_connection() as connection:
+            keyword = connection.execute(
+                """
+                SELECT
+                    keyword_id,
+                    name
+                FROM keywords
+                WHERE keyword_id = ?
+                  AND is_custom = 1
+                """,
+                (keyword_id,),
+            ).fetchone()
+
+            if keyword is None:
+                return None
+
+            affected_movie_count = connection.execute(
+                """
+                SELECT COUNT(*)
+                FROM movie_keywords
+                WHERE keyword_id = ?
+                """,
+                (keyword_id,),
+            ).fetchone()[0]
+
+            existing_keyword = connection.execute(
+                """
+                SELECT
+                    keyword_id,
+                    name
+                FROM keywords
+                WHERE is_custom = 1
+                  AND name = ? COLLATE NOCASE
+                  AND keyword_id != ?
+                """,
+                (cleaned_name, keyword_id),
+            ).fetchone()
+
+            if existing_keyword is None:
+                connection.execute(
+                    """
+                    UPDATE keywords
+                    SET name = ?
+                    WHERE keyword_id = ?
+                      AND is_custom = 1
+                    """,
+                    (cleaned_name, keyword_id),
+                )
+
+                return {
+                    "action": "renamed",
+                    "keyword_id": keyword_id,
+                    "name": cleaned_name,
+                    "previous_name": keyword["name"],
+                    "is_custom": True,
+                    "affected_movie_count": affected_movie_count,
+                    "merged_from_keyword_id": None,
+                }
+
+            surviving_keyword_id = existing_keyword["keyword_id"]
+            connection.execute(
+                """
+                INSERT INTO movie_keywords (
+                    tmdb_id,
+                    keyword_id,
+                    position
+                )
+                SELECT
+                    tmdb_id,
+                    ?,
+                    NULL
+                FROM movie_keywords
+                WHERE keyword_id = ?
+                ON CONFLICT(tmdb_id, keyword_id) DO NOTHING
+                """,
+                (surviving_keyword_id, keyword_id),
+            )
+            connection.execute(
+                """
+                DELETE FROM movie_keywords
+                WHERE keyword_id = ?
+                """,
+                (keyword_id,),
+            )
+            connection.execute(
+                """
+                DELETE FROM keywords
+                WHERE keyword_id = ?
+                  AND is_custom = 1
+                """,
+                (keyword_id,),
+            )
+
+            return {
+                "action": "merged",
+                "keyword_id": surviving_keyword_id,
+                "name": existing_keyword["name"],
+                "previous_name": keyword["name"],
+                "is_custom": True,
+                "affected_movie_count": affected_movie_count,
+                "merged_from_keyword_id": keyword_id,
+            }
+
     def _get_movie_keyword(
         self,
         tmdb_id: int,

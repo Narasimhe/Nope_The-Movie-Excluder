@@ -17,6 +17,15 @@ class FakeMovieService:
             "is_custom": True,
             "affected_movie_count": 2,
         }
+        self.renamed_keyword: dict | None = {
+            "action": "renamed",
+            "keyword_id": 51,
+            "name": "wintry atmosphere",
+            "previous_name": "cold ambience",
+            "is_custom": True,
+            "affected_movie_count": 2,
+            "merged_from_keyword_id": None,
+        }
 
     def add_custom_keyword(
         self,
@@ -53,6 +62,23 @@ class FakeMovieService:
         return {
             **self.deleted_keyword,
             "keyword_id": keyword_id,
+        }
+
+    def rename_custom_keyword(
+        self,
+        keyword_id: int,
+        name: str,
+    ) -> dict | None:
+        if not name.strip():
+            raise ValueError("Custom keyword name cannot be empty.")
+
+        if self.renamed_keyword is None:
+            return None
+
+        return {
+            **self.renamed_keyword,
+            "keyword_id": keyword_id,
+            "name": name,
         }
 
 
@@ -143,6 +169,66 @@ class CustomKeywordEndpointTests(unittest.TestCase):
         with patch.object(main, "movie_service", fake_service):
             with self.assertRaises(HTTPException) as context:
                 main.delete_custom_keyword(999)
+
+        self.assertEqual(context.exception.status_code, 404)
+
+    def test_rename_custom_keyword_globally(self) -> None:
+        fake_service = FakeMovieService()
+        request = main.CustomKeywordRequest(
+            name="wintry atmosphere"
+        )
+
+        with patch.object(main, "movie_service", fake_service):
+            result = main.rename_custom_keyword(51, request)
+
+        self.assertEqual(
+            result["message"],
+            "Custom keyword renamed globally",
+        )
+        self.assertEqual(
+            result["keyword"]["name"],
+            "wintry atmosphere",
+        )
+
+    def test_global_custom_keyword_merge_is_reported(self) -> None:
+        fake_service = FakeMovieService()
+        fake_service.renamed_keyword["action"] = "merged"
+        request = main.CustomKeywordRequest(
+            name="wintry atmosphere"
+        )
+
+        with patch.object(main, "movie_service", fake_service):
+            result = main.rename_custom_keyword(51, request)
+
+        self.assertEqual(
+            result["message"],
+            "Custom keywords merged globally",
+        )
+
+    def test_blank_global_custom_keyword_name_returns_400(
+        self,
+    ) -> None:
+        fake_service = FakeMovieService()
+        request = main.CustomKeywordRequest(name="   ")
+
+        with patch.object(main, "movie_service", fake_service):
+            with self.assertRaises(HTTPException) as context:
+                main.rename_custom_keyword(51, request)
+
+        self.assertEqual(context.exception.status_code, 400)
+
+    def test_missing_global_custom_keyword_rename_returns_404(
+        self,
+    ) -> None:
+        fake_service = FakeMovieService()
+        fake_service.renamed_keyword = None
+        request = main.CustomKeywordRequest(
+            name="wintry atmosphere"
+        )
+
+        with patch.object(main, "movie_service", fake_service):
+            with self.assertRaises(HTTPException) as context:
+                main.rename_custom_keyword(999, request)
 
         self.assertEqual(context.exception.status_code, 404)
 

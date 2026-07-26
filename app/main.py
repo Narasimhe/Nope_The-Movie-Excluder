@@ -477,6 +477,44 @@ def delete_custom_keyword(keyword_id: int):
 
 
 @app.put(
+    "/keywords/custom/{keyword_id}",
+    tags=["movies"],
+    summary="Rename or merge a custom keyword globally",
+)
+def rename_custom_keyword(
+    keyword_id: int,
+    request: CustomKeywordRequest,
+):
+    try:
+        renamed = movie_service.rename_custom_keyword(
+            keyword_id,
+            request.name,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    if renamed is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Custom keyword was not found.",
+        )
+
+    message = (
+        "Custom keywords merged globally"
+        if renamed["action"] == "merged"
+        else "Custom keyword renamed globally"
+    )
+
+    return {
+        "message": message,
+        "keyword": renamed,
+    }
+
+
+@app.put(
     "/movies/{tmdb_id}/status",
     tags=["movies"],
     summary="Set a movie status",

@@ -245,6 +245,122 @@ class MovieMetadataRepositoryTests(unittest.TestCase):
             1,
         )
 
+    def test_custom_keyword_can_be_renamed_globally(self) -> None:
+        custom = self.repository.add_custom_keyword(
+            101,
+            "cold ambience",
+        )
+        self.repository.add_custom_keyword(202, "cold ambience")
+
+        renamed = self.repository.rename_custom_keyword(
+            custom["keyword_id"],
+            "wintry atmosphere",
+        )
+
+        self.assertEqual(renamed["action"], "renamed")
+        self.assertEqual(
+            renamed["keyword_id"],
+            custom["keyword_id"],
+        )
+        self.assertEqual(renamed["affected_movie_count"], 2)
+        self.assertEqual(
+            self.repository.get_custom_keywords(101)[0]["name"],
+            "wintry atmosphere",
+        )
+        self.assertEqual(
+            self.repository.get_custom_keywords(202)[0]["name"],
+            "wintry atmosphere",
+        )
+
+    def test_renaming_to_existing_custom_keyword_merges_them(self) -> None:
+        source = self.repository.add_custom_keyword(
+            101,
+            "cold ambience",
+        )
+        self.repository.add_custom_keyword(202, "cold ambience")
+        target = self.repository.add_custom_keyword(
+            101,
+            "wintry atmosphere",
+        )
+
+        merged = self.repository.rename_custom_keyword(
+            source["keyword_id"],
+            "  WINTRY   ATMOSPHERE ",
+        )
+
+        self.assertEqual(merged["action"], "merged")
+        self.assertEqual(
+            merged["keyword_id"],
+            target["keyword_id"],
+        )
+        self.assertEqual(
+            merged["merged_from_keyword_id"],
+            source["keyword_id"],
+        )
+        self.assertEqual(merged["affected_movie_count"], 2)
+
+        first_movie_keywords = (
+            self.repository.get_custom_keywords(101)
+        )
+        second_movie_keywords = (
+            self.repository.get_custom_keywords(202)
+        )
+
+        self.assertEqual(len(first_movie_keywords), 1)
+        self.assertEqual(len(second_movie_keywords), 1)
+        self.assertEqual(
+            first_movie_keywords[0]["keyword_id"],
+            target["keyword_id"],
+        )
+        self.assertEqual(
+            second_movie_keywords[0]["keyword_id"],
+            target["keyword_id"],
+        )
+
+        with database.get_connection() as connection:
+            source_count = connection.execute(
+                """
+                SELECT COUNT(*)
+                FROM keywords
+                WHERE keyword_id = ?
+                """,
+                (source["keyword_id"],),
+            ).fetchone()[0]
+
+        self.assertEqual(source_count, 0)
+
+    def test_official_keyword_cannot_be_globally_renamed(self) -> None:
+        self.repository.replace_tmdb_keywords(
+            101,
+            [{"id": 1001, "name": "alien"}],
+        )
+        official = self.repository.get_tmdb_keywords(101)[0]
+
+        renamed = self.repository.rename_custom_keyword(
+            official["keyword_id"],
+            "visitors",
+        )
+
+        self.assertIsNone(renamed)
+        self.assertEqual(
+            self.repository.get_tmdb_keywords(101)[0]["name"],
+            "alien",
+        )
+
+    def test_blank_global_custom_keyword_name_is_rejected(
+        self,
+    ) -> None:
+        custom = self.repository.add_custom_keyword(
+            101,
+            "cold ambience",
+        )
+
+        with self.assertRaisesRegex(ValueError, "cannot be empty"):
+            self.repository.rename_custom_keyword(
+                custom["keyword_id"],
+                "   ",
+            )
+
     def test_blank_custom_keyword_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "cannot be empty"):
             self.repository.add_custom_keyword(101, "   ")

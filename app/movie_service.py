@@ -173,6 +173,16 @@ class MovieService:
             keyword_id
         )
 
+    def rename_custom_keyword(
+        self,
+        keyword_id: int,
+        name: str,
+    ) -> dict | None:
+        return self.metadata_repository.rename_custom_keyword(
+            keyword_id,
+            name,
+        )
+
     def set_movie_notes(
         self,
         tmdb_id: int,
