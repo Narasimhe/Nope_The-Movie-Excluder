@@ -19,6 +19,10 @@ class CustomKeywordRequest(BaseModel):
     name: str
 
 
+class MovieStatusRequest(BaseModel):
+    status: str
+
+
 @app.get("/health")
 def health_check():
     print("HEALTH ENDPOINT HIT", flush=True)
@@ -38,6 +42,22 @@ def add_watched_movie(request: WatchedRequest):
         "message": "Movie marked as watched",
         "user_movie_data": result,
     }
+
+
+@app.get(
+    "/movies/status/{status}",
+    tags=["movies"],
+    summary="List movies by exact status",
+)
+def get_movies_by_status(status: str):
+    try:
+        return movie_service.get_movies_by_status(status)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
 
 @app.get("/movies/search")
 def search_movies(query: str):
@@ -108,3 +128,29 @@ def remove_custom_keyword(
         )
 
     return {"message": "Custom keyword removed"}
+
+
+@app.put(
+    "/movies/{tmdb_id}/status",
+    tags=["movies"],
+    summary="Set a movie status",
+)
+def set_movie_status(
+    tmdb_id: int,
+    request: MovieStatusRequest,
+):
+    try:
+        user_movie_data = movie_service.set_movie_status(
+            tmdb_id,
+            request.status,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    return {
+        "message": "Movie status updated",
+        "user_movie_data": user_movie_data,
+    }

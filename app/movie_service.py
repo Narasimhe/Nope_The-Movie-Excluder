@@ -1,6 +1,6 @@
 from app.movie_metadata_repository import MovieMetadataRepository
 from app.movie_repository import MovieRepository
-from app.movie_status import MovieStatus
+from app.movie_status import MovieStatus, validate_movie_status
 from app.tmdb_client import TMDBClient
 from app.user_movie_repository import UserMovieRepository
 
@@ -55,6 +55,9 @@ class MovieService:
         )
         result["keywords"] = (
             self.metadata_repository.get_movie_keywords(tmdb_id)
+        )
+        result["user_data"] = (
+            self.user_repository.get_user_movie_data(tmdb_id)
         )
         return result
 
@@ -167,7 +170,15 @@ class MovieService:
         tmdb_id: int,
         status: str | MovieStatus,
     ) -> dict:
-        return self.user_repository.set_status(tmdb_id, status)
+        validated_status = validate_movie_status(status)
+
+        if self.movie_repository.get_movie(tmdb_id) is None:
+            self._fetch_and_save_movie_metadata(tmdb_id)
+
+        return self.user_repository.set_status(
+            tmdb_id,
+            validated_status,
+        )
 
     def _filter_discovery_results(self, movies: list[dict]) -> list[dict]:
         watched_ids = self.user_repository.get_watched_movie_ids()
@@ -186,7 +197,7 @@ class MovieService:
         return filtered_movies  
 
     def exclude_movie(self, tmdb_id: int, notes: str | None = None) -> dict:
-        self.user_repository.set_status(tmdb_id, MovieStatus.EXCLUDED)
+        self.set_movie_status(tmdb_id, MovieStatus.EXCLUDED)
 
         if notes is not None:
             self.user_repository.set_notes(tmdb_id, notes.strip())
@@ -194,16 +205,63 @@ class MovieService:
         return self.user_repository.get_user_movie_data(tmdb_id)
     
     def get_watched_movies(self) -> list[dict]:
-        return self.movie_repository.get_watched_movies()  
+        return self._enrich_movie_list(
+            self.movie_repository.get_watched_movies()
+        )
     
     def get_watchlist_movies(self) -> list[dict]:
-        return self.movie_repository.get_watchlist_movies()
+        return self._enrich_movie_list(
+            self.movie_repository.get_watchlist_movies()
+        )
     
     def get_rewatch_movies(self) -> list[dict]:
-        return self.movie_repository.get_rewatch_movies()
+        return self._enrich_movie_list(
+            self.movie_repository.get_rewatch_movies()
+        )
 
     def get_excluded_movies(self) -> list[dict]:
-        return self.movie_repository.get_excluded_movies()
+        return self._enrich_movie_list(
+            self.movie_repository.get_excluded_movies()
+        )
 
     def get_new_discovery_movies(self) -> list[dict]:
-        return self.movie_repository.get_new_discovery_movies()
+        return self._enrich_movie_list(
+            self.movie_repository.get_new_discovery_movies()
+        )
+
+    def get_movies_by_status(
+        self,
+        status: str | MovieStatus,
+    ) -> list[dict]:
+        validated_status = validate_movie_status(status)
+        return self._enrich_movie_list(
+            self.movie_repository.get_movies_by_status(
+                validated_status
+            )
+        )
+
+    def _enrich_movie_list(
+        self,
+        movies: list[dict],
+    ) -> list[dict]:
+        tmdb_ids = [
+            movie["tmdb_id"]
+            for movie in movies
+        ]
+        genres_by_id = (
+            self.metadata_repository.get_movie_genres_bulk(tmdb_ids)
+        )
+        user_data_by_id = (
+            self.user_repository.get_user_movie_data_bulk(tmdb_ids)
+        )
+
+        results = []
+
+        for movie in movies:
+            result = dict(movie)
+            tmdb_id = result["tmdb_id"]
+            result["genres"] = genres_by_id.get(tmdb_id, [])
+            result["user_data"] = user_data_by_id.get(tmdb_id)
+            results.append(result)
+
+        return results

@@ -1,7 +1,7 @@
 from typing import Any
 
 from app.database import get_connection
-from app.movie_status import MovieStatus
+from app.movie_status import MovieStatus, validate_movie_status
 
 
 class MovieRepository:
@@ -152,6 +152,27 @@ class MovieRepository:
                 ORDER BY m.title
                 """,
                 (MovieStatus.NEW_DISCOVERY.value,),
+            ).fetchall()
+
+        return [dict(row) for row in rows]
+
+    def get_movies_by_status(
+        self,
+        status: str | MovieStatus,
+    ) -> list[dict]:
+        validated_status = validate_movie_status(status)
+
+        with get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT m.*
+                FROM movies m
+                JOIN user_movie_data u
+                    ON m.tmdb_id = u.tmdb_id
+                WHERE u.status = ?
+                ORDER BY m.title
+                """,
+                (validated_status,),
             ).fetchall()
 
         return [dict(row) for row in rows]
