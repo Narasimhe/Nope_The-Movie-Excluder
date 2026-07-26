@@ -1,7 +1,11 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
+from app.advanced_filters import FilterLogic
 from app.movie_service import MovieService
+from app.search_preference_repository import (
+    SearchPreferenceRepository,
+)
 
 app = FastAPI(
     title="Movie Excluder API",
@@ -9,6 +13,7 @@ app = FastAPI(
 )
 
 movie_service = MovieService()
+search_preference_repository = SearchPreferenceRepository()
 
 
 class WatchedRequest(BaseModel):
@@ -21,6 +26,62 @@ class CustomKeywordRequest(BaseModel):
 
 class MovieStatusRequest(BaseModel):
     status: str
+
+
+class AdvancedFiltersRequest(BaseModel):
+    include_genre_ids: list[int] = Field(default_factory=list)
+    exclude_genre_ids: list[int] = Field(default_factory=list)
+    genre_logic: FilterLogic = FilterLogic.OR
+
+    include_keyword_ids: list[int] = Field(default_factory=list)
+    exclude_keyword_ids: list[int] = Field(default_factory=list)
+    keyword_logic: FilterLogic = FilterLogic.OR
+
+    include_original_languages: list[str] = Field(
+        default_factory=list
+    )
+    exclude_original_languages: list[str] = Field(
+        default_factory=list
+    )
+    include_origin_countries: list[str] = Field(
+        default_factory=list
+    )
+    exclude_origin_countries: list[str] = Field(
+        default_factory=list
+    )
+    country_logic: FilterLogic = FilterLogic.OR
+
+    minimum_rating: float | None = None
+    maximum_rating: float | None = None
+    minimum_vote_count: int | None = None
+    release_year_from: int | None = None
+    release_year_to: int | None = None
+    runtime_min: int | None = None
+    runtime_max: int | None = None
+    sort_by: str = "popularity.desc"
+    include_adult: bool = False
+
+
+class SearchPreferenceCreateRequest(BaseModel):
+    name: str
+    filters: AdvancedFiltersRequest = Field(
+        default_factory=AdvancedFiltersRequest
+    )
+    is_default: bool = False
+
+
+class SearchPreferenceUpdateRequest(BaseModel):
+    name: str
+    filters: AdvancedFiltersRequest
+
+
+def _filter_request_to_dict(
+    filters: AdvancedFiltersRequest,
+) -> dict:
+    if hasattr(filters, "model_dump"):
+        return filters.model_dump()
+
+    return filters.dict()
 
 
 @app.get("/health")
@@ -154,3 +215,146 @@ def set_movie_status(
         "message": "Movie status updated",
         "user_movie_data": user_movie_data,
     }
+
+
+@app.post(
+    "/search-preferences",
+    tags=["search preferences"],
+    summary="Create a search preference",
+    status_code=201,
+)
+def create_search_preference(
+    request: SearchPreferenceCreateRequest,
+):
+    try:
+        preference = (
+            search_preference_repository.create_preference(
+                request.name,
+                _filter_request_to_dict(request.filters),
+                is_default=request.is_default,
+            )
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    return {
+        "message": "Search preference created",
+        "preference": preference,
+    }
+
+
+@app.get(
+    "/search-preferences",
+    tags=["search preferences"],
+    summary="List search preferences",
+)
+def list_search_preferences():
+    return search_preference_repository.list_preferences()
+
+
+@app.get(
+    "/search-preferences/{preference_id}",
+    tags=["search preferences"],
+    summary="Get a search preference",
+)
+def get_search_preference(preference_id: int):
+    try:
+        preference = search_preference_repository.get_preference(
+            preference_id
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    if preference is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Search preference was not found.",
+        )
+
+    return preference
+
+
+@app.put(
+    "/search-preferences/{preference_id}",
+    tags=["search preferences"],
+    summary="Update a search preference",
+)
+def update_search_preference(
+    preference_id: int,
+    request: SearchPreferenceUpdateRequest,
+):
+    get_search_preference(preference_id)
+
+    try:
+        preference = (
+            search_preference_repository.update_preference(
+                preference_id,
+                request.name,
+                _filter_request_to_dict(request.filters),
+            )
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    return {
+        "message": "Search preference updated",
+        "preference": preference,
+    }
+
+
+@app.put(
+    "/search-preferences/{preference_id}/default",
+    tags=["search preferences"],
+    summary="Set the default search preference",
+)
+def set_default_search_preference(preference_id: int):
+    get_search_preference(preference_id)
+
+    try:
+        preference = search_preference_repository.set_default(
+            preference_id
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    return {
+        "message": "Default search preference updated",
+        "preference": preference,
+    }
+
+
+@app.delete(
+    "/search-preferences/{preference_id}",
+    tags=["search preferences"],
+    summary="Delete a search preference",
+)
+def delete_search_preference(preference_id: int):
+    try:
+        removed = search_preference_repository.delete_preference(
+            preference_id
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    if not removed:
+        raise HTTPException(
+            status_code=404,
+            detail="Search preference was not found.",
+        )
+
+    return {"message": "Search preference deleted"}
