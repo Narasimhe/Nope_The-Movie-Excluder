@@ -133,6 +133,27 @@ class MovieServiceMetadataIntegrationTests(unittest.TestCase):
             5,
         )
 
+    def test_service_adds_and_removes_a_custom_keyword(self) -> None:
+        added = self.service.add_custom_keyword(
+            329865,
+            "cold ambience",
+        )
+
+        self.assertTrue(added["is_custom"])
+        self.assertEqual(added["name"], "cold ambience")
+        self.assertEqual(self.tmdb_client.movie_detail_calls, 1)
+
+        removed = self.service.remove_custom_keyword(
+            329865,
+            added["keyword_id"],
+        )
+
+        self.assertTrue(removed)
+        self.assertEqual(
+            self.metadata_repository.get_custom_keywords(329865),
+            [],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

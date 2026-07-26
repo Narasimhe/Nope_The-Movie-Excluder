@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from app.movie_service import MovieService
@@ -15,11 +15,19 @@ class WatchedRequest(BaseModel):
     tmdb_id: int
 
 
+class CustomKeywordRequest(BaseModel):
+    name: str
+
+
 @app.get("/health")
 def health_check():
     print("HEALTH ENDPOINT HIT", flush=True)
     return {"status": "ok"}
 
+
+@app.get("/movies/watched")
+def get_watched_movies():
+    return movie_service.get_watched_movies()
 
 
 @app.post("/movies/watched")
@@ -51,3 +59,52 @@ def search_movies(query: str):
 )
 def get_movie_details(tmdb_id: int):
     return movie_service.get_movie(tmdb_id)
+
+
+@app.post(
+    "/movies/{tmdb_id}/keywords/custom",
+    tags=["movies"],
+    summary="Add a custom keyword",
+)
+def add_custom_keyword(
+    tmdb_id: int,
+    request: CustomKeywordRequest,
+):
+    try:
+        keyword = movie_service.add_custom_keyword(
+            tmdb_id,
+            request.name,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+    return {
+        "message": "Custom keyword added",
+        "keyword": keyword,
+    }
+
+
+@app.delete(
+    "/movies/{tmdb_id}/keywords/custom/{keyword_id}",
+    tags=["movies"],
+    summary="Remove a custom keyword",
+)
+def remove_custom_keyword(
+    tmdb_id: int,
+    keyword_id: int,
+):
+    removed = movie_service.remove_custom_keyword(
+        tmdb_id,
+        keyword_id,
+    )
+
+    if not removed:
+        raise HTTPException(
+            status_code=404,
+            detail="Custom keyword link was not found.",
+        )
+
+    return {"message": "Custom keyword removed"}

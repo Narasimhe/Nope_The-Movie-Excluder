@@ -141,6 +141,27 @@ class MovieService:
     def mark_as_new_discovery(self, tmdb_id: int) -> dict:
         return self.set_movie_status(tmdb_id, MovieStatus.NEW_DISCOVERY)
 
+    def add_custom_keyword(
+        self,
+        tmdb_id: int,
+        name: str,
+    ) -> dict:
+        self.get_movie(tmdb_id)
+        return self.metadata_repository.add_custom_keyword(
+            tmdb_id,
+            name,
+        )
+
+    def remove_custom_keyword(
+        self,
+        tmdb_id: int,
+        keyword_id: int,
+    ) -> bool:
+        return self.metadata_repository.remove_custom_keyword(
+            tmdb_id,
+            keyword_id,
+        )
+
     def set_movie_status(
         self,
         tmdb_id: int,
