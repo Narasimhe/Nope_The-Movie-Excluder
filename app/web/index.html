@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#09090b">
+  <meta
+    name="description"
+    content="Search, sort, and remember movies your way."
+  >
+  <title>Movie Excluder</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <div class="site-shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Movie Excluder home">
+        <span class="brand-mark" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </span>
+        <span>
+          <strong>Movie</strong>
+          <em>Excluder</em>
+        </span>
+      </a>
+
+      <form class="search-form" id="movie-search">
+        <label class="sr-only" for="search-query">
+          Search for a movie
+        </label>
+        <span class="search-icon" aria-hidden="true"></span>
+        <input
+          id="search-query"
+          name="query"
+          type="search"
+          placeholder="Search movies..."
+          autocomplete="off"
+          required
+        >
+        <button type="submit">Search</button>
+      </form>
+
+      <a class="api-link" href="/docs" target="_blank" rel="noreferrer">
+        API
+      </a>
+    </header>
+
+    <main class="app-layout">
+      <aside class="sidebar">
+        <p class="sidebar-label">Library</p>
+        <nav class="desktop-nav" aria-label="Movie library">
+          <button class="nav-link is-active" data-view="new_discovery">
+            <span aria-hidden="true">✦</span> Discover
+          </button>
+          <button class="nav-link" data-view="watch_later">
+            <span aria-hidden="true">＋</span> Watch later
+          </button>
+          <button class="nav-link" data-view="watched">
+            <span aria-hidden="true">✓</span> Watched
+          </button>
+          <button class="nav-link" data-view="rewatch">
+            <span aria-hidden="true">↻</span> Rewatch
+          </button>
+          <button class="nav-link" data-view="favorites">
+            <span aria-hidden="true">♥</span> Favourites
+          </button>
+          <button class="nav-link" data-view="excluded">
+            <span aria-hidden="true">×</span> Nope
+          </button>
+        </nav>
+
+        <div class="sidebar-foot">
+          <span class="status-dot"></span>
+          Local database
+        </div>
+      </aside>
+
+      <section class="library" aria-labelledby="library-title">
+        <div class="mobile-nav-wrap">
+          <label for="mobile-view">Your library</label>
+          <select id="mobile-view">
+            <option value="new_discovery">Discover</option>
+            <option value="watch_later">Watch later</option>
+            <option value="watched">Watched</option>
+            <option value="rewatch">Rewatch</option>
+            <option value="excluded">Nope</option>
+            <option value="favorites">Favourites</option>
+          </select>
+        </div>
+
+        <div class="section-heading">
+          <div>
+            <p class="section-kicker" id="library-kicker">
+              Personal library
+            </p>
+            <h2 id="library-title">New discoveries</h2>
+            <p id="library-description">
+              Movies waiting for your decision.
+            </p>
+          </div>
+          <span class="result-count" id="result-count" aria-live="polite">
+            0 movies
+          </span>
+        </div>
+
+        <div class="notice is-hidden" id="notice" role="status"></div>
+
+        <div class="movie-grid" id="movie-grid" aria-live="polite"></div>
+
+        <div class="empty-state is-hidden" id="empty-state">
+          <div class="empty-icon" aria-hidden="true"></div>
+          <h3 id="empty-title">Nothing here yet</h3>
+          <p id="empty-copy">
+            Search for a movie above and give it a personal status.
+          </p>
+          <button id="empty-search-button" type="button">
+            Search movies
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Movie Excluder <span>·</span> your private movie memory</p>
+      <p class="tmdb-note">
+        This product uses the TMDB API but is not endorsed or certified by
+        TMDB.
+      </p>
+    </footer>
+  </div>
+
+  <dialog class="movie-dialog" id="movie-dialog">
+    <button
+      class="dialog-close"
+      id="dialog-close"
+      type="button"
+      aria-label="Close movie details"
+    >
+      ×
+    </button>
+
+    <div class="dialog-loading" id="dialog-loading">
+      Loading movie details…
+    </div>
+
+    <div class="dialog-content is-hidden" id="dialog-content">
+      <div class="dialog-poster-wrap" id="dialog-poster-wrap"></div>
+
+      <div class="dialog-body">
+        <p class="dialog-kicker" id="dialog-kicker">Movie details</p>
+        <h2 id="dialog-title"></h2>
+        <div class="dialog-meta" id="dialog-meta"></div>
+        <p class="dialog-overview" id="dialog-overview"></p>
+
+        <div class="detail-block">
+          <h3>Genres</h3>
+          <div class="tag-list" id="dialog-genres"></div>
+        </div>
+
+        <div class="detail-block">
+          <h3>Keywords</h3>
+          <div class="tag-list" id="dialog-keywords"></div>
+        </div>
+
+        <div class="personal-panel">
+          <div class="status-control">
+            <label for="status-select">Your status</label>
+            <div class="select-row">
+              <select id="status-select">
+                <option value="new_discovery">New discovery</option>
+                <option value="watch_later">Watch later</option>
+                <option value="watched">Watched</option>
+                <option value="rewatch">Rewatch</option>
+                <option value="excluded">Nope</option>
+              </select>
+              <button id="save-status" type="button">Save status</button>
+            </div>
+          </div>
+
+          <button class="favorite-button" id="favorite-button" type="button">
+            <span aria-hidden="true">♥</span>
+            <span id="favorite-label">Add to favourites</span>
+          </button>
+          <p class="favorite-help" id="favorite-help">
+            Favourites are available for watched and rewatch movies.
+          </p>
+        </div>
+      </div>
+    </div>
+  </dialog>
+</body>
+</html>

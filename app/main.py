@@ -1,6 +1,9 @@
 from enum import Enum
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app.advanced_filters import FilterLogic
@@ -18,6 +21,16 @@ from app.super_advanced_search_service import (
 app = FastAPI(
     title="Movie Excluder API",
     version="0.9.0",
+)
+
+APP_DIR = Path(__file__).resolve().parent
+STATIC_DIR = APP_DIR / "static"
+WEB_DIR = APP_DIR / "web"
+
+app.mount(
+    "/static",
+    StaticFiles(directory=STATIC_DIR),
+    name="static",
 )
 
 movie_service = MovieService()
@@ -129,6 +142,11 @@ def _filter_request_to_dict(
         return filters.model_dump()
 
     return filters.dict()
+
+
+@app.get("/", include_in_schema=False)
+def web_home():
+    return FileResponse(WEB_DIR / "index.html")
 
 
 @app.get("/health")
