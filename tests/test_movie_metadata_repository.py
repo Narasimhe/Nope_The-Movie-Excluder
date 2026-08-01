@@ -95,22 +95,22 @@ class MovieMetadataRepositoryTests(unittest.TestCase):
             [53],
         )
 
-    def test_only_first_five_tmdb_keywords_are_saved(self) -> None:
+    def test_only_first_ten_tmdb_keywords_are_saved(self) -> None:
         keywords = [
             {"id": number, "name": f"Keyword {number}"}
-            for number in range(1, 8)
+            for number in range(1, 13)
         ]
 
         saved = self.repository.replace_tmdb_keywords(101, keywords)
 
-        self.assertEqual(len(saved), 5)
+        self.assertEqual(len(saved), 10)
         self.assertEqual(
             [keyword["tmdb_keyword_id"] for keyword in saved],
-            [1, 2, 3, 4, 5],
+            list(range(1, 11)),
         )
         self.assertEqual(
             [keyword["position"] for keyword in saved],
-            [1, 2, 3, 4, 5],
+            list(range(1, 11)),
         )
         self.assertTrue(
             all(not keyword["is_custom"] for keyword in saved)

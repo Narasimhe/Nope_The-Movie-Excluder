@@ -9,11 +9,12 @@
     content="Search, sort, and remember movies your way."
   >
   <title>Movie Excluder</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/styles.css">
   <script src="/static/app.js" defer></script>
 </head>
 <body>
-  <div class="site-shell">
+  <div class="site-shell" id="app-shell">
     <header class="topbar">
       <a class="brand" href="/" aria-label="Movie Excluder home">
         <span class="brand-mark" aria-hidden="true">
@@ -53,7 +54,7 @@
         <p class="sidebar-label">Library</p>
         <nav class="desktop-nav" aria-label="Movie library">
           <button class="nav-link is-active" data-view="new_discovery">
-            <span aria-hidden="true">✦</span> Discover
+            <span aria-hidden="true">✦</span> New discovery
           </button>
           <button class="nav-link" data-view="watch_later">
             <span aria-hidden="true">＋</span> Watch later
@@ -70,6 +71,9 @@
           <button class="nav-link" data-view="excluded">
             <span aria-hidden="true">×</span> Nope
           </button>
+          <button class="nav-link" data-view="entries">
+            <span aria-hidden="true">✎</span> Notes &amp; Links
+          </button>
         </nav>
 
         <div class="sidebar-foot">
@@ -82,14 +86,235 @@
         <div class="mobile-nav-wrap">
           <label for="mobile-view">Your library</label>
           <select id="mobile-view">
-            <option value="new_discovery">Discover</option>
+            <option value="new_discovery">New discovery</option>
             <option value="watch_later">Watch later</option>
             <option value="watched">Watched</option>
             <option value="rewatch">Rewatch</option>
             <option value="excluded">Nope</option>
             <option value="favorites">Favourites</option>
+            <option value="entries">Notes &amp; Links</option>
           </select>
         </div>
+
+        <section class="discovery-workspace" aria-label="Movie discovery">
+          <button class="workspace-collapse" id="workspace-collapse" type="button" aria-expanded="true">
+            <span id="workspace-summary">Discovery controls</span>
+            <span id="workspace-collapse-label">Hide filters</span>
+          </button>
+          <div id="workspace-controls">
+          <div class="mode-switch" role="tablist" aria-label="Search mode">
+            <button
+              class="mode-button is-active"
+              data-discovery-mode="simple"
+              type="button"
+            >Simple Discovery</button>
+            <button
+              class="mode-button"
+              data-discovery-mode="advanced"
+              type="button"
+            >Advanced Search</button>
+            <button
+              class="mode-button"
+              data-discovery-mode="super"
+              type="button"
+            >Super Advanced</button>
+          </div>
+
+          <div class="simple-controls" id="simple-controls">
+            <div>
+              <strong>Explore TMDB without personal filters</strong>
+              <p>Popular discoveries that do not check your saved statuses.</p>
+            </div>
+            <button id="refresh-discovery" type="button">Refresh movies</button>
+          </div>
+
+          <div class="advanced-controls is-hidden" id="advanced-controls">
+            <div class="profile-toolbar">
+              <label for="profile-select">Saved profile</label>
+              <select id="profile-select">
+                <option value="">Unsaved search</option>
+              </select>
+              <button id="save-profile" type="button">Save as new</button>
+              <button id="update-profile" type="button" disabled>Update</button>
+              <button class="danger-button" id="delete-profile" type="button" disabled>
+                Delete
+              </button>
+            </div>
+
+            <form id="advanced-search-form">
+              <div class="filter-grid">
+                <section class="filter-card">
+                  <div class="filter-card-heading">
+                    <div>
+                      <p class="filter-kicker">Movie type</p>
+                      <h3>Genres</h3>
+                    </div>
+                    <label class="compact-select">
+                      Match
+                      <select id="genre-logic">
+                        <option value="or">Any selected</option>
+                        <option value="and">All selected</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div class="filter-pair">
+                    <div class="filter-field">
+                      <span>Include genres</span>
+                      <div class="multi-picker" id="include-genres"></div>
+                    </div>
+                    <div class="filter-field">
+                      <span>Exclude genres</span>
+                      <div class="multi-picker" id="exclude-genres"></div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="filter-card">
+                  <div class="filter-card-heading">
+                    <div>
+                      <p class="filter-kicker">Origin</p>
+                      <h3>Language and country</h3>
+                    </div>
+                  </div>
+                  <div class="filter-pair">
+                    <div class="filter-field">
+                      <span>Include languages</span>
+                      <div class="multi-picker" id="include-languages"></div>
+                    </div>
+                    <div class="filter-field">
+                      <span>Exclude languages</span>
+                      <div class="multi-picker" id="exclude-languages"></div>
+                    </div>
+                    <div class="filter-field">
+                      <span>Include countries</span>
+                      <div class="multi-picker" id="include-countries"></div>
+                    </div>
+                    <div class="filter-field">
+                      <span>Exclude countries</span>
+                      <div class="multi-picker" id="exclude-countries"></div>
+                    </div>
+                  </div>
+                </section>
+
+                <section class="filter-card">
+                  <div class="filter-card-heading">
+                    <div>
+                      <p class="filter-kicker">Quality and time</p>
+                      <h3>Rating and release year</h3>
+                    </div>
+                  </div>
+                  <div class="number-grid">
+                    <label>Minimum rating
+                      <input id="minimum-rating" type="number" min="0" max="10" step="0.1" placeholder="Any">
+                    </label>
+                    <label>Maximum rating
+                      <input id="maximum-rating" type="number" min="0" max="10" step="0.1" placeholder="Any">
+                    </label>
+                    <label>Year from
+                      <input id="release-year-from" type="number" min="1" max="9999" placeholder="Any">
+                    </label>
+                    <label>Year to
+                      <input id="release-year-to" type="number" min="1" max="9999" placeholder="Any">
+                    </label>
+                    <label>Minimum TMDB votes
+                      <input id="minimum-votes" type="number" min="0" step="1" placeholder="Any">
+                    </label>
+                    <label>Sort results
+                      <select id="sort-by">
+                        <option value="popularity.desc">Most popular</option>
+                        <option value="vote_average.desc">Highest rated</option>
+                        <option value="vote_count.desc">Most voted</option>
+                        <option value="primary_release_date.desc">Newest first</option>
+                        <option value="primary_release_date.asc">Oldest first</option>
+                        <option value="title.asc">Title A–Z</option>
+                      </select>
+                    </label>
+                  </div>
+                </section>
+
+                <section class="filter-card people-card">
+                  <div class="filter-card-heading">
+                    <div>
+                      <p class="filter-kicker">People, subjects and studios</p>
+                      <h3>Find by name</h3>
+                    </div>
+                  </div>
+                  <div class="entity-grid">
+                    <div class="entity-picker" data-entity="actors">
+                      <label for="actor-query">Actor</label>
+                      <input id="actor-query" type="search" placeholder="Type an actor name…" autocomplete="off">
+                      <div class="entity-results is-hidden" id="actor-results"></div>
+                      <div class="selected-entities" id="selected-actors"></div>
+                    </div>
+                    <div class="entity-picker" data-entity="directors">
+                      <label for="director-query">Director</label>
+                      <input id="director-query" type="search" placeholder="Type a director name…" autocomplete="off">
+                      <div class="entity-results is-hidden" id="director-results"></div>
+                      <div class="selected-entities" id="selected-directors"></div>
+                    </div>
+                    <div class="entity-picker" data-entity="keywords">
+                      <label for="keyword-query">Include TMDB keyword</label>
+                      <input id="keyword-query" type="search" placeholder="Type a subject or theme…" autocomplete="off">
+                      <div class="entity-results is-hidden" id="keyword-results"></div>
+                      <div class="selected-entities" id="selected-keywords"></div>
+                    </div>
+                    <div class="entity-picker" data-entity="excludedKeywords">
+                      <label for="exclude-keyword-query">Exclude TMDB keyword</label>
+                      <input id="exclude-keyword-query" type="search" placeholder="Type a subject or theme…" autocomplete="off">
+                      <div class="entity-results is-hidden" id="exclude-keyword-results"></div>
+                      <div class="selected-entities" id="selected-excluded-keywords"></div>
+                    </div>
+                    <div class="entity-picker" data-entity="companies">
+                      <label for="company-query">Production company</label>
+                      <input id="company-query" type="search" placeholder="Type a company name…" autocomplete="off">
+                      <div class="entity-results is-hidden" id="company-results"></div>
+                      <div class="selected-entities" id="selected-companies"></div>
+                    </div>
+                    <div class="entity-picker" data-entity="excludedCompanies">
+                      <label for="exclude-company-query">Exclude company</label>
+                      <input id="exclude-company-query" type="search" placeholder="Type a company name…" autocomplete="off">
+                      <div class="entity-results is-hidden" id="exclude-company-results"></div>
+                      <div class="selected-entities" id="selected-excluded-companies"></div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+
+              <section class="personal-filter-card is-hidden" id="personal-filters">
+                <div>
+                  <p class="filter-kicker">Your local library</p>
+                  <h3>Movies allowed in these results</h3>
+                  <p>Watched, Rewatch and Nope are hidden by default.</p>
+                </div>
+                <div class="status-options">
+                  <label><input type="checkbox" name="included-status" value="new_discovery" checked> New discovery</label>
+                  <label><input type="checkbox" name="included-status" value="watch_later" checked> Watch later</label>
+                  <label><input type="checkbox" name="included-status" value="watched"> Watched</label>
+                  <label><input type="checkbox" name="included-status" value="rewatch"> Rewatch</label>
+                  <label><input type="checkbox" name="included-status" value="excluded"> Nope</label>
+                  <label><input id="include-untracked" type="checkbox" checked> Untracked movies</label>
+                </div>
+                <div class="personal-extra">
+                  <label>Notes contain
+                    <input id="notes-query" type="search" placeholder="Optional words from your notes">
+                  </label>
+                  <label class="check-field">
+                    <input id="favorite-only" type="checkbox">
+                    Favourites only
+                  </label>
+                </div>
+              </section>
+
+              <div class="search-actions">
+                <button class="primary-action" id="run-advanced-search" type="submit">
+                  Search movies
+                </button>
+                <button id="reset-filters" type="button">Reset filters</button>
+              </div>
+            </form>
+          </div>
+          </div>
+        </section>
 
         <div class="section-heading">
           <div>
@@ -110,6 +335,8 @@
 
         <div class="movie-grid" id="movie-grid" aria-live="polite"></div>
 
+        <nav class="pagination is-hidden" id="pagination" aria-label="Movie result pages"></nav>
+
         <div class="empty-state is-hidden" id="empty-state">
           <div class="empty-icon" aria-hidden="true"></div>
           <h3 id="empty-title">Nothing here yet</h3>
@@ -120,76 +347,172 @@
             Search movies
           </button>
         </div>
+
+        <section class="entries-page is-hidden" id="entries-page" aria-labelledby="entries-title">
+          <div class="entries-heading">
+            <div>
+              <p class="section-kicker">Your general memory</p>
+              <h2 id="entries-title">Notes &amp; Links</h2>
+              <p>A private notebook for ideas, lists, references and useful sites.</p>
+            </div>
+            <button class="primary-action" id="new-entry" type="button">+ New entry</button>
+          </div>
+          <form class="entry-filters" id="entry-filters">
+            <input id="entry-query" type="search" placeholder="Search notes and links…">
+            <select id="entry-type-filter" aria-label="Entry type">
+              <option value="">All entries</option>
+              <option value="note">Notes</option>
+              <option value="link">Links</option>
+            </select>
+            <select id="entry-year-filter" aria-label="Year"><option value="">Any year</option></select>
+            <select id="entry-month-filter" aria-label="Month">
+              <option value="">Any month</option>
+              <option value="1">January</option><option value="2">February</option>
+              <option value="3">March</option><option value="4">April</option>
+              <option value="5">May</option><option value="6">June</option>
+              <option value="7">July</option><option value="8">August</option>
+              <option value="9">September</option><option value="10">October</option>
+              <option value="11">November</option><option value="12">December</option>
+            </select>
+            <button type="submit">Find</button>
+            <button id="clear-entry-filters" type="button">Clear</button>
+          </form>
+          <div class="entry-list" id="entry-list"></div>
+          <nav class="pagination is-hidden" id="entry-pagination" aria-label="Notes and links pages"></nav>
+        </section>
       </section>
     </main>
 
     <footer>
       <p>Movie Excluder <span>·</span> your private movie memory</p>
-      <p class="tmdb-note">
-        This product uses the TMDB API but is not endorsed or certified by
-        TMDB.
-      </p>
+      <nav class="footer-nav" aria-label="Personal memory pages">
+        <button type="button" data-footer-view="notes">Notes</button>
+        <button type="button" data-footer-view="links">Links</button>
+        <button type="button" data-footer-view="movie-notes">Movie Notes</button>
+      </nav>
     </footer>
   </div>
 
-  <dialog class="movie-dialog" id="movie-dialog">
-    <button
-      class="dialog-close"
-      id="dialog-close"
-      type="button"
-      aria-label="Close movie details"
-    >
-      ×
-    </button>
+  <dialog class="profile-dialog" id="profile-dialog">
+    <form method="dialog" id="profile-name-form">
+      <div>
+        <p class="filter-kicker">Reusable search</p>
+        <h2 id="profile-dialog-title">Save search profile</h2>
+        <p id="profile-dialog-copy">Save the current filters so you can use them again.</p>
+      </div>
+      <label for="profile-name">Profile name</label>
+      <input id="profile-name" maxlength="100" placeholder="American Sci-Fi" required>
+      <div class="profile-dialog-actions">
+        <button value="cancel" type="button" id="cancel-profile">Cancel</button>
+        <button class="primary-action" id="profile-submit" type="submit">Save profile</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog class="profile-dialog entry-dialog" id="entry-dialog">
+    <form method="dialog" id="entry-form">
+      <div>
+        <p class="filter-kicker">General memory</p>
+        <h2 id="entry-dialog-title">New note or link</h2>
+      </div>
+      <label>Type
+        <select id="entry-type"><option value="note">Note</option><option value="link">Link</option></select>
+      </label>
+      <label>Title
+        <input id="entry-title" maxlength="200" required placeholder="Unique space travel keywords">
+      </label>
+      <label>Body
+        <textarea id="entry-body" rows="8" placeholder="Write freely. Lines beginning with - or * become a list."></textarea>
+      </label>
+      <label id="entry-url-field">Links
+        <textarea id="entry-url" rows="4" placeholder="Paste one link per line"></textarea>
+      </label>
+      <div class="profile-dialog-actions">
+        <button type="button" id="cancel-entry">Cancel</button>
+        <button class="primary-action" type="submit" id="save-entry">Save entry</button>
+      </div>
+    </form>
+  </dialog>
+
+  <section class="movie-detail-page is-hidden" id="movie-detail-page">
+    <header class="detail-page-header">
+      <button class="detail-back" id="dialog-close" type="button">
+        <span aria-hidden="true">←</span>
+        Back to movies
+      </button>
+      <span class="detail-brand">Movie Excluder</span>
+    </header>
 
     <div class="dialog-loading" id="dialog-loading">
       Loading movie details…
     </div>
 
-    <div class="dialog-content is-hidden" id="dialog-content">
-      <div class="dialog-poster-wrap" id="dialog-poster-wrap"></div>
-
-      <div class="dialog-body">
-        <p class="dialog-kicker" id="dialog-kicker">Movie details</p>
-        <h2 id="dialog-title"></h2>
-        <div class="dialog-meta" id="dialog-meta"></div>
-        <p class="dialog-overview" id="dialog-overview"></p>
-
-        <div class="detail-block">
-          <h3>Genres</h3>
-          <div class="tag-list" id="dialog-genres"></div>
+    <main class="detail-page-content is-hidden" id="dialog-content">
+      <section class="detail-hero">
+        <div class="detail-poster-column">
+          <div class="dialog-poster-wrap" id="dialog-poster-wrap"></div>
+          <div class="tag-list poster-keywords" id="dialog-keywords"></div>
+          <button class="keyword-add-toggle" id="show-custom-keyword" type="button" aria-label="Add a personal keyword" title="Add a personal keyword">+</button>
+          <form class="custom-keyword-form is-hidden" id="custom-keyword-form">
+            <input id="custom-keyword" maxlength="80" placeholder="Add personal keyword">
+            <button type="submit">Add</button>
+          </form>
+          <p class="inline-feedback" id="keyword-feedback" aria-live="polite"></p>
         </div>
 
-        <div class="detail-block">
-          <h3>Keywords</h3>
-          <div class="tag-list" id="dialog-keywords"></div>
-        </div>
+        <div class="dialog-body">
+          <p class="dialog-kicker" id="dialog-kicker">Movie details</p>
+          <h1 id="dialog-title"></h1>
+          <div class="detail-meta-row">
+            <div class="dialog-meta" id="dialog-meta"></div>
+            <div class="tag-list dialog-genres" id="dialog-genres"></div>
+          </div>
+          <p class="dialog-overview" id="dialog-overview"></p>
+          <div class="credits-lines">
+            <p><strong>Director:</strong> <span id="dialog-directors">—</span></p>
+            <p><strong>Actors:</strong> <span id="dialog-actors">—</span></p>
+          </div>
 
-        <div class="personal-panel">
-          <div class="status-control">
-            <label for="status-select">Your status</label>
-            <div class="select-row">
-              <select id="status-select">
-                <option value="new_discovery">New discovery</option>
-                <option value="watch_later">Watch later</option>
-                <option value="watched">Watched</option>
-                <option value="rewatch">Rewatch</option>
-                <option value="excluded">Nope</option>
-              </select>
-              <button id="save-status" type="button">Save status</button>
+          <div class="personal-panel">
+            <div class="status-control">
+              <label for="status-select">Status</label>
+              <div class="select-row">
+                <select id="status-select">
+                  <option value="new_discovery">New discovery</option>
+                  <option value="watch_later">Watch later</option>
+                  <option value="watched">Watched</option>
+                  <option value="rewatch">Rewatch</option>
+                  <option value="excluded">Nope</option>
+                </select>
+                <button id="save-status" type="button">Save</button>
+                <button class="favorite-button" id="favorite-button" type="button" aria-label="Add to favourites" title="Add to favourites">
+                  <span aria-hidden="true">♥</span>
+                </button>
+              </div>
+              <p class="inline-feedback" id="status-feedback" aria-live="polite"></p>
             </div>
           </div>
 
-          <button class="favorite-button" id="favorite-button" type="button">
-            <span aria-hidden="true">♥</span>
-            <span id="favorite-label">Add to favourites</span>
-          </button>
-          <p class="favorite-help" id="favorite-help">
-            Favourites are available for watched and rewatch movies.
-          </p>
+          <section class="verdict-panel">
+            <div class="panel-heading"><h2>My Verdict</h2><button id="clear-verdict" type="button">Clear</button></div>
+            <div class="star-rating" id="verdict-stars" role="radiogroup" aria-label="My verdict out of 10"></div>
+            <p class="inline-feedback" id="verdict-feedback" aria-live="polite"></p>
+          </section>
+
+          <details class="notes-panel detail-notes" id="notes-panel" open>
+            <summary><span>Personal Memory</span><span class="summary-action">Minimize</span></summary>
+            <label class="sr-only" for="movie-notes">Movie notes</label>
+            <textarea
+              id="movie-notes"
+              rows="6"
+              placeholder="Private thoughts, observations, or anything worth remembering..."
+            ></textarea>
+            <button id="save-notes" type="button">Save notes</button>
+            <p class="inline-feedback" id="notes-feedback" aria-live="polite"></p>
+          </details>
         </div>
-      </div>
-    </div>
-  </dialog>
+      </section>
+    </main>
+  </section>
 </body>
 </html>

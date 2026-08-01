@@ -5,6 +5,8 @@ from app.movie_status import MovieStatus, validate_movie_status
 
 
 class MovieRepository:
+    PAGE_SIZE = 20
+
     def save_movie(self, movie: dict[str, Any]) -> None:
         with get_connection() as connection:
             connection.execute(
@@ -18,9 +20,10 @@ class MovieRepository:
                     poster_path,
                     backdrop_path,
                     vote_average,
+                    original_language,
                     fetched_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
                 ON CONFLICT(tmdb_id) DO UPDATE SET
                     title = excluded.title,
                     original_title = excluded.original_title,
@@ -29,6 +32,7 @@ class MovieRepository:
                     poster_path = excluded.poster_path,
                     backdrop_path = excluded.backdrop_path,
                     vote_average = excluded.vote_average,
+                    original_language = excluded.original_language,
                     fetched_at = CURRENT_TIMESTAMP
                 """,
                 (
@@ -40,6 +44,7 @@ class MovieRepository:
                     movie.get("poster_path"),
                     movie.get("backdrop_path"),
                     movie.get("vote_average"),
+                    movie.get("original_language"),
                 ),
             )
 
@@ -228,12 +233,84 @@ class MovieRepository:
 
         return [dict(row) for row in rows]
 
+    def get_movies_by_status_page(
+        self,
+        status: str | MovieStatus,
+        page: int = 1,
+    ) -> dict:
+        validated_status = validate_movie_status(status)
+        return self._get_user_movie_page(
+            "u.status = ?",
+            (validated_status,),
+            page,
+        )
+
+    def get_watched_movies_page(self, page: int = 1) -> dict:
+        return self._get_user_movie_page(
+            "u.status IN (?, ?)",
+            (MovieStatus.WATCHED.value, MovieStatus.REWATCH.value),
+            page,
+        )
+
+    def get_favorite_movies_page(self, page: int = 1) -> dict:
+        return self._get_user_movie_page(
+            "u.is_favorite = 1 AND u.status IN (?, ?)",
+            (MovieStatus.WATCHED.value, MovieStatus.REWATCH.value),
+            page,
+        )
+
+    def get_movies_with_notes_page(self, page: int = 1) -> dict:
+        return self._get_user_movie_page(
+            "u.notes IS NOT NULL AND TRIM(u.notes) <> ''",
+            (),
+            page,
+        )
+
+    def _get_user_movie_page(
+        self,
+        where_clause: str,
+        parameters: tuple,
+        page: int,
+    ) -> dict:
+        if isinstance(page, bool) or not isinstance(page, int) or page < 1:
+            raise ValueError("Movie page must be at least 1.")
+        offset = (page - 1) * self.PAGE_SIZE
+        with get_connection() as connection:
+            total = connection.execute(
+                f"""
+                SELECT COUNT(*)
+                FROM movies m
+                JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
+                WHERE {where_clause}
+                """,
+                parameters,
+            ).fetchone()[0]
+            rows = connection.execute(
+                f"""
+                SELECT m.*
+                FROM movies m
+                JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
+                WHERE {where_clause}
+                ORDER BY m.title COLLATE NOCASE, m.tmdb_id
+                LIMIT ? OFFSET ?
+                """,
+                (*parameters, self.PAGE_SIZE, offset),
+            ).fetchall()
+        return {
+            "page": page,
+            "page_size": self.PAGE_SIZE,
+            "total_results": total,
+            "total_pages": max(1, (total + self.PAGE_SIZE - 1) // self.PAGE_SIZE),
+            "results": [dict(row) for row in rows],
+        }
+
     def mark_metadata_fetched(self, tmdb_id: int) -> None:
         with get_connection() as connection:
             connection.execute(
                 """
                 UPDATE movies
-                SET metadata_fetched_at = CURRENT_TIMESTAMP
+                SET metadata_fetched_at = CURRENT_TIMESTAMP,
+                    metadata_version = 2
                 WHERE tmdb_id = ?
                 """,
                 (tmdb_id,),

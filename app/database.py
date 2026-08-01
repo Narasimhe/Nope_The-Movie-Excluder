@@ -155,7 +155,7 @@ def _create_movie_metadata_tables(
             position INTEGER
                 CHECK (
                     position IS NULL
-                    OR position BETWEEN 1 AND 5
+                    OR position BETWEEN 1 AND 10
                 ),
             PRIMARY KEY (tmdb_id, keyword_id),
             FOREIGN KEY (tmdb_id)
@@ -170,8 +170,75 @@ def _create_movie_metadata_tables(
             idx_unique_official_keyword_position
         ON movie_keywords (tmdb_id, position)
         WHERE position IS NOT NULL;
+
+        CREATE TABLE IF NOT EXISTS movie_credits (
+            tmdb_id INTEGER NOT NULL,
+            tmdb_person_id INTEGER NOT NULL,
+            name TEXT NOT NULL,
+            credit_type TEXT NOT NULL
+                CHECK (credit_type IN ('director', 'actor')),
+            character_name TEXT,
+            position INTEGER NOT NULL,
+            PRIMARY KEY (tmdb_id, tmdb_person_id, credit_type),
+            FOREIGN KEY (tmdb_id)
+                REFERENCES movies (tmdb_id)
+                ON DELETE CASCADE
+        );
         """
     )
+
+    table_row = connection.execute(
+        """
+        SELECT sql
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'movie_keywords'
+        """
+    ).fetchone()
+
+    table_sql = str(table_row["sql"] or "") if table_row else ""
+
+    if "BETWEEN 1 AND 5" in table_sql:
+        connection.execute(
+            "DROP INDEX IF EXISTS idx_unique_official_keyword_position"
+        )
+        connection.execute(
+            "ALTER TABLE movie_keywords RENAME TO movie_keywords_legacy"
+        )
+        connection.execute(
+            """
+            CREATE TABLE movie_keywords (
+                tmdb_id INTEGER NOT NULL,
+                keyword_id INTEGER NOT NULL,
+                position INTEGER
+                    CHECK (
+                        position IS NULL
+                        OR position BETWEEN 1 AND 10
+                    ),
+                PRIMARY KEY (tmdb_id, keyword_id),
+                FOREIGN KEY (tmdb_id) REFERENCES movies (tmdb_id)
+                    ON DELETE CASCADE,
+                FOREIGN KEY (keyword_id) REFERENCES keywords (keyword_id)
+                    ON DELETE CASCADE
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO movie_keywords (tmdb_id, keyword_id, position)
+            SELECT tmdb_id, keyword_id, position
+            FROM movie_keywords_legacy
+            """
+        )
+        connection.execute("DROP TABLE movie_keywords_legacy")
+        connection.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS
+                idx_unique_official_keyword_position
+            ON movie_keywords (tmdb_id, position)
+            WHERE position IS NOT NULL
+            """
+        )
 
 
 def _create_search_preferences_table(
@@ -183,6 +250,7 @@ def _create_search_preferences_table(
             preference_id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL COLLATE NOCASE UNIQUE,
             filters_json TEXT NOT NULL,
+            personal_filters_json TEXT NOT NULL DEFAULT '{}',
             is_default INTEGER NOT NULL DEFAULT 0
                 CHECK (is_default IN (0, 1)),
             created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -193,6 +261,61 @@ def _create_search_preferences_table(
             idx_single_default_search_preference
         ON search_preferences (is_default)
         WHERE is_default = 1;
+        """
+    )
+
+    columns = {
+        row["name"]
+        for row in connection.execute(
+            "PRAGMA table_info(search_preferences)"
+        ).fetchall()
+    }
+
+    if "personal_filters_json" not in columns:
+        connection.execute(
+            """
+            ALTER TABLE search_preferences
+            ADD COLUMN personal_filters_json TEXT NOT NULL DEFAULT '{}'
+            """
+        )
+
+
+def _create_search_state_table(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS search_state (
+            state_id INTEGER PRIMARY KEY CHECK (state_id = 1),
+            mode TEXT NOT NULL DEFAULT 'simple'
+                CHECK (mode IN ('simple', 'advanced', 'super')),
+            filters_json TEXT NOT NULL DEFAULT '{}',
+            personal_filters_json TEXT NOT NULL DEFAULT '{}',
+            selected_preference_id INTEGER,
+            filters_collapsed INTEGER NOT NULL DEFAULT 0
+                CHECK (filters_collapsed IN (0, 1)),
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+
+
+def _create_general_entries_table(connection: sqlite3.Connection) -> None:
+    connection.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS general_entries (
+            entry_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            entry_type TEXT NOT NULL
+                CHECK (entry_type IN ('note', 'link')),
+            title TEXT NOT NULL,
+            body TEXT,
+            url TEXT,
+            is_deleted INTEGER NOT NULL DEFAULT 0
+                CHECK (is_deleted IN (0, 1)),
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_general_entries_recent
+        ON general_entries (is_deleted, created_at DESC, entry_id DESC);
         """
     )
 
@@ -266,8 +389,10 @@ def initialize_database() -> None:
                 poster_path TEXT,
                 backdrop_path TEXT,
                 vote_average REAL,
+                original_language TEXT,
                 fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                metadata_fetched_at TEXT
+                metadata_fetched_at TEXT,
+                metadata_version INTEGER NOT NULL DEFAULT 2
             )
             """
         )
@@ -286,11 +411,29 @@ def initialize_database() -> None:
                 """
             )
 
+        if "original_language" not in movie_columns:
+            connection.execute(
+                """
+                ALTER TABLE movies
+                ADD COLUMN original_language TEXT
+                """
+            )
+
+        if "metadata_version" not in movie_columns:
+            connection.execute(
+                """
+                ALTER TABLE movies
+                ADD COLUMN metadata_version INTEGER NOT NULL DEFAULT 1
+                """
+            )
+
         _migrate_legacy_user_movie_data(connection)
         _create_user_movie_data_table(connection)
         _ensure_user_movie_favorite_column(connection)
         _create_movie_metadata_tables(connection)
         _create_search_preferences_table(connection)
+        _create_search_state_table(connection)
+        _create_general_entries_table(connection)
 
 
 if __name__ == "__main__":

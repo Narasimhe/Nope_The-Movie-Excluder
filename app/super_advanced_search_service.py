@@ -24,11 +24,7 @@ class SuperAdvancedSearchService(AdvancedSearchService):
         super().__init__(
             tmdb_client=tmdb_client,
             preference_repository=preference_repository,
-        )
-        self.user_repository = (
-            user_repository
-            if user_repository is not None
-            else UserMovieRepository()
+            user_repository=user_repository,
         )
 
     def search(
@@ -39,6 +35,7 @@ class SuperAdvancedSearchService(AdvancedSearchService):
         include_untracked: bool = True,
         notes_query: str | None = None,
         favorite_only: bool = False,
+        filters: AdvancedMovieFilters | dict | None = None,
     ) -> dict:
         if page < 1:
             raise ValueError(
@@ -56,17 +53,25 @@ class SuperAdvancedSearchService(AdvancedSearchService):
         normalized_notes_query = self._normalize_notes_query(
             notes_query
         )
-        preference = self._get_preference(preference_id)
-        filters = AdvancedMovieFilters(**preference["filters"])
-        tmdb_response = self.tmdb_client.discover_movies(
+        preference = self._resolve_preference(
+            preference_id,
             filters,
-            page=page,
         )
-        candidates = tmdb_response.get("results") or []
+        filters = AdvancedMovieFilters(**preference["filters"])
         (
             directed_movie_ids,
             director_credit_lookups,
         ) = self._get_directed_movie_ids(filters)
+        (
+            tmdb_response,
+            candidates,
+            source_pages_scanned,
+            pagination_exact,
+        ) = self._discover_candidates(
+            filters,
+            page,
+            post_filtering=True,
+        )
         director_matches = [
             movie
             for movie in candidates
@@ -147,6 +152,21 @@ class SuperAdvancedSearchService(AdvancedSearchService):
             if filters.matches_local_rules(candidate):
                 results.append(candidate)
 
+        filtered_total = len(results)
+
+        if pagination_exact:
+            start = (page - 1) * self.PAGE_SIZE
+            page_results = results[start:start + self.PAGE_SIZE]
+            visible_total_pages = max(
+                1,
+                (filtered_total + self.PAGE_SIZE - 1) // self.PAGE_SIZE,
+            )
+            visible_total_results = filtered_total
+        else:
+            page_results = results
+            visible_total_pages = None
+            visible_total_results = None
+
         return {
             "preference": {
                 "preference_id": preference["preference_id"],
@@ -163,22 +183,27 @@ class SuperAdvancedSearchService(AdvancedSearchService):
             "favorite_filter": {
                 "favorite_only": favorite_only,
             },
-            "page": tmdb_response.get("page", page),
-            "tmdb_total_pages": tmdb_response.get(
-                "total_pages",
-                0,
-            ),
-            "tmdb_total_results": tmdb_response.get(
-                "total_results",
-                0,
+            "page": page,
+            "tmdb_total_pages": visible_total_pages,
+            "tmdb_total_results": visible_total_results,
+            "raw_tmdb_total_pages": tmdb_response.get("total_pages", 0),
+            "raw_tmdb_total_results": tmdb_response.get("total_results", 0),
+            "source_pages_scanned": source_pages_scanned,
+            "pagination_exact": pagination_exact,
+            "has_previous_page": page > 1,
+            "has_next_page": (
+                page < visible_total_pages
+                if pagination_exact
+                else page < int(tmdb_response.get("total_pages") or 0)
             ),
             "candidate_count": len(candidates),
             "director_match_count": len(director_matches),
             "status_match_count": len(status_matches),
-            "result_count": len(results),
+            "filtered_result_count": filtered_total,
+            "result_count": len(page_results),
             "country_detail_lookups": country_detail_lookups,
             "director_credit_lookups": director_credit_lookups,
-            "results": results,
+            "results": page_results,
         }
 
     @staticmethod

@@ -167,6 +167,20 @@ class AdvancedSearchServiceTests(unittest.TestCase):
         self.assertEqual(result["country_detail_lookups"], 0)
         self.assertEqual(self.tmdb_client.detail_calls, [])
 
+    def test_direct_filters_work_without_a_saved_preference(self) -> None:
+        self.preference_repository.default_preference = None
+
+        result = self.service.search(
+            filters={"include_original_languages": ["en"]},
+        )
+
+        self.assertIsNone(result["preference"]["preference_id"])
+        self.assertEqual(result["preference"]["name"], "Unsaved search")
+        self.assertEqual(
+            [movie["id"] for movie in result["results"]],
+            [101, 202],
+        )
+
     def test_missing_selected_preference_is_rejected(self) -> None:
         with self.assertRaisesRegex(
             LookupError,

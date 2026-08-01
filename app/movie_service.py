@@ -40,6 +40,7 @@ class MovieService:
         if (
             local_movie is None
             or local_movie.get("metadata_fetched_at") is None
+            or int(local_movie.get("metadata_version") or 1) < 2
         ):
             self._fetch_and_save_movie_metadata(tmdb_id)
             local_movie = self.movie_repository.get_movie(tmdb_id)
@@ -56,6 +57,9 @@ class MovieService:
         result["keywords"] = (
             self.metadata_repository.get_movie_keywords(tmdb_id)
         )
+        credits = self.metadata_repository.get_movie_credits(tmdb_id)
+        result["directors"] = credits["directors"]
+        result["actors"] = credits["actors"]
         result["user_data"] = (
             self.user_repository.get_user_movie_data(tmdb_id)
         )
@@ -73,6 +77,8 @@ class MovieService:
         else:
             keywords = []
 
+        credits = tmdb_movie.get("credits") or {}
+
         self.metadata_repository.replace_movie_genres(
             tmdb_id,
             genres,
@@ -80,6 +86,10 @@ class MovieService:
         self.metadata_repository.replace_tmdb_keywords(
             tmdb_id,
             keywords,
+        )
+        self.metadata_repository.replace_movie_credits(
+            tmdb_id,
+            credits if isinstance(credits, dict) else {},
         )
         self.movie_repository.mark_metadata_fetched(tmdb_id)
 
@@ -207,6 +217,28 @@ class MovieService:
 
         return result
 
+    def set_movie_verdict(
+        self,
+        tmdb_id: int,
+        verdict: int | None,
+    ) -> dict:
+        if verdict is not None and (
+            isinstance(verdict, bool)
+            or not isinstance(verdict, int)
+            or verdict < 1
+            or verdict > 10
+        ):
+            raise ValueError(
+                "Movie verdict must be a whole number from 1 to 10, or null."
+            )
+        if self.movie_repository.get_movie(tmdb_id) is None:
+            self._fetch_and_save_movie_metadata(tmdb_id)
+        self.user_repository.set_verdict(tmdb_id, verdict)
+        result = self.user_repository.get_user_movie_data(tmdb_id)
+        if result is None:
+            raise RuntimeError("Movie verdict was saved but not found.")
+        return result
+
     def search_movie_notes(self, query: str) -> list[dict]:
         matching_user_data = self.user_repository.search_notes(query)
         tmdb_ids = [
@@ -297,6 +329,57 @@ class MovieService:
             "movie_count": len(enriched_movies),
             "matched_keywords": keyword_summaries,
             "movies": enriched_movies,
+        }
+
+    def search_local_movies_by_keyword_page(
+        self,
+        query: str,
+        keyword_type: str = "all",
+        page: int = 1,
+    ) -> dict:
+        search_result = (
+            self.metadata_repository.search_movie_keyword_links_page(
+                query,
+                keyword_type,
+                page=page,
+            )
+        )
+        movies = self.movie_repository.get_movies_by_ids(
+            search_result["movie_ids"]
+        )
+        movies.sort(
+            key=lambda movie: (
+                (movie.get("title") or "").casefold(),
+                movie["tmdb_id"],
+            )
+        )
+        enriched_movies = self._enrich_movie_list(movies)
+        links_by_movie: dict[int, list[dict]] = {}
+        for link in search_result["links"]:
+            links_by_movie.setdefault(link["tmdb_id"], []).append({
+                key: link[key]
+                for key in (
+                    "keyword_id",
+                    "tmdb_keyword_id",
+                    "name",
+                    "is_custom",
+                    "position",
+                )
+            })
+        for movie in enriched_movies:
+            movie["matched_keywords"] = links_by_movie.get(
+                movie["tmdb_id"],
+                [],
+            )
+        return {
+            "query": search_result["query"],
+            "keyword_type": search_result["keyword_type"],
+            "page": search_result["page"],
+            "page_size": search_result["page_size"],
+            "total_results": search_result["total_results"],
+            "total_pages": search_result["total_pages"],
+            "movies": enriched_movies,
+            "results": enriched_movies,
         }
 
     def set_movie_favorite(
@@ -392,6 +475,47 @@ class MovieService:
             )
         )
 
+    def get_movies_by_status_page(
+        self,
+        status: str | MovieStatus,
+        page: int = 1,
+    ) -> dict:
+        return self._enrich_page(
+            self.movie_repository.get_movies_by_status_page(status, page)
+        )
+
+    def get_watched_movies_page(self, page: int = 1) -> dict:
+        return self._enrich_page(
+            self.movie_repository.get_watched_movies_page(page)
+        )
+
+    def get_favorite_movies_page(self, page: int = 1) -> dict:
+        return self._enrich_page(
+            self.movie_repository.get_favorite_movies_page(page)
+        )
+
+    def get_movies_with_notes_page(self, page: int = 1) -> dict:
+        return self._enrich_page(
+            self.movie_repository.get_movies_with_notes_page(page)
+        )
+
+    def _enrich_page(self, page_data: dict) -> dict:
+        result = dict(page_data)
+        result["results"] = self._enrich_movie_list(
+            page_data["results"]
+        )
+        return result
+
+    @staticmethod
+    def _empty_page(page: int = 1) -> dict:
+        return {
+            "page": page,
+            "page_size": 20,
+            "total_results": 0,
+            "total_pages": 1,
+            "results": [],
+        }
+
     def _enrich_movie_list(
         self,
         movies: list[dict],
@@ -416,4 +540,50 @@ class MovieService:
             result["user_data"] = user_data_by_id.get(tmdb_id)
             results.append(result)
 
+        return results
+
+    def search_movies_page(self, query: str, page: int = 1) -> dict:
+        query = query.strip()
+        if not query:
+            return self._empty_page(page)
+        response = self.tmdb_client.search_movies_page(query, page=page)
+        results = self._format_tmdb_results(response.get("results") or [])
+        total_pages = min(int(response.get("total_pages") or 0), 500)
+        return {
+            "page": int(response.get("page") or page),
+            "page_size": 20,
+            "total_results": int(response.get("total_results") or 0),
+            "total_pages": max(1, total_pages),
+            "results": results,
+        }
+
+    def _format_tmdb_results(self, tmdb_results: list[dict]) -> list[dict]:
+        tmdb_ids = [
+            movie["id"] for movie in tmdb_results
+            if movie.get("id") is not None
+        ]
+        user_data_by_id = self.user_repository.get_user_movie_data_bulk(
+            tmdb_ids
+        )
+        results = []
+        for movie in tmdb_results:
+            tmdb_id = movie.get("id")
+            if tmdb_id is None:
+                continue
+            release_date = movie.get("release_date") or ""
+            results.append({
+                "tmdb_id": tmdb_id,
+                "title": movie.get("title"),
+                "original_title": movie.get("original_title"),
+                "release_year": release_date[:4] or None,
+                "release_date": release_date or None,
+                "overview": movie.get("overview"),
+                "poster_path": movie.get("poster_path"),
+                "backdrop_path": movie.get("backdrop_path"),
+                "rating": movie.get("vote_average"),
+                "vote_count": movie.get("vote_count"),
+                "genre_ids": movie.get("genre_ids", []),
+                "original_language": movie.get("original_language"),
+                "user_data": user_data_by_id.get(tmdb_id),
+            })
         return results

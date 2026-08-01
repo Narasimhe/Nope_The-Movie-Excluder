@@ -105,6 +105,27 @@ class SearchPreferenceRepositoryTests(unittest.TestCase):
             100,
         )
 
+    def test_preference_remembers_super_advanced_filters(self) -> None:
+        preference = self.repository.create_preference(
+            "Unwatched English",
+            {"include_original_languages": ["en"]},
+            personal_filters={
+                "included_statuses": ["new_discovery"],
+                "include_untracked": True,
+                "notes_query": "cold ambience",
+                "favorite_only": False,
+            },
+        )
+
+        self.assertEqual(
+            preference["personal_filters"]["included_statuses"],
+            ["new_discovery"],
+        )
+        self.assertEqual(
+            preference["personal_filters"]["notes_query"],
+            "cold ambience",
+        )
+
     def test_preference_can_be_updated(self) -> None:
         created = self.repository.create_preference(
             "American Movies",

@@ -37,11 +37,35 @@ class WebUITests(unittest.TestCase):
         self.assertIn('/static/styles.css', index)
         self.assertIn('/static/app.js', index)
         self.assertIn('id="movie-search"', index)
-        self.assertIn('id="movie-dialog"', index)
+        self.assertIn('id="movie-detail-page"', index)
+        self.assertIn('id="movie-notes"', index)
+        self.assertIn('data-discovery-mode="simple"', index)
+        self.assertIn('data-discovery-mode="advanced"', index)
+        self.assertIn('data-discovery-mode="super"', index)
+        self.assertIn('id="profile-select"', index)
+        self.assertIn('id="advanced-search-form"', index)
+        self.assertIn('id="pagination"', index)
+        self.assertIn('id="entries-page"', index)
+        self.assertIn('id="verdict-stars"', index)
+        self.assertIn('id="workspace-collapse"', index)
+        self.assertLess(
+            index.index('id="dialog-genres"'),
+            index.index('class="personal-panel"'),
+        )
+        self.assertLess(
+            index.index('id="dialog-keywords"'),
+            index.index('class="personal-panel"'),
+        )
         self.assertIn("--accent: #f2c94c", styles)
         self.assertIn("/movies/search?query=", script)
         self.assertIn("/movies/status/", script)
         self.assertIn("/favorite", script)
+        self.assertIn("/notes", script)
+        self.assertIn("/movies/discover/advanced", script)
+        self.assertIn("/movies/discover/super-advanced", script)
+        self.assertIn("/search-preferences", script)
+        self.assertIn("/search-state", script)
+        self.assertIn("/entries", script)
 
 
 if __name__ == "__main__":

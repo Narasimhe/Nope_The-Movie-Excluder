@@ -36,7 +36,7 @@ class TMDBClient:
         response = self.session.get(
             f"{BASE_URL}/movie/{movie_id}",
             headers=self.headers,
-            params={"append_to_response": "keywords"},
+            params={"append_to_response": "keywords,credits"},
             timeout=10,
         )
         response.raise_for_status()
@@ -52,14 +52,23 @@ class TMDBClient:
         return response.json()
 
     def search_movies(self, query: str) -> list[dict]:
+        return self.search_movies_page(query, page=1).get("results", [])
+
+    def search_movies_page(self, query: str, page: int = 1) -> dict:
+        cleaned_query = self._validate_search_query(query)
+        self._validate_page(page)
         response = self.session.get(
             f"{BASE_URL}/search/movie",
             headers=self.headers,
-            params={"query": query},
+            params={
+                "query": cleaned_query,
+                "include_adult": False,
+                "page": page,
+            },
             timeout=10,
         )
         response.raise_for_status()
-        return response.json().get("results", [])
+        return response.json()
 
     def search_people(
         self,
@@ -95,6 +104,52 @@ class TMDBClient:
                 "query": cleaned_query,
                 "page": page,
             },
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def search_keywords(
+        self,
+        query: str,
+        page: int = 1,
+    ) -> dict:
+        cleaned_query = self._validate_search_query(query)
+        self._validate_page(page)
+        response = self.session.get(
+            f"{BASE_URL}/search/keyword",
+            headers=self.headers,
+            params={"query": cleaned_query, "page": page},
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_person(self, person_id: int) -> dict:
+        self._validate_positive_id(person_id, "TMDB person ID")
+        response = self.session.get(
+            f"{BASE_URL}/person/{person_id}",
+            headers=self.headers,
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_company(self, company_id: int) -> dict:
+        self._validate_positive_id(company_id, "TMDB company ID")
+        response = self.session.get(
+            f"{BASE_URL}/company/{company_id}",
+            headers=self.headers,
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_keyword(self, keyword_id: int) -> dict:
+        self._validate_positive_id(keyword_id, "TMDB keyword ID")
+        response = self.session.get(
+            f"{BASE_URL}/keyword/{keyword_id}",
+            headers=self.headers,
             timeout=10,
         )
         response.raise_for_status()

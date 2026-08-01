@@ -19,6 +19,7 @@ class FakeSuperAdvancedSearchService:
         include_untracked: bool = True,
         notes_query: str | None = None,
         favorite_only: bool = False,
+        filters: dict | None = None,
     ) -> dict:
         if preference_id == 999:
             raise LookupError("Search preference was not found.")
@@ -34,6 +35,7 @@ class FakeSuperAdvancedSearchService:
             "include_untracked": include_untracked,
             "notes_query": notes_query,
             "favorite_only": favorite_only,
+            "filters": filters,
         }
         return {
             "page": page,
@@ -120,6 +122,26 @@ class SuperAdvancedSearchEndpointTests(unittest.TestCase):
         )
         self.assertTrue(
             service.last_search["favorite_only"]
+        )
+
+    def test_direct_filters_are_forwarded(self) -> None:
+        service = FakeSuperAdvancedSearchService()
+        request = main.SuperAdvancedSearchRequest(
+            filters=main.AdvancedFiltersRequest(
+                include_original_languages=["en"],
+            )
+        )
+
+        with patch.object(
+            main,
+            "super_advanced_search_service",
+            service,
+        ):
+            main.super_advanced_search(request)
+
+        self.assertEqual(
+            service.last_search["filters"]["include_original_languages"],
+            ["en"],
         )
 
     def test_missing_preference_returns_404(self) -> None:

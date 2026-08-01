@@ -28,16 +28,19 @@ class FakeFavoriteService:
             "is_favorite": is_favorite,
         }
 
-    def get_favorite_movies(self) -> list[dict]:
-        return [
-            {
+    def get_favorite_movies_page(self, page: int) -> dict:
+        return {
+            "page": page,
+            "total_results": 1,
+            "total_pages": 1,
+            "results": [{
                 "tmdb_id": 101,
                 "title": "Favorite Movie",
                 "user_data": {
                     "is_favorite": True,
                 },
-            }
-        ]
+            }],
+        }
 
 
 class FavoriteEndpointTests(unittest.TestCase):
@@ -85,8 +88,8 @@ class FavoriteEndpointTests(unittest.TestCase):
         with patch.object(main, "movie_service", service):
             result = main.get_favorite_movies()
 
-        self.assertEqual(result[0]["tmdb_id"], 101)
-        self.assertTrue(result[0]["user_data"]["is_favorite"])
+        self.assertEqual(result["results"][0]["tmdb_id"], 101)
+        self.assertTrue(result["results"][0]["user_data"]["is_favorite"])
 
     def test_unwatched_favorite_attempt_returns_400(self) -> None:
         service = FakeFavoriteService()

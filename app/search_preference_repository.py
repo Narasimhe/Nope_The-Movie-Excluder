@@ -4,6 +4,18 @@ from typing import Any
 
 from app.advanced_filters import AdvancedMovieFilters
 from app.database import get_connection
+from app.movie_status import MovieStatus, validate_movie_status
+
+
+DEFAULT_PERSONAL_SEARCH_FILTERS = {
+    "included_statuses": [
+        MovieStatus.NEW_DISCOVERY.value,
+        MovieStatus.WATCH_LATER.value,
+    ],
+    "include_untracked": True,
+    "notes_query": None,
+    "favorite_only": False,
+}
 
 
 class SearchPreferenceRepository:
@@ -13,9 +25,13 @@ class SearchPreferenceRepository:
         filters: AdvancedMovieFilters | dict[str, Any],
         *,
         is_default: bool = False,
+        personal_filters: dict[str, Any] | None = None,
     ) -> dict:
         cleaned_name = self._clean_name(name)
         filters_json = self._serialize_filters(filters)
+        personal_filters_json = self._serialize_personal_filters(
+            personal_filters
+        )
 
         try:
             with get_connection() as connection:
@@ -27,13 +43,15 @@ class SearchPreferenceRepository:
                     INSERT INTO search_preferences (
                         name,
                         filters_json,
+                        personal_filters_json,
                         is_default
                     )
-                    VALUES (?, ?, ?)
+                    VALUES (?, ?, ?, ?)
                     """,
                     (
                         cleaned_name,
                         filters_json,
+                        personal_filters_json,
                         int(is_default),
                     ),
                 )
@@ -58,10 +76,16 @@ class SearchPreferenceRepository:
         preference_id: int,
         name: str,
         filters: AdvancedMovieFilters | dict[str, Any],
+        personal_filters: dict[str, Any] | None = None,
     ) -> dict:
         self._validate_preference_id(preference_id)
         cleaned_name = self._clean_name(name)
         filters_json = self._serialize_filters(filters)
+        personal_filters_json = (
+            self._serialize_personal_filters(personal_filters)
+            if personal_filters is not None
+            else None
+        )
 
         try:
             with get_connection() as connection:
@@ -71,12 +95,17 @@ class SearchPreferenceRepository:
                     SET
                         name = ?,
                         filters_json = ?,
+                        personal_filters_json = COALESCE(
+                            ?,
+                            personal_filters_json
+                        ),
                         updated_at = CURRENT_TIMESTAMP
                     WHERE preference_id = ?
                     """,
                     (
                         cleaned_name,
                         filters_json,
+                        personal_filters_json,
                         preference_id,
                     ),
                 )
@@ -267,6 +296,69 @@ class SearchPreferenceRepository:
         )
 
     @staticmethod
+    def _normalize_personal_filters(
+        personal_filters: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        values = (
+            DEFAULT_PERSONAL_SEARCH_FILTERS
+            if personal_filters is None
+            else personal_filters
+        )
+
+        if not isinstance(values, dict):
+            raise ValueError("Personal search filters must be an object.")
+
+        raw_statuses = values.get(
+            "included_statuses",
+            DEFAULT_PERSONAL_SEARCH_FILTERS["included_statuses"],
+        )
+
+        if not isinstance(raw_statuses, list):
+            raise ValueError("Included statuses must be a list.")
+
+        statuses = []
+
+        for raw_status in raw_statuses:
+            status = validate_movie_status(raw_status)
+
+            if status not in statuses:
+                statuses.append(status)
+
+        include_untracked = values.get("include_untracked", True)
+        favorite_only = values.get("favorite_only", False)
+
+        if not isinstance(include_untracked, bool):
+            raise ValueError("include_untracked must be true or false.")
+        if not isinstance(favorite_only, bool):
+            raise ValueError("favorite_only must be true or false.")
+
+        notes_query = values.get("notes_query")
+
+        if notes_query is not None:
+            if not isinstance(notes_query, str):
+                raise ValueError("notes_query must be text or null.")
+
+            notes_query = " ".join(notes_query.split()) or None
+
+        return {
+            "included_statuses": statuses,
+            "include_untracked": include_untracked,
+            "notes_query": notes_query,
+            "favorite_only": favorite_only,
+        }
+
+    @classmethod
+    def _serialize_personal_filters(
+        cls,
+        personal_filters: dict[str, Any] | None,
+    ) -> str:
+        return json.dumps(
+            cls._normalize_personal_filters(personal_filters),
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+
+    @staticmethod
     def _row_to_preference(
         row: sqlite3.Row | None,
     ) -> dict | None:
@@ -283,10 +375,23 @@ class SearchPreferenceRepository:
                 "Stored search preference contains invalid filters."
             ) from error
 
+        try:
+            personal_filters = (
+                SearchPreferenceRepository._normalize_personal_filters(
+                    json.loads(row["personal_filters_json"] or "{}")
+                )
+            )
+        except (json.JSONDecodeError, TypeError, ValueError) as error:
+            raise RuntimeError(
+                "Stored search preference contains invalid personal "
+                "filters."
+            ) from error
+
         return {
             "preference_id": row["preference_id"],
             "name": row["name"],
             "filters": filters,
+            "personal_filters": personal_filters,
             "is_default": bool(row["is_default"]),
             "created_at": row["created_at"],
             "updated_at": row["updated_at"],

@@ -8,11 +8,13 @@ from pydantic import BaseModel, Field
 
 from app.advanced_filters import FilterLogic
 from app.advanced_search_service import AdvancedSearchService
+from app.general_entry_repository import GeneralEntryRepository
 from app.movie_service import MovieService
 from app.movie_status import MovieStatus
 from app.search_preference_repository import (
     SearchPreferenceRepository,
 )
+from app.search_state_repository import SearchStateRepository
 from app.super_advanced_search_service import (
     DEFAULT_INCLUDED_STATUSES,
     SuperAdvancedSearchService,
@@ -20,7 +22,7 @@ from app.super_advanced_search_service import (
 
 app = FastAPI(
     title="Movie Excluder API",
-    version="0.9.0",
+    version="1.0.0",
 )
 
 APP_DIR = Path(__file__).resolve().parent
@@ -37,6 +39,8 @@ movie_service = MovieService()
 advanced_search_service = AdvancedSearchService()
 super_advanced_search_service = SuperAdvancedSearchService()
 search_preference_repository = SearchPreferenceRepository()
+search_state_repository = SearchStateRepository()
+general_entry_repository = GeneralEntryRepository()
 tmdb_lookup_client = advanced_search_service.tmdb_client
 
 
@@ -58,6 +62,17 @@ class MovieNotesRequest(BaseModel):
 
 class FavoriteRequest(BaseModel):
     is_favorite: bool
+
+
+class MovieVerdictRequest(BaseModel):
+    verdict: int | None = None
+
+
+class GeneralEntryRequest(BaseModel):
+    entry_type: str
+    title: str
+    body: str | None = None
+    url: str | None = None
 
 
 class KeywordType(str, Enum):
@@ -108,21 +123,55 @@ class AdvancedFiltersRequest(BaseModel):
     include_adult: bool = False
 
 
+class PersonalSearchFiltersRequest(BaseModel):
+    included_statuses: list[MovieStatus] = Field(
+        default_factory=lambda: [
+            MovieStatus.NEW_DISCOVERY,
+            MovieStatus.WATCH_LATER,
+        ]
+    )
+    include_untracked: bool = True
+    notes_query: str | None = None
+    favorite_only: bool = False
+
+
+class SearchStateRequest(BaseModel):
+    mode: str = "simple"
+    filters: AdvancedFiltersRequest = Field(
+        default_factory=AdvancedFiltersRequest
+    )
+    personal_filters: PersonalSearchFiltersRequest = Field(
+        default_factory=PersonalSearchFiltersRequest
+    )
+    selected_preference_id: int | None = None
+    filters_collapsed: bool = False
+
+
 class SearchPreferenceCreateRequest(BaseModel):
     name: str
     filters: AdvancedFiltersRequest = Field(
         default_factory=AdvancedFiltersRequest
     )
     is_default: bool = False
+    personal_filters: PersonalSearchFiltersRequest | None = None
 
 
 class SearchPreferenceUpdateRequest(BaseModel):
     name: str
     filters: AdvancedFiltersRequest
+    personal_filters: PersonalSearchFiltersRequest | None = None
+
+
+class AdvancedSearchExecutionRequest(BaseModel):
+    filters: AdvancedFiltersRequest = Field(
+        default_factory=AdvancedFiltersRequest
+    )
+    page: int = 1
 
 
 class SuperAdvancedSearchRequest(BaseModel):
     preference_id: int | None = None
+    filters: AdvancedFiltersRequest | None = None
     page: int = 1
     included_statuses: list[MovieStatus] = Field(
         default_factory=lambda: [
@@ -144,6 +193,13 @@ def _filter_request_to_dict(
     return filters.dict()
 
 
+def _model_to_dict(model: BaseModel) -> dict:
+    if hasattr(model, "model_dump"):
+        return model.model_dump()
+
+    return model.dict()
+
+
 @app.get("/", include_in_schema=False)
 def web_home():
     return FileResponse(WEB_DIR / "index.html")
@@ -156,8 +212,11 @@ def health_check():
 
 
 @app.get("/movies/watched")
-def get_watched_movies():
-    return movie_service.get_watched_movies()
+def get_watched_movies(page: int = 1):
+    try:
+        return movie_service.get_watched_movies_page(page)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.post("/movies/watched")
@@ -175,9 +234,9 @@ def add_watched_movie(request: WatchedRequest):
     tags=["movies"],
     summary="List movies by exact status",
 )
-def get_movies_by_status(status: str):
+def get_movies_by_status(status: str, page: int = 1):
     try:
-        return movie_service.get_movies_by_status(status)
+        return movie_service.get_movies_by_status_page(status, page)
     except ValueError as error:
         raise HTTPException(
             status_code=400,
@@ -186,12 +245,12 @@ def get_movies_by_status(status: str):
 
 
 @app.get("/movies/search")
-def search_movies(query: str):
+def search_movies(query: str, page: int = 1):
     print(f"Searching for: {query}", flush=True)
 
     try:
-        result = movie_service.search_movies(query)
-        print(f"Returned {len(result)} results", flush=True)
+        result = movie_service.search_movies_page(query, page)
+        print(f"Returned {len(result['results'])} results", flush=True)
         return result
     except Exception as e:
         print(f"SEARCH ERROR: {type(e).__name__}: {e}", flush=True)
@@ -248,6 +307,25 @@ def search_people(query: str, page: int = 1):
 
 
 @app.get(
+    "/people/{person_id}",
+    tags=["TMDB lookup"],
+    summary="Get a person for a saved search profile",
+)
+def get_person(person_id: int):
+    try:
+        person = tmdb_lookup_client.get_person(person_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return {
+        "id": person.get("id"),
+        "name": person.get("name"),
+        "known_for_department": person.get("known_for_department"),
+        "profile_path": person.get("profile_path"),
+    }
+
+
+@app.get(
     "/companies/search",
     tags=["TMDB lookup"],
     summary="Search production companies for autocomplete",
@@ -282,6 +360,74 @@ def search_companies(query: str, page: int = 1):
 
 
 @app.get(
+    "/tmdb-keywords/search",
+    tags=["TMDB lookup"],
+    summary="Search official TMDB keywords for autocomplete",
+)
+def search_tmdb_keywords(query: str, page: int = 1):
+    try:
+        response = tmdb_lookup_client.search_keywords(query, page=page)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return {
+        "query": " ".join(query.split()),
+        "page": response.get("page", page),
+        "total_pages": response.get("total_pages", 0),
+        "total_results": response.get("total_results", 0),
+        "results": [
+            {"id": keyword.get("id"), "name": keyword.get("name")}
+            for keyword in response.get("results") or []
+        ],
+    }
+
+
+@app.get(
+    "/tmdb-keywords/{keyword_id}",
+    tags=["TMDB lookup"],
+    summary="Get an official keyword for a saved search profile",
+)
+def get_tmdb_keyword(keyword_id: int):
+    try:
+        keyword = tmdb_lookup_client.get_keyword(keyword_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return {"id": keyword.get("id"), "name": keyword.get("name")}
+
+
+@app.get(
+    "/companies/{company_id}",
+    tags=["TMDB lookup"],
+    summary="Get a company for a saved search profile",
+)
+def get_company(company_id: int):
+    try:
+        company = tmdb_lookup_client.get_company(company_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+    return {
+        "id": company.get("id"),
+        "name": company.get("name"),
+        "origin_country": company.get("origin_country"),
+        "logo_path": company.get("logo_path"),
+    }
+
+
+@app.get(
+    "/movies/notes",
+    tags=["movies"],
+    summary="List movies with personal notes",
+)
+def get_movies_with_notes(page: int = 1):
+    try:
+        return movie_service.get_movies_with_notes_page(page)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.get(
     "/movies/notes/search",
     tags=["movies"],
     summary="Search personal movie notes",
@@ -304,11 +450,13 @@ def search_movie_notes(query: str):
 def search_local_movies_by_keyword(
     query: str,
     keyword_type: KeywordType = KeywordType.ALL,
+    page: int = 1,
 ):
     try:
-        return movie_service.search_local_movies_by_keyword(
+        return movie_service.search_local_movies_by_keyword_page(
             query,
             keyword_type.value,
+            page,
         )
     except ValueError as error:
         raise HTTPException(
@@ -322,8 +470,11 @@ def search_local_movies_by_keyword(
     tags=["movies"],
     summary="List favorite movies",
 )
-def get_favorite_movies():
-    return movie_service.get_favorite_movies()
+def get_favorite_movies(page: int = 1):
+    try:
+        return movie_service.get_favorite_movies_page(page)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.get(
@@ -353,6 +504,26 @@ def advanced_search(
 
 
 @app.post(
+    "/movies/discover/advanced",
+    tags=["movies"],
+    summary="Run Advanced Search with direct filters",
+)
+def advanced_search_with_filters(
+    request: AdvancedSearchExecutionRequest,
+):
+    try:
+        return advanced_search_service.search(
+            page=request.page,
+            filters=_filter_request_to_dict(request.filters),
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        ) from error
+
+
+@app.post(
     "/movies/discover/super-advanced",
     tags=["movies"],
     summary="Run Super Advanced Search",
@@ -361,13 +532,22 @@ def super_advanced_search(
     request: SuperAdvancedSearchRequest,
 ):
     try:
+        search_arguments = {
+            "preference_id": request.preference_id,
+            "page": request.page,
+            "included_statuses": request.included_statuses,
+            "include_untracked": request.include_untracked,
+            "notes_query": request.notes_query,
+            "favorite_only": request.favorite_only,
+        }
+
+        if request.filters is not None:
+            search_arguments["filters"] = _filter_request_to_dict(
+                request.filters
+            )
+
         return super_advanced_search_service.search(
-            preference_id=request.preference_id,
-            page=request.page,
-            included_statuses=request.included_statuses,
-            include_untracked=request.include_untracked,
-            notes_query=request.notes_query,
-            favorite_only=request.favorite_only,
+            **search_arguments,
         )
     except LookupError as error:
         raise HTTPException(
@@ -412,6 +592,28 @@ def set_movie_notes(
 
     return {
         "message": "Movie notes updated",
+        "user_movie_data": user_movie_data,
+    }
+
+
+@app.put(
+    "/movies/{tmdb_id}/verdict",
+    tags=["movies"],
+    summary="Set or clear a personal 10-star verdict",
+)
+def set_movie_verdict(
+    tmdb_id: int,
+    request: MovieVerdictRequest,
+):
+    try:
+        user_movie_data = movie_service.set_movie_verdict(
+            tmdb_id,
+            request.verdict,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {
+        "message": "Movie verdict updated",
         "user_movie_data": user_movie_data,
     }
 
@@ -597,11 +799,18 @@ def create_search_preference(
     request: SearchPreferenceCreateRequest,
 ):
     try:
+        create_arguments = {"is_default": request.is_default}
+
+        if request.personal_filters is not None:
+            create_arguments["personal_filters"] = _model_to_dict(
+                request.personal_filters
+            )
+
         preference = (
             search_preference_repository.create_preference(
                 request.name,
                 _filter_request_to_dict(request.filters),
-                is_default=request.is_default,
+                **create_arguments,
             )
         )
     except ValueError as error:
@@ -662,11 +871,19 @@ def update_search_preference(
     get_search_preference(preference_id)
 
     try:
+        update_arguments = {}
+
+        if request.personal_filters is not None:
+            update_arguments["personal_filters"] = _model_to_dict(
+                request.personal_filters
+            )
+
         preference = (
             search_preference_repository.update_preference(
                 preference_id,
                 request.name,
                 _filter_request_to_dict(request.filters),
+                **update_arguments,
             )
         )
     except ValueError as error:
@@ -728,3 +945,112 @@ def delete_search_preference(preference_id: int):
         )
 
     return {"message": "Search preference deleted"}
+
+
+@app.get(
+    "/search-state",
+    tags=["search preferences"],
+    summary="Get the active unsaved search state",
+)
+def get_search_state():
+    return search_state_repository.get_state()
+
+
+@app.put(
+    "/search-state",
+    tags=["search preferences"],
+    summary="Remember the active unsaved search state",
+)
+def save_search_state(request: SearchStateRequest):
+    try:
+        return search_state_repository.save_state(
+            mode=request.mode,
+            filters=_filter_request_to_dict(request.filters),
+            personal_filters=_model_to_dict(request.personal_filters),
+            selected_preference_id=request.selected_preference_id,
+            filters_collapsed=request.filters_collapsed,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.get(
+    "/entries",
+    tags=["notes and links"],
+    summary="List general notes and links",
+)
+def list_general_entries(
+    page: int = 1,
+    query: str | None = None,
+    entry_type: str | None = None,
+    year: int | None = None,
+    month: int | None = None,
+):
+    try:
+        return general_entry_repository.list_entries(
+            page=page,
+            query=query,
+            entry_type=entry_type,
+            year=year,
+            month=month,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.post(
+    "/entries",
+    tags=["notes and links"],
+    summary="Create a general note or link",
+    status_code=201,
+)
+def create_general_entry(request: GeneralEntryRequest):
+    try:
+        entry = general_entry_repository.create_entry(
+            request.entry_type,
+            request.title,
+            request.body,
+            request.url,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"message": "Entry created", "entry": entry}
+
+
+@app.put(
+    "/entries/{entry_id}",
+    tags=["notes and links"],
+    summary="Update a general note or link",
+)
+def update_general_entry(
+    entry_id: int,
+    request: GeneralEntryRequest,
+):
+    try:
+        entry = general_entry_repository.update_entry(
+            entry_id,
+            request.entry_type,
+            request.title,
+            request.body,
+            request.url,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Entry was not found.")
+    return {"message": "Entry updated", "entry": entry}
+
+
+@app.delete(
+    "/entries/{entry_id}",
+    tags=["notes and links"],
+    summary="Move a general note or link to trash",
+)
+def delete_general_entry(entry_id: int):
+    try:
+        removed = general_entry_repository.delete_entry(entry_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    if not removed:
+        raise HTTPException(status_code=404, detail="Entry was not found.")
+    return {"message": "Entry moved to trash"}

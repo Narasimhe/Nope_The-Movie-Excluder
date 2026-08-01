@@ -10,7 +10,7 @@ class FakeMovieService:
     def __init__(self) -> None:
         self.requested_status: str | None = None
 
-    def get_movies_by_status(self, status: str) -> list[dict]:
+    def get_movies_by_status_page(self, status: str, page: int) -> dict:
         allowed = {
             "new_discovery",
             "watch_later",
@@ -23,8 +23,11 @@ class FakeMovieService:
             raise ValueError(f"Invalid movie status: {status!r}.")
 
         self.requested_status = status
-        return [
-            {
+        return {
+            "page": page,
+            "total_results": 1,
+            "total_pages": 1,
+            "results": [{
                 "tmdb_id": 603,
                 "title": "The Matrix",
                 "genres": [
@@ -34,8 +37,8 @@ class FakeMovieService:
                     "tmdb_id": 603,
                     "status": status,
                 },
-            }
-        ]
+            }],
+        }
 
 
 class MovieStatusListEndpointTests(unittest.TestCase):
@@ -58,11 +61,11 @@ class MovieStatusListEndpointTests(unittest.TestCase):
             "watch_later",
         )
         self.assertEqual(
-            result[0]["user_data"]["status"],
+            result["results"][0]["user_data"]["status"],
             "watch_later",
         )
         self.assertEqual(
-            result[0]["genres"][0]["name"],
+            result["results"][0]["genres"][0]["name"],
             "Science Fiction",
         )
 

@@ -28,6 +28,7 @@ class FakeTMDBClient:
             "poster_path": "/arrival.jpg",
             "backdrop_path": "/arrival-backdrop.jpg",
             "vote_average": 7.6,
+            "original_language": "en",
             "genres": [
                 {"id": 18, "name": "Drama"},
                 {"id": 878, "name": "Science Fiction"},
@@ -35,8 +36,17 @@ class FakeTMDBClient:
             "keywords": {
                 "keywords": [
                     {"id": number, "name": f"Keyword {number}"}
-                    for number in range(1, 8)
+                    for number in range(1, 13)
                 ]
+            },
+            "credits": {
+                "crew": [
+                    {"id": 10, "name": "Denis Villeneuve", "job": "Director"}
+                ],
+                "cast": [
+                    {"id": 20 + number, "name": f"Actor {number}", "order": number}
+                    for number in range(7)
+                ],
             },
         }
 
@@ -70,7 +80,7 @@ class MovieServiceMetadataIntegrationTests(unittest.TestCase):
             tmdb_client=self.tmdb_client,
         )
 
-    def test_opening_details_saves_genres_and_top_five_keywords(
+    def test_opening_details_saves_genres_credits_and_top_ten_keywords(
         self,
     ) -> None:
         movie = self.service.get_movie(329865)
@@ -83,14 +93,16 @@ class MovieServiceMetadataIntegrationTests(unittest.TestCase):
             },
             {18, 878},
         )
-        self.assertEqual(len(movie["keywords"]), 5)
+        self.assertEqual(len(movie["keywords"]), 10)
         self.assertEqual(
             [
                 keyword["tmdb_keyword_id"]
                 for keyword in movie["keywords"]
             ],
-            [1, 2, 3, 4, 5],
+            list(range(1, 11)),
         )
+        self.assertEqual(movie["directors"][0]["name"], "Denis Villeneuve")
+        self.assertEqual(len(movie["actors"]), 5)
         self.assertIsNotNone(movie["metadata_fetched_at"])
 
     def test_second_open_uses_saved_metadata(self) -> None:
@@ -99,7 +111,7 @@ class MovieServiceMetadataIntegrationTests(unittest.TestCase):
 
         self.assertEqual(self.tmdb_client.movie_detail_calls, 1)
         self.assertEqual(len(second_result["genres"]), 2)
-        self.assertEqual(len(second_result["keywords"]), 5)
+        self.assertEqual(len(second_result["keywords"]), 10)
 
     def test_old_saved_movie_is_enriched_when_opened(self) -> None:
         self.movie_repository.save_movie(
@@ -131,7 +143,7 @@ class MovieServiceMetadataIntegrationTests(unittest.TestCase):
                     if not keyword["is_custom"]
                 ]
             ),
-            5,
+            10,
         )
 
     def test_service_adds_and_removes_a_custom_keyword(self) -> None:

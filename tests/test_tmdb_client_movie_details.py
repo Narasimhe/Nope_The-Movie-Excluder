@@ -31,7 +31,7 @@ class FakeSession:
 
 
 class TMDBClientMovieDetailsTests(unittest.TestCase):
-    def test_movie_details_appends_keywords(self) -> None:
+    def test_movie_details_appends_keywords_and_credits(self) -> None:
         client = TMDBClient.__new__(TMDBClient)
         client.headers = {"Authorization": "Bearer test"}
         client.session = FakeSession()
@@ -45,7 +45,7 @@ class TMDBClientMovieDetailsTests(unittest.TestCase):
         )
         self.assertEqual(
             client.session.last_request["params"],
-            {"append_to_response": "keywords"},
+            {"append_to_response": "keywords,credits"},
         )
         self.assertEqual(
             client.session.last_request["timeout"],

@@ -1,9 +1,11 @@
-from dotenv import load_dotenv
 import os
 
-load_dotenv()
-from dotenv import load_dotenv
-import os
+try:
+    from dotenv import load_dotenv
+except ImportError:  # Helpful for lightweight test environments.
+    def load_dotenv() -> bool:
+        return False
+
 
 loaded = load_dotenv()
 

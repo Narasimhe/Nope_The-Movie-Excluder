@@ -10,10 +10,11 @@ class FakeMovieService:
     def __init__(self) -> None:
         self.request: tuple[str, str] | None = None
 
-    def search_local_movies_by_keyword(
+    def search_local_movies_by_keyword_page(
         self,
         query: str,
         keyword_type: str,
+        page: int,
     ) -> dict:
         if not query.strip():
             raise ValueError("Keyword search name cannot be empty.")
@@ -22,17 +23,9 @@ class FakeMovieService:
         return {
             "query": query,
             "keyword_type": keyword_type,
-            "matched_keyword_count": 1,
-            "movie_count": 1,
-            "matched_keywords": [
-                {
-                    "keyword_id": 51,
-                    "tmdb_keyword_id": None,
-                    "name": "Marvel",
-                    "is_custom": True,
-                    "movie_count": 1,
-                }
-            ],
+            "page": page,
+            "total_results": 1,
+            "total_pages": 1,
             "movies": [
                 {
                     "tmdb_id": 1726,
@@ -75,7 +68,7 @@ class LocalKeywordSearchEndpointTests(unittest.TestCase):
             fake_service.request,
             ("marvel", "custom"),
         )
-        self.assertEqual(result["movie_count"], 1)
+        self.assertEqual(result["total_results"], 1)
         self.assertEqual(
             result["movies"][0]["user_data"]["status"],
             "watched",

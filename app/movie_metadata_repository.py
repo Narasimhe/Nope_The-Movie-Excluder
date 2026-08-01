@@ -3,7 +3,8 @@ from typing import Any
 from app.database import get_connection
 
 
-MAX_TMDB_KEYWORDS = 5
+MAX_TMDB_KEYWORDS = 10
+MAX_MAIN_ACTORS = 5
 
 
 class MovieMetadataRepository:
@@ -601,6 +602,113 @@ class MovieMetadataRepository:
             if keyword["is_custom"]
         ]
 
+    def replace_movie_credits(
+        self,
+        tmdb_id: int,
+        credits: dict[str, Any],
+    ) -> dict[str, list[dict]]:
+        self._validate_movie_id(tmdb_id)
+        if not isinstance(credits, dict):
+            raise ValueError("Movie credits must be an object.")
+
+        directors = []
+        seen_directors = set()
+        for person in credits.get("crew") or []:
+            if str(person.get("job") or "").casefold() != "director":
+                continue
+            person_id = person.get("id")
+            if (
+                isinstance(person_id, bool)
+                or not isinstance(person_id, int)
+                or person_id <= 0
+                or person_id in seen_directors
+            ):
+                continue
+            name = self._clean_name(person.get("name"), "Director")
+            directors.append((person_id, name, None))
+            seen_directors.add(person_id)
+
+        actors = []
+        seen_actors = set()
+        cast = sorted(
+            credits.get("cast") or [],
+            key=lambda person: person.get("order", 999999),
+        )
+        for person in cast:
+            person_id = person.get("id")
+            if (
+                isinstance(person_id, bool)
+                or not isinstance(person_id, int)
+                or person_id <= 0
+                or person_id in seen_actors
+            ):
+                continue
+            name = self._clean_name(person.get("name"), "Actor")
+            character = " ".join(str(person.get("character") or "").split())
+            actors.append((person_id, name, character or None))
+            seen_actors.add(person_id)
+            if len(actors) == MAX_MAIN_ACTORS:
+                break
+
+        with get_connection() as connection:
+            connection.execute(
+                "DELETE FROM movie_credits WHERE tmdb_id = ?",
+                (tmdb_id,),
+            )
+            for position, (person_id, name, character) in enumerate(
+                directors, start=1
+            ):
+                connection.execute(
+                    """
+                    INSERT INTO movie_credits (
+                        tmdb_id, tmdb_person_id, name, credit_type,
+                        character_name, position
+                    )
+                    VALUES (?, ?, ?, 'director', ?, ?)
+                    """,
+                    (tmdb_id, person_id, name, character, position),
+                )
+            for position, (person_id, name, character) in enumerate(
+                actors, start=1
+            ):
+                connection.execute(
+                    """
+                    INSERT INTO movie_credits (
+                        tmdb_id, tmdb_person_id, name, credit_type,
+                        character_name, position
+                    )
+                    VALUES (?, ?, ?, 'actor', ?, ?)
+                    """,
+                    (tmdb_id, person_id, name, character, position),
+                )
+
+        return self.get_movie_credits(tmdb_id)
+
+    def get_movie_credits(self, tmdb_id: int) -> dict[str, list[dict]]:
+        self._validate_movie_id(tmdb_id)
+        with get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT tmdb_person_id, name, credit_type,
+                       character_name, position
+                FROM movie_credits
+                WHERE tmdb_id = ?
+                ORDER BY credit_type DESC, position
+                """,
+                (tmdb_id,),
+            ).fetchall()
+        result = {"directors": [], "actors": []}
+        for row in rows:
+            credit = {
+                "tmdb_person_id": row["tmdb_person_id"],
+                "name": row["name"],
+                "character": row["character_name"],
+                "position": row["position"],
+            }
+            key = "directors" if row["credit_type"] == "director" else "actors"
+            result[key].append(credit)
+        return result
+
     def search_movie_keyword_links(
         self,
         query: str,
@@ -673,4 +781,38 @@ class MovieMetadataRepository:
             "query": cleaned_query,
             "keyword_type": normalized_type,
             "links": links,
+        }
+
+    def search_movie_keyword_links_page(
+        self,
+        query: str,
+        keyword_type: str = "all",
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict:
+        if isinstance(page, bool) or not isinstance(page, int) or page < 1:
+            raise ValueError("Keyword search page must be at least 1.")
+        if page_size != 20:
+            raise ValueError("Keyword search page size must be 20.")
+
+        base = self.search_movie_keyword_links(query, keyword_type)
+        movie_ids = list(dict.fromkeys(link["tmdb_id"] for link in base["links"]))
+        total = len(movie_ids)
+        start = (page - 1) * page_size
+        selected_ids = set(movie_ids[start:start + page_size])
+        return {
+            "query": base["query"],
+            "keyword_type": base["keyword_type"],
+            "page": page,
+            "page_size": page_size,
+            "total_results": total,
+            "total_pages": max(1, (total + page_size - 1) // page_size),
+            "links": [
+                link for link in base["links"]
+                if link["tmdb_id"] in selected_ids
+            ],
+            "movie_ids": [
+                movie_id for movie_id in movie_ids
+                if movie_id in selected_ids
+            ],
         }
