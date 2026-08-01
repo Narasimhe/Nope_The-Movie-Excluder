@@ -58,6 +58,19 @@ class GeneralEntryRepositoryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "needs a URL"):
             self.repository.create_entry("link", "Missing")
 
+    def test_link_entry_accepts_multiple_urls(self) -> None:
+        entry = self.repository.create_entry(
+            "link",
+            "Reference sites",
+            "Two useful sources",
+            " example.com/one \n\n https://example.org/two ",
+        )
+
+        self.assertEqual(
+            entry["url"],
+            "example.com/one\nhttps://example.org/two",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

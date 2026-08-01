@@ -36,6 +36,7 @@ class WebUITests(unittest.TestCase):
 
         self.assertIn('/static/styles.css', index)
         self.assertIn('/static/app.js', index)
+        self.assertIn('/static/favicon.svg', index)
         self.assertIn('id="movie-search"', index)
         self.assertIn('id="movie-detail-page"', index)
         self.assertIn('id="movie-notes"', index)
@@ -48,6 +49,9 @@ class WebUITests(unittest.TestCase):
         self.assertIn('id="entries-page"', index)
         self.assertIn('id="verdict-stars"', index)
         self.assertIn('id="workspace-collapse"', index)
+        self.assertIn('id="show-custom-keyword"', index)
+        self.assertIn('id="profile-dialog-title"', index)
+        self.assertIn('data-footer-view="movie-notes"', index)
         self.assertLess(
             index.index('id="dialog-genres"'),
             index.index('class="personal-panel"'),
@@ -66,6 +70,9 @@ class WebUITests(unittest.TestCase):
         self.assertIn("/search-preferences", script)
         self.assertIn("/search-state", script)
         self.assertIn("/entries", script)
+        self.assertIn("/movies/notes?page=", script)
+        self.assertIn("pagination_exact", script)
+        self.assertIn("function renderPeople", script)
 
 
 if __name__ == "__main__":

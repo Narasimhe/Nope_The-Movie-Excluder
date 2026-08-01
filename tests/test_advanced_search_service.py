@@ -51,6 +51,7 @@ class FakePreferenceRepository:
 class FakeTMDBClient:
     def __init__(self) -> None:
         self.discover_call: dict | None = None
+        self.discover_pages: list[int] = []
         self.detail_calls: list[int] = []
 
     def discover_movies(self, filters, page: int = 1) -> dict:
@@ -58,6 +59,7 @@ class FakeTMDBClient:
             "filters": filters,
             "page": page,
         }
+        self.discover_pages.append(page)
         return {
             "page": page,
             "total_pages": 5,
@@ -136,16 +138,13 @@ class AdvancedSearchServiceTests(unittest.TestCase):
         )
 
     def test_default_preference_runs_advanced_search(self) -> None:
-        result = self.service.search(page=2)
+        result = self.service.search(page=1)
 
         self.assertEqual(
             result["preference"]["preference_id"],
             1,
         )
-        self.assertEqual(
-            self.tmdb_client.discover_call["page"],
-            2,
-        )
+        self.assertEqual(self.tmdb_client.discover_pages, [1, 2, 3, 4, 5])
         self.assertEqual(
             [movie["id"] for movie in result["results"]],
             [101],
@@ -153,6 +152,9 @@ class AdvancedSearchServiceTests(unittest.TestCase):
         self.assertEqual(result["candidate_count"], 3)
         self.assertEqual(result["result_count"], 1)
         self.assertEqual(result["country_detail_lookups"], 3)
+        self.assertTrue(result["pagination_exact"])
+        self.assertEqual(result["tmdb_total_pages"], 1)
+        self.assertEqual(result["tmdb_total_results"], 1)
 
     def test_selected_preference_is_used(self) -> None:
         result = self.service.search(
@@ -197,6 +199,31 @@ class AdvancedSearchServiceTests(unittest.TestCase):
         )
         self.assertEqual(result["director_credit_lookups"], 1)
         self.assertEqual(self.tmdb_client.asserted_person_id, 525)
+        self.assertTrue(result["pagination_exact"])
+        self.assertEqual(result["tmdb_total_pages"], 1)
+        self.assertEqual(result["tmdb_total_results"], 2)
+        self.assertEqual(result["source_pages_scanned"], 5)
+
+    def test_broad_post_filtered_search_does_not_claim_raw_totals(self) -> None:
+        discover = self.tmdb_client.discover_movies
+
+        def broad_discover(filters, page=1):
+            response = discover(filters, page)
+            response["total_pages"] = 51
+            response["total_results"] = 1001
+            return response
+
+        self.tmdb_client.discover_movies = broad_discover
+        result = self.service.search(
+            page=2,
+            filters={"exclude_original_languages": ["fr"]},
+        )
+
+        self.assertFalse(result["pagination_exact"])
+        self.assertIsNone(result["tmdb_total_pages"])
+        self.assertIsNone(result["tmdb_total_results"])
+        self.assertEqual(result["raw_tmdb_total_pages"], 51)
+        self.assertTrue(result["has_next_page"])
 
     def test_missing_default_preference_is_rejected(self) -> None:
         self.preference_repository.default_preference = None

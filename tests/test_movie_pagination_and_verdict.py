@@ -61,6 +61,21 @@ class MoviePaginationAndVerdictTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "1 to 10"):
             self.service.set_movie_verdict(99, 11)
 
+    def test_movie_notes_pages_count_only_movies_with_notes(self) -> None:
+        for movie_id in range(1, 24):
+            self._save_movie(movie_id)
+            self.users.set_status(movie_id, MovieStatus.WATCHED)
+            if movie_id <= 21:
+                self.users.set_notes(movie_id, f"Memory {movie_id}")
+
+        first = self.service.get_movies_with_notes_page(1)
+        second = self.service.get_movies_with_notes_page(2)
+
+        self.assertEqual(first["total_results"], 21)
+        self.assertEqual(first["total_pages"], 2)
+        self.assertEqual(len(first["results"]), 20)
+        self.assertEqual(len(second["results"]), 1)
+
 
 if __name__ == "__main__":
     unittest.main()
