@@ -205,10 +205,10 @@
                   </div>
                   <div class="number-grid">
                     <label>Minimum rating
-                      <input id="minimum-rating" type="number" min="0" max="10" step="0.1" placeholder="Any">
+                      <input id="minimum-rating" type="number" min="0" max="10" step="1" placeholder="Any">
                     </label>
                     <label>Maximum rating
-                      <input id="maximum-rating" type="number" min="0" max="10" step="0.1" placeholder="Any">
+                      <input id="maximum-rating" type="number" min="0" max="10" step="1" placeholder="Any">
                     </label>
                     <label>Year from
                       <input id="release-year-from" type="number" min="1" max="9999" placeholder="Any">
@@ -292,8 +292,12 @@
                   <label><input type="checkbox" name="included-status" value="watched"> Watched</label>
                   <label><input type="checkbox" name="included-status" value="rewatch"> Rewatch</label>
                   <label><input type="checkbox" name="included-status" value="excluded"> Nope</label>
-                  <label><input id="include-untracked" type="checkbox" checked> Untracked movies</label>
                 </div>
+                <label class="untracked-option">
+                  <input id="include-untracked" type="checkbox" checked>
+                  Include untracked movies
+                  <small>Movies not yet in your personal library</small>
+                </label>
                 <div class="personal-extra">
                   <label>Notes contain
                     <input id="notes-query" type="search" placeholder="Optional words from your notes">
@@ -315,6 +319,8 @@
           </div>
           </div>
         </section>
+
+        <button class="return-to-origin is-hidden" id="return-to-origin" type="button"></button>
 
         <div class="section-heading">
           <div>
@@ -367,12 +373,6 @@
             <select id="entry-year-filter" aria-label="Year"><option value="">Any year</option></select>
             <select id="entry-month-filter" aria-label="Month">
               <option value="">Any month</option>
-              <option value="1">January</option><option value="2">February</option>
-              <option value="3">March</option><option value="4">April</option>
-              <option value="5">May</option><option value="6">June</option>
-              <option value="7">July</option><option value="8">August</option>
-              <option value="9">September</option><option value="10">October</option>
-              <option value="11">November</option><option value="12">December</option>
             </select>
             <button type="submit">Find</button>
             <button id="clear-entry-filters" type="button">Clear</button>
@@ -380,15 +380,78 @@
           <div class="entry-list" id="entry-list"></div>
           <nav class="pagination is-hidden" id="entry-pagination" aria-label="Notes and links pages"></nav>
         </section>
+
+        <article class="entry-reader is-hidden" id="entry-reader" aria-labelledby="entry-reader-title">
+          <nav class="entry-reader-toolbar" aria-label="Entry reader controls">
+            <button id="entry-reader-back" type="button">← Notes</button>
+            <div>
+              <button id="entry-reader-edit" type="button">✎ Edit</button>
+              <button id="entry-reader-previous" type="button">← Previous</button>
+              <button id="entry-reader-next" type="button">Next →</button>
+              <button class="danger-button" id="entry-reader-delete" type="button" aria-label="Delete entry">Delete</button>
+            </div>
+          </nav>
+          <header class="entry-reader-header">
+            <p class="entry-type" id="entry-reader-type">Note</p>
+            <h1 id="entry-reader-title"></h1>
+            <div class="entry-reader-meta">
+              <time id="entry-reader-date"></time>
+              <div class="entry-reader-tags" id="entry-reader-tags"></div>
+            </div>
+          </header>
+          <div class="entry-reader-body" id="entry-reader-body"></div>
+          <div class="entry-reader-links" id="entry-reader-links"></div>
+          <p class="entry-reader-created is-hidden" id="entry-reader-created"></p>
+        </article>
+
+        <section class="looking-out-page is-hidden" id="looking-out-page" aria-labelledby="looking-out-title">
+          <div class="memory-page-heading">
+            <div>
+              <p class="section-kicker">Your future watch radar</p>
+              <h2 id="looking-out-title">Looking Out For</h2>
+              <p>Unreleased movies you want to remember.</p>
+            </div>
+            <label class="release-alert-toggle">
+              <input id="release-alerts-toggle" type="checkbox" checked>
+              <span>Release alerts</span>
+            </label>
+          </div>
+          <div class="release-alert-summary is-hidden" id="release-alert-summary"></div>
+          <div class="looking-out-grid" id="looking-out-grid"></div>
+          <nav class="pagination is-hidden" id="looking-out-pagination" aria-label="Looking Out For pages"></nav>
+        </section>
+
+        <section class="storage-page is-hidden" id="storage-page" aria-labelledby="storage-title">
+          <div class="memory-page-heading">
+            <div>
+              <p class="section-kicker">Local data</p>
+              <h2 id="storage-title">Storage</h2>
+              <p>See what the app keeps and safely remove disposable cache.</p>
+            </div>
+          </div>
+          <div class="storage-summary" id="storage-summary"></div>
+          <div class="storage-actions">
+            <button id="cleanup-cache" type="button">Clear TMDB-only cache older than 90 days</button>
+            <button class="danger-button" id="purge-deleted-entries" type="button">Permanently clear deleted Notes &amp; Links</button>
+          </div>
+          <p class="inline-feedback" id="storage-feedback" aria-live="polite"></p>
+        </section>
       </section>
     </main>
 
     <footer>
-      <p>Movie Excluder <span>·</span> your private movie memory</p>
+      <div class="footer-identity">
+        <strong>Movie Excluder</strong>
+        <span>your private movie memory</span>
+      </div>
       <nav class="footer-nav" aria-label="Personal memory pages">
         <button type="button" data-footer-view="notes">Notes</button>
         <button type="button" data-footer-view="links">Links</button>
         <button type="button" data-footer-view="movie-notes">Movie Notes</button>
+        <button type="button" data-footer-view="looking-out">
+          Looking Out For <span class="footer-alert-badge is-hidden" id="release-alert-badge"></span>
+        </button>
+        <button type="button" data-footer-view="storage">Storage</button>
       </nav>
     </footer>
   </div>
@@ -424,6 +487,9 @@
       <label>Body
         <textarea id="entry-body" rows="8" placeholder="Write freely. Lines beginning with - or * become a list."></textarea>
       </label>
+      <label>Tags
+        <input id="entry-tags" maxlength="500" placeholder="AI, Coding, Python">
+      </label>
       <label id="entry-url-field">Links
         <textarea id="entry-url" rows="4" placeholder="Paste one link per line"></textarea>
       </label>
@@ -438,8 +504,9 @@
     <header class="detail-page-header">
       <button class="detail-back" id="dialog-close" type="button">
         <span aria-hidden="true">←</span>
-        Back to movies
+        <span id="detail-back-label">Back to movies</span>
       </button>
+      <nav class="detail-trail" id="detail-trail" aria-label="Movie exploration trail"></nav>
       <span class="detail-brand">Movie Excluder</span>
     </header>
 
@@ -491,6 +558,10 @@
               </div>
               <p class="inline-feedback" id="status-feedback" aria-live="polite"></p>
             </div>
+            <div class="looking-out-control is-hidden" id="looking-out-control">
+              <button id="looking-out-toggle" type="button">＋ Looking Out For</button>
+              <span id="looking-out-release-date"></span>
+            </div>
           </div>
 
           <section class="verdict-panel">
@@ -510,6 +581,17 @@
             <button id="save-notes" type="button">Save notes</button>
             <p class="inline-feedback" id="notes-feedback" aria-live="polite"></p>
           </details>
+
+          <section class="related-panel" id="related-panel">
+            <div class="related-heading">
+              <div>
+                <p class="filter-kicker">Keep exploring</p>
+                <h2>Related Movies</h2>
+              </div>
+              <button class="related-familiar-toggle is-hidden" id="related-familiar-toggle" type="button"></button>
+            </div>
+            <div class="related-movies" id="related-movies" aria-live="polite"></div>
+          </section>
         </div>
       </section>
     </main>

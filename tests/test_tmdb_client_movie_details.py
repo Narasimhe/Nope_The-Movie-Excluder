@@ -52,6 +52,25 @@ class TMDBClientMovieDetailsTests(unittest.TestCase):
             10,
         )
 
+    def test_related_movie_endpoints_use_the_movie_id(self) -> None:
+        client = TMDBClient.__new__(TMDBClient)
+        client.headers = {"Authorization": "Bearer test"}
+        client.session = FakeSession()
+
+        client.get_movie_recommendations(329865)
+        self.assertEqual(
+            client.session.last_request["url"],
+            f"{BASE_URL}/movie/329865/recommendations",
+        )
+        self.assertEqual(client.session.last_request["params"], {"page": 1})
+
+        client.get_similar_movies(329865, page=2)
+        self.assertEqual(
+            client.session.last_request["url"],
+            f"{BASE_URL}/movie/329865/similar",
+        )
+        self.assertEqual(client.session.last_request["params"], {"page": 2})
+
 
 if __name__ == "__main__":
     unittest.main()

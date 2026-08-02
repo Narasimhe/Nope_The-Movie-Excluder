@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from enum import Enum
 from pathlib import Path
 
@@ -9,6 +10,7 @@ from pydantic import BaseModel, Field
 from app.advanced_filters import FilterLogic
 from app.advanced_search_service import AdvancedSearchService
 from app.general_entry_repository import GeneralEntryRepository
+from app.database import initialize_database
 from app.movie_service import MovieService
 from app.movie_status import MovieStatus
 from app.search_preference_repository import (
@@ -19,10 +21,18 @@ from app.super_advanced_search_service import (
     DEFAULT_INCLUDED_STATUSES,
     SuperAdvancedSearchService,
 )
+from app.storage_repository import StorageRepository
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    initialize_database()
+    yield
 
 app = FastAPI(
     title="Movie Excluder API",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 APP_DIR = Path(__file__).resolve().parent
@@ -41,6 +51,7 @@ super_advanced_search_service = SuperAdvancedSearchService()
 search_preference_repository = SearchPreferenceRepository()
 search_state_repository = SearchStateRepository()
 general_entry_repository = GeneralEntryRepository()
+storage_repository = StorageRepository()
 tmdb_lookup_client = advanced_search_service.tmdb_client
 
 
@@ -73,6 +84,11 @@ class GeneralEntryRequest(BaseModel):
     title: str
     body: str | None = None
     url: str | None = None
+    tags: list[str] = Field(default_factory=list)
+
+
+class ReleaseAlertsRequest(BaseModel):
+    enabled: bool
 
 
 class KeywordType(str, Enum):
@@ -562,12 +578,103 @@ def super_advanced_search(
 
 
 @app.get(
+    "/movies/looking-out-for",
+    tags=["movies"],
+    summary="List future movies being tracked",
+)
+def get_looking_out_for_movies(page: int = 1):
+    try:
+        return movie_service.get_looking_out_for_movies(page)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.get(
+    "/movies/{tmdb_id}/related",
+    tags=["movies"],
+    summary="Get related movies",
+)
+def get_related_movies(
+    tmdb_id: int,
+    limit: int = 6,
+    include_previously_watched: bool = False,
+):
+    try:
+        if not include_previously_watched:
+            return movie_service.get_related_movies(tmdb_id, limit)
+        return movie_service.get_related_movies(
+            tmdb_id,
+            limit,
+            include_previously_watched,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+
+
+@app.get(
     "/movies/{tmdb_id}",
     tags=["movies"],
     summary="Get movie details",
 )
 def get_movie_details(tmdb_id: int):
     return movie_service.get_movie(tmdb_id)
+
+
+@app.post(
+    "/movies/{tmdb_id}/looking-out-for",
+    tags=["movies"],
+    summary="Track an unreleased movie",
+)
+def add_movie_to_looking_out_for(tmdb_id: int):
+    try:
+        tracked = movie_service.add_to_looking_out_for(tmdb_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"message": "Movie added to Looking Out For", "tracking": tracked}
+
+
+@app.delete(
+    "/movies/{tmdb_id}/looking-out-for",
+    tags=["movies"],
+    summary="Stop tracking an unreleased movie",
+)
+def remove_movie_from_looking_out_for(tmdb_id: int):
+    if not movie_service.remove_from_looking_out_for(tmdb_id):
+        raise HTTPException(status_code=404, detail="Movie was not being tracked.")
+    return {"message": "Movie removed from Looking Out For"}
+
+
+@app.put(
+    "/movies/{tmdb_id}/looking-out-for/watch-later",
+    tags=["movies"],
+    summary="Move a released tracked movie to Watch Later",
+)
+def move_looking_out_for_movie_to_watch_later(tmdb_id: int):
+    try:
+        user_data = movie_service.move_looking_out_for_to_watch_later(tmdb_id)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"message": "Movie moved to Watch Later", "user_movie_data": user_data}
+
+
+@app.get(
+    "/settings/release-alerts",
+    tags=["settings"],
+    summary="Get the in-app release alert preference",
+)
+def get_release_alerts_setting():
+    return {"enabled": movie_service.get_release_alerts_enabled()}
+
+
+@app.put(
+    "/settings/release-alerts",
+    tags=["settings"],
+    summary="Change the in-app release alert preference",
+)
+def set_release_alerts_setting(request: ReleaseAlertsRequest):
+    return {
+        "enabled": movie_service.set_release_alerts_enabled(request.enabled)
+    }
 
 
 @app.put(
@@ -983,6 +1090,7 @@ def list_general_entries(
     page: int = 1,
     query: str | None = None,
     entry_type: str | None = None,
+    tag: str | None = None,
     year: int | None = None,
     month: int | None = None,
 ):
@@ -991,6 +1099,7 @@ def list_general_entries(
             page=page,
             query=query,
             entry_type=entry_type,
+            tag=tag,
             year=year,
             month=month,
         )
@@ -1011,6 +1120,7 @@ def create_general_entry(request: GeneralEntryRequest):
             request.title,
             request.body,
             request.url,
+            request.tags,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
@@ -1033,6 +1143,7 @@ def update_general_entry(
             request.title,
             request.body,
             request.url,
+            request.tags,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
@@ -1054,3 +1165,35 @@ def delete_general_entry(entry_id: int):
     if not removed:
         raise HTTPException(status_code=404, detail="Entry was not found.")
     return {"message": "Entry moved to trash"}
+
+
+@app.get(
+    "/storage",
+    tags=["settings"],
+    summary="Show local database storage information",
+)
+def get_storage_summary():
+    return storage_repository.get_summary()
+
+
+@app.post(
+    "/storage/cleanup-cache",
+    tags=["settings"],
+    summary="Remove old TMDB-only cached movies",
+)
+def cleanup_old_movie_cache(days: int = 90):
+    try:
+        result = storage_repository.cleanup_old_cache(days)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return {"message": "Old unprotected cache cleaned", **result}
+
+
+@app.delete(
+    "/storage/deleted-entries",
+    tags=["settings"],
+    summary="Permanently remove soft-deleted notes and links",
+)
+def purge_deleted_general_entries():
+    result = storage_repository.purge_deleted_entries()
+    return {"message": "Deleted entries permanently removed", **result}

@@ -51,6 +51,38 @@ class TMDBClient:
         response.raise_for_status()
         return response.json()
 
+    def get_movie_recommendations(
+        self,
+        movie_id: int,
+        page: int = 1,
+    ) -> dict:
+        self._validate_positive_id(movie_id, "TMDB movie ID")
+        self._validate_page(page)
+        response = self.session.get(
+            f"{BASE_URL}/movie/{movie_id}/recommendations",
+            headers=self.headers,
+            params={"page": page},
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_similar_movies(
+        self,
+        movie_id: int,
+        page: int = 1,
+    ) -> dict:
+        self._validate_positive_id(movie_id, "TMDB movie ID")
+        self._validate_page(page)
+        response = self.session.get(
+            f"{BASE_URL}/movie/{movie_id}/similar",
+            headers=self.headers,
+            params={"page": page},
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+
     def search_movies(self, query: str) -> list[dict]:
         return self.search_movies_page(query, page=1).get("results", [])
 

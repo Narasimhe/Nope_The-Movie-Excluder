@@ -21,9 +21,10 @@ class MovieRepository:
                     backdrop_path,
                     vote_average,
                     original_language,
-                    fetched_at
+                    fetched_at,
+                    last_accessed_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ON CONFLICT(tmdb_id) DO UPDATE SET
                     title = excluded.title,
                     original_title = excluded.original_title,
@@ -33,7 +34,8 @@ class MovieRepository:
                     backdrop_path = excluded.backdrop_path,
                     vote_average = excluded.vote_average,
                     original_language = excluded.original_language,
-                    fetched_at = CURRENT_TIMESTAMP
+                    fetched_at = CURRENT_TIMESTAMP,
+                    last_accessed_at = CURRENT_TIMESTAMP
                 """,
                 (
                     movie["id"],
@@ -63,6 +65,17 @@ class MovieRepository:
             return None
 
         return dict(row)
+
+    def touch_movie(self, tmdb_id: int) -> None:
+        with get_connection() as connection:
+            connection.execute(
+                """
+                UPDATE movies
+                SET last_accessed_at = CURRENT_TIMESTAMP
+                WHERE tmdb_id = ?
+                """,
+                (tmdb_id,),
+            )
 
     def get_movies_by_ids(
         self,
@@ -137,6 +150,11 @@ class MovieRepository:
                 JOIN user_movie_data u
                     ON m.tmdb_id = u.tmdb_id
                 WHERE u.status = ?
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM looking_out_for l
+                      WHERE l.tmdb_id = m.tmdb_id
+                  )
                 ORDER BY m.title
                 """,
                 (MovieStatus.WATCH_LATER.value,),
@@ -218,14 +236,23 @@ class MovieRepository:
     ) -> list[dict]:
         validated_status = validate_movie_status(status)
 
+        looking_out_clause = (
+            " AND NOT EXISTS ("
+            "SELECT 1 FROM looking_out_for l "
+            "WHERE l.tmdb_id = m.tmdb_id)"
+            if validated_status == MovieStatus.NEW_DISCOVERY.value
+            else ""
+        )
+
         with get_connection() as connection:
             rows = connection.execute(
-                """
+                f"""
                 SELECT m.*
                 FROM movies m
                 JOIN user_movie_data u
                     ON m.tmdb_id = u.tmdb_id
                 WHERE u.status = ?
+                {looking_out_clause}
                 ORDER BY m.title
                 """,
                 (validated_status,),
@@ -239,8 +266,15 @@ class MovieRepository:
         page: int = 1,
     ) -> dict:
         validated_status = validate_movie_status(status)
+        where_clause = "u.status = ?"
+        if validated_status == MovieStatus.NEW_DISCOVERY.value:
+            where_clause += (
+                " AND NOT EXISTS ("
+                "SELECT 1 FROM looking_out_for l "
+                "WHERE l.tmdb_id = m.tmdb_id)"
+            )
         return self._get_user_movie_page(
-            "u.status = ?",
+            where_clause,
             (validated_status,),
             page,
         )

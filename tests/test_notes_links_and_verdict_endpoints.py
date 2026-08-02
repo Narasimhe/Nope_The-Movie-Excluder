@@ -8,14 +8,15 @@ class FakeEntryRepository:
     def __init__(self) -> None:
         self.created = None
 
-    def create_entry(self, entry_type, title, body, url):
-        self.created = (entry_type, title, body, url)
+    def create_entry(self, entry_type, title, body, url, tags):
+        self.created = (entry_type, title, body, url, tags)
         return {
             "entry_id": 1,
             "entry_type": entry_type,
             "title": title,
             "body": body,
             "url": url,
+            "tags": tags,
         }
 
 
@@ -39,12 +40,13 @@ class NotesLinksAndVerdictEndpointTests(unittest.TestCase):
             title="Slow-burn site",
             body="Useful source",
             url="example.com",
+            tags=["slow burn"],
         )
         with patch.object(main, "general_entry_repository", repository):
             result = main.create_general_entry(request)
         self.assertEqual(
             repository.created,
-            ("link", "Slow-burn site", "Useful source", "example.com"),
+            ("link", "Slow-burn site", "Useful source", "example.com", ["slow burn"]),
         )
         self.assertEqual(result["entry"]["entry_id"], 1)
 

@@ -15,6 +15,8 @@ from app.user_movie_repository import UserMovieRepository
 class FakeTMDBClient:
     def __init__(self) -> None:
         self.movie_detail_calls = 0
+        self.recommendation_calls = 0
+        self.similar_calls = 0
 
     def get_movie(self, movie_id: int) -> dict:
         self.movie_detail_calls += 1
@@ -49,6 +51,24 @@ class FakeTMDBClient:
                 ],
             },
         }
+
+    def get_movie_recommendations(self, movie_id: int) -> dict:
+        self.recommendation_calls += 1
+        return {
+            "results": [
+                {
+                    "id": related_id,
+                    "title": f"Related {related_id}",
+                    "release_date": "2020-01-01",
+                    "original_language": "en",
+                }
+                for related_id in (movie_id, 700, 700, 800, 900)
+            ]
+        }
+
+    def get_similar_movies(self, movie_id: int) -> dict:
+        self.similar_calls += 1
+        return {"results": []}
 
 
 class MovieServiceMetadataIntegrationTests(unittest.TestCase):
@@ -208,6 +228,37 @@ class MovieServiceMetadataIntegrationTests(unittest.TestCase):
         self.assertEqual(self.tmdb_client.movie_detail_calls, 0)
         self.assertIsNone(
             self.movie_repository.get_movie(329865)
+        )
+
+    def test_related_movies_are_deduplicated_and_hide_nope(self) -> None:
+        self.service.set_movie_status(900, MovieStatus.EXCLUDED)
+
+        related = self.service.get_related_movies(329865)
+
+        self.assertEqual(
+            [movie["tmdb_id"] for movie in related["results"]],
+            [700, 800],
+        )
+        self.assertEqual(related["source"], "recommendations")
+        self.assertEqual(self.tmdb_client.recommendation_calls, 1)
+        self.assertEqual(self.tmdb_client.similar_calls, 0)
+
+    def test_related_movies_hide_and_optionally_reveal_watched_titles(self) -> None:
+        self.service.set_movie_status(700, MovieStatus.WATCHED)
+        self.service.set_movie_status(800, MovieStatus.REWATCH)
+        self.service.set_movie_status(900, MovieStatus.EXCLUDED)
+
+        hidden = self.service.get_related_movies(329865)
+        revealed = self.service.get_related_movies(
+            329865,
+            include_previously_watched=True,
+        )
+
+        self.assertEqual(hidden["results"], [])
+        self.assertEqual(hidden["hidden_familiar_count"], 2)
+        self.assertEqual(
+            [movie["tmdb_id"] for movie in revealed["results"]],
+            [700, 800],
         )
 
 

@@ -71,6 +71,99 @@ class GeneralEntryRepositoryTests(unittest.TestCase):
             "example.com/one\nhttps://example.org/two",
         )
 
+    def test_entry_tags_are_reusable_searchable_and_replaceable(self) -> None:
+        first = self.repository.create_entry(
+            "note",
+            "AI coding",
+            "Private thoughts",
+            tags=["AI", "Coding", "ai"],
+        )
+        second = self.repository.create_entry(
+            "link",
+            "Python reference",
+            "Useful source",
+            "example.com",
+            tags=["Coding", "Python"],
+        )
+
+        self.assertEqual(
+            [tag["name"] for tag in first["tags"]],
+            ["AI", "Coding"],
+        )
+        coding = self.repository.list_entries(tag="coding")
+        self.assertEqual(coding["total_results"], 2)
+        self.assertEqual(
+            self.repository.list_entries(query="Python")["results"][0]["entry_id"],
+            second["entry_id"],
+        )
+
+        updated = self.repository.update_entry(
+            first["entry_id"],
+            "note",
+            "AI coding",
+            "Private thoughts",
+            tags=["Machine Learning"],
+        )
+        self.assertEqual(
+            [tag["name"] for tag in updated["tags"]],
+            ["Machine Learning"],
+        )
+        self.assertEqual(
+            self.repository.list_entries(tag="AI")["total_results"],
+            0,
+        )
+
+    def test_recently_updated_entries_sort_first(self) -> None:
+        older = self.repository.create_entry("note", "Older")
+        newer = self.repository.create_entry("note", "Newer")
+        with database.get_connection() as connection:
+            connection.execute(
+                "UPDATE general_entries SET updated_at = ? WHERE entry_id = ?",
+                ("2030-01-01 00:00:00", older["entry_id"]),
+            )
+        results = self.repository.list_entries()["results"]
+        self.assertEqual(results[0]["entry_id"], older["entry_id"])
+        self.assertEqual(results[1]["entry_id"], newer["entry_id"])
+
+    def test_date_filters_use_kolkata_calendar_time(self) -> None:
+        entry = self.repository.create_entry("note", "Midnight journal")
+        with database.get_connection() as connection:
+            connection.execute(
+                "UPDATE general_entries SET updated_at = ? WHERE entry_id = ?",
+                ("2026-07-31 19:00:00", entry["entry_id"]),
+            )
+
+        august = self.repository.list_entries(year=2026, month=8)
+        july = self.repository.list_entries(year=2026, month=7)
+
+        self.assertEqual(august["total_results"], 1)
+        self.assertEqual(july["total_results"], 0)
+
+    def test_date_filters_follow_latest_edit_not_original_date(self) -> None:
+        entry = self.repository.create_entry("note", "Living journal")
+        with database.get_connection() as connection:
+            connection.execute(
+                """
+                UPDATE general_entries
+                SET created_at = ?, updated_at = ?
+                WHERE entry_id = ?
+                """,
+                (
+                    "2026-08-02 08:00:00",
+                    "2027-01-10 08:00:00",
+                    entry["entry_id"],
+                ),
+            )
+
+        self.assertEqual(
+            self.repository.list_entries(year=2027, month=1)["total_results"],
+            1,
+        )
+        self.assertEqual(
+            self.repository.list_entries(year=2026, month=8)["total_results"],
+            0,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

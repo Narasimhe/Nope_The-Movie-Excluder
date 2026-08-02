@@ -52,6 +52,13 @@ class WebUITests(unittest.TestCase):
         self.assertIn('id="show-custom-keyword"', index)
         self.assertIn('id="profile-dialog-title"', index)
         self.assertIn('data-footer-view="movie-notes"', index)
+        self.assertIn('id="return-to-origin"', index)
+        self.assertIn('id="detail-trail"', index)
+        self.assertIn('id="related-movies"', index)
+        self.assertIn('id="entry-reader"', index)
+        self.assertIn('id="looking-out-page"', index)
+        self.assertIn('id="storage-page"', index)
+        self.assertIn('id="entry-tags"', index)
         self.assertLess(
             index.index('id="dialog-genres"'),
             index.index('class="personal-panel"'),
@@ -73,6 +80,12 @@ class WebUITests(unittest.TestCase):
         self.assertIn("/movies/notes?page=", script)
         self.assertIn("pagination_exact", script)
         self.assertIn("function renderPeople", script)
+        self.assertIn("function renderDetailTrail", script)
+        self.assertIn("include_previously_watched", script)
+        self.assertIn("/movies/looking-out-for", script)
+        self.assertIn("function openEntryReader", script)
+        self.assertIn("JOURNAL_TIME_ZONE", script)
+        self.assertIn('"Untracked"', script)
 
 
 if __name__ == "__main__":

@@ -1,3 +1,4 @@
+import shutil
 import sqlite3
 from pathlib import Path
 
@@ -9,6 +10,19 @@ DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
 DATABASE_PATH = DATA_DIR / "movie_excluder.db"
+DEFAULT_DATABASE_PATH = DATABASE_PATH
+DEMO_DATABASE_PATH = DATA_DIR / "demo.db"
+
+
+def ensure_database_exists() -> None:
+    """Create the working database from the demo template only once."""
+    if DATABASE_PATH.exists():
+        return
+
+    # Tests and diagnostic tools replace DATABASE_PATH with a temporary file.
+    # Demo bootstrapping belongs only to the application's configured database.
+    if DATABASE_PATH == DEFAULT_DATABASE_PATH and DEMO_DATABASE_PATH.exists():
+        shutil.copyfile(DEMO_DATABASE_PATH, DATABASE_PATH)
 
 
 class DatabaseConnection(sqlite3.Connection):
@@ -20,11 +34,13 @@ class DatabaseConnection(sqlite3.Connection):
 
 
 def get_connection() -> sqlite3.Connection:
+    ensure_database_exists()
     connection = sqlite3.connect(
         DATABASE_PATH,
         factory=DatabaseConnection,
     )
     connection.row_factory = sqlite3.Row
+    connection.execute("PRAGMA foreign_keys = ON")
     return connection
 
 
@@ -315,9 +331,80 @@ def _create_general_entries_table(connection: sqlite3.Connection) -> None:
         );
 
         CREATE INDEX IF NOT EXISTS idx_general_entries_recent
-        ON general_entries (is_deleted, created_at DESC, entry_id DESC);
+        ON general_entries (is_deleted, updated_at DESC, entry_id DESC);
+
+        CREATE TABLE IF NOT EXISTS general_entry_tags (
+            tag_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL COLLATE NOCASE UNIQUE
+        );
+
+        CREATE TABLE IF NOT EXISTS general_entry_tag_links (
+            entry_id INTEGER NOT NULL,
+            tag_id INTEGER NOT NULL,
+            PRIMARY KEY (entry_id, tag_id),
+            FOREIGN KEY (entry_id)
+                REFERENCES general_entries (entry_id)
+                ON DELETE CASCADE,
+            FOREIGN KEY (tag_id)
+                REFERENCES general_entry_tags (tag_id)
+                ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_general_entry_tag_links_tag
+        ON general_entry_tag_links (tag_id, entry_id);
         """
     )
+
+
+def _create_looking_out_for_tables(
+    connection: sqlite3.Connection,
+) -> None:
+    connection.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS looking_out_for (
+            tmdb_id INTEGER PRIMARY KEY,
+            release_date TEXT NOT NULL,
+            tracked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (tmdb_id)
+                REFERENCES movies (tmdb_id)
+                ON DELETE CASCADE
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_looking_out_for_release
+        ON looking_out_for (release_date, tmdb_id);
+
+        CREATE TABLE IF NOT EXISTS app_settings (
+            setting_key TEXT PRIMARY KEY,
+            setting_value TEXT NOT NULL,
+            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        INSERT INTO app_settings (setting_key, setting_value)
+        VALUES ('release_alerts_enabled', 'true')
+        ON CONFLICT(setting_key) DO NOTHING;
+        """
+    )
+
+
+def _ensure_movie_cache_columns(
+    connection: sqlite3.Connection,
+    movie_columns: set[str],
+) -> None:
+    if "last_accessed_at" not in movie_columns:
+        connection.execute(
+            """
+            ALTER TABLE movies
+            ADD COLUMN last_accessed_at TEXT
+            """
+        )
+        connection.execute(
+            """
+            UPDATE movies
+            SET last_accessed_at = COALESCE(fetched_at, CURRENT_TIMESTAMP)
+            WHERE last_accessed_at IS NULL
+            """
+        )
 
 
 def _migrate_legacy_user_movie_data(
@@ -392,7 +479,8 @@ def initialize_database() -> None:
                 original_language TEXT,
                 fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 metadata_fetched_at TEXT,
-                metadata_version INTEGER NOT NULL DEFAULT 2
+                metadata_version INTEGER NOT NULL DEFAULT 2,
+                last_accessed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
@@ -427,6 +515,8 @@ def initialize_database() -> None:
                 """
             )
 
+        _ensure_movie_cache_columns(connection, movie_columns)
+
         _migrate_legacy_user_movie_data(connection)
         _create_user_movie_data_table(connection)
         _ensure_user_movie_favorite_column(connection)
@@ -434,6 +524,7 @@ def initialize_database() -> None:
         _create_search_preferences_table(connection)
         _create_search_state_table(connection)
         _create_general_entries_table(connection)
+        _create_looking_out_for_tables(connection)
 
 
 if __name__ == "__main__":
