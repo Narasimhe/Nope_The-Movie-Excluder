@@ -40,8 +40,15 @@ const PICKER_CONFIG = {
   "exclude-genres": { options: GENRE_OPTIONS, opposite: "include-genres" },
   "include-languages": { options: LANGUAGE_OPTIONS, opposite: "exclude-languages" },
   "exclude-languages": { options: LANGUAGE_OPTIONS, opposite: "include-languages" },
-  "include-countries": { options: COUNTRY_OPTIONS, opposite: "exclude-countries" },
-  "exclude-countries": { options: COUNTRY_OPTIONS, opposite: "include-countries" },
+  "include-countries": { options: COUNTRY_OPTIONS },
+};
+
+const DEFAULT_SYSTEM_FILTERS = {
+  exclude_genre_ids: [16, 37, 99],
+  exclude_original_languages: ["hi", "te", "ta", "ml", "kn", "bn", "mr", "pa", "ur", "ar"],
+  minimum_rating: 6.0,
+  maximum_rating: 10.0,
+  minimum_vote_count: 100,
 };
 
 const STATUS_LABELS = {
@@ -53,6 +60,11 @@ const STATUS_LABELS = {
 };
 
 const VIEW_COPY = {
+  discover: {
+    kicker: "Movie discovery",
+    title: "Discover movies",
+    description: "Explore TMDB with clean personal status filtering.",
+  },
   new_discovery: {
     kicker: "Personal library",
     title: "New discoveries",
@@ -83,6 +95,11 @@ const VIEW_COPY = {
     title: "Favourites",
     description: "Your hand-picked favourites from watched movies.",
   },
+  "movie-notes": {
+    kicker: "Personal memory",
+    title: "Movie Notes",
+    description: "Search and browse your private thoughts and observations.",
+  },
 };
 
 const elements = {
@@ -101,6 +118,13 @@ const elements = {
   count: document.querySelector("#result-count"),
   navLinks: [...document.querySelectorAll("[data-view]")],
   mobileView: document.querySelector("#mobile-view"),
+  discoverWorkspace: document.querySelector("#discovery-workspace"),
+  refreshFeed: document.querySelector("#refresh-feed"),
+  viewModeToggle: document.querySelector("#view-mode-toggle"),
+  viewModeButtons: [...document.querySelectorAll(".view-mode-btn")],
+  notesSearchContainer: document.querySelector("#notes-search-container"),
+  notesSearchInput: document.querySelector("#notes-search-input"),
+  clearNotesSearch: document.querySelector("#clear-notes-search"),
   modeButtons: [...document.querySelectorAll("[data-discovery-mode]")],
   simpleControls: document.querySelector("#simple-controls"),
   advancedControls: document.querySelector("#advanced-controls"),
@@ -303,6 +327,20 @@ function setActiveView(view) {
   }
 }
 
+function getSavedViewMode() {
+  return localStorage.getItem("movie_excluder_card_layout") || "compact";
+}
+
+function setViewMode(mode) {
+  const isCompact = mode !== "detailed";
+  localStorage.setItem("movie_excluder_card_layout", isCompact ? "compact" : "detailed");
+  elements.grid.classList.toggle("is-compact", isCompact);
+  elements.grid.classList.toggle("is-detailed", !isCompact);
+  elements.viewModeButtons.forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.layout === (isCompact ? "compact" : "detailed"));
+  });
+}
+
 function showNotice(message) {
   elements.notice.textContent = message;
   elements.notice.classList.remove("is-hidden");
@@ -469,6 +507,7 @@ const ENTITY_CONFIG = {
 function renderSelectedEntities(key) {
   const config = ENTITY_CONFIG[key];
   const container = document.querySelector(`#${config.selectedId}`);
+  if (!container) return;
   container.replaceChildren();
 
   state.selectedEntities[key].forEach((entity) => {
@@ -476,15 +515,42 @@ function renderSelectedEntities(key) {
     const name = document.createElement("span");
     const remove = document.createElement("button");
     chip.className = "selected-entity";
+
+    if (key === "keywords") {
+      const isExcluded = entity.mode === "exclude";
+      chip.classList.add("is-clickable");
+      chip.classList.toggle("is-excluded", isExcluded);
+
+      const toggle = document.createElement("span");
+      toggle.className = "entity-mode-toggle";
+      toggle.textContent = isExcluded ? "− " : "+ ";
+      toggle.title = isExcluded
+        ? "Excluded theme (tap to switch to Include)"
+        : "Included theme (tap to switch to Exclude)";
+      chip.append(toggle);
+
+      chip.addEventListener("click", (event) => {
+        if (event.target === remove) return;
+        entity.mode = entity.mode === "exclude" ? "include" : "exclude";
+        renderSelectedEntities(key);
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        scheduleSearchStateSave();
+      });
+    }
+
     name.textContent = entity.name;
     remove.type = "button";
     remove.textContent = "×";
     remove.setAttribute("aria-label", `Remove ${entity.name}`);
-    remove.addEventListener("click", () => {
+    remove.addEventListener("click", (event) => {
+      event.stopPropagation();
       state.selectedEntities[key] = state.selectedEntities[key].filter(
         (item) => item.id !== entity.id,
       );
       renderSelectedEntities(key);
+      updateFilterPillBadges();
+      renderActiveFilterTags();
       scheduleSearchStateSave();
     });
     chip.append(name, remove);
@@ -499,6 +565,8 @@ function renderSelectedEntities(key) {
     clear.addEventListener("click", () => {
       state.selectedEntities[key] = [];
       renderSelectedEntities(key);
+      updateFilterPillBadges();
+      renderActiveFilterTags();
       scheduleSearchStateSave();
     });
     container.append(clear);
@@ -506,9 +574,14 @@ function renderSelectedEntities(key) {
 }
 
 function addSelectedEntity(key, entity) {
+  if (key === "keywords" && !entity.mode) {
+    entity.mode = "include";
+  }
   if (!state.selectedEntities[key].some((item) => item.id === entity.id)) {
     state.selectedEntities[key].push(entity);
     renderSelectedEntities(key);
+    updateFilterPillBadges();
+    renderActiveFilterTags();
   }
 
   const config = ENTITY_CONFIG[key];
@@ -554,12 +627,53 @@ function renderEntityResults(key, results) {
 function initializeEntityPickers() {
   Object.entries(ENTITY_CONFIG).forEach(([key, config]) => {
     const input = document.querySelector(`#${config.queryId}`);
+    if (!input) return;
     let timer = null;
+
+    if (key === "keywords") {
+      input.addEventListener("paste", async (event) => {
+        const text = (event.clipboardData || window.clipboardData)?.getData("text") || "";
+        if (text.includes(",") || text.includes(";")) {
+          event.preventDefault();
+          const terms = text.split(/[,;\n]+/).map((t) => t.trim()).filter((t) => t.length >= 2);
+          if (!terms.length) return;
+          input.value = "";
+          const origPlaceholder = input.placeholder;
+          input.placeholder = `Resolving ${terms.length} themes…`;
+          for (const term of terms) {
+            try {
+              const response = await fetchJSON(
+                `${config.searchPath}?query=${encodeURIComponent(term)}`,
+              );
+              if (response.results && response.results.length > 0) {
+                const match = response.results[0];
+                if (!state.selectedEntities.keywords.some((k) => k.id === match.id)) {
+                  state.selectedEntities.keywords.push({
+                    id: Number(match.id),
+                    name: match.name || term,
+                    mode: "include",
+                  });
+                }
+              }
+            } catch {
+              // ignore single fetch error
+            }
+          }
+          input.placeholder = origPlaceholder;
+          renderSelectedEntities("keywords");
+          updateFilterPillBadges();
+          renderActiveFilterTags();
+          scheduleSearchStateSave();
+          return;
+        }
+      });
+    }
 
     input.addEventListener("input", () => {
       window.clearTimeout(timer);
       const query = input.value.trim();
       const results = document.querySelector(`#${config.resultsId}`);
+      if (!results) return;
 
       if (query.length < 2) {
         results.classList.add("is-hidden");
@@ -585,17 +699,38 @@ function initializeEntityPickers() {
 }
 
 async function hydrateEntitySelections(filters) {
-  const idGroups = {
+  const incKeywords = await Promise.all((filters.include_keyword_ids || []).map(async (id) => {
+    try {
+      const result = await fetchJSON(`${ENTITY_CONFIG.keywords.detailPath}${id}`);
+      return { id: Number(id), name: result.name || `TMDB #${id}`, mode: "include" };
+    } catch {
+      return { id: Number(id), name: `TMDB #${id}`, mode: "include" };
+    }
+  }));
+
+  const excKeywords = await Promise.all((filters.exclude_keyword_ids || []).map(async (id) => {
+    try {
+      const result = await fetchJSON(`${ENTITY_CONFIG.keywords.detailPath}${id}`);
+      return { id: Number(id), name: result.name || `TMDB #${id}`, mode: "exclude" };
+    } catch {
+      return { id: Number(id), name: `TMDB #${id}`, mode: "exclude" };
+    }
+  }));
+
+  state.selectedEntities.keywords = [...incKeywords, ...excKeywords];
+  renderSelectedEntities("keywords");
+
+  const otherGroups = {
     actors: filters.include_actor_ids || [],
     directors: filters.include_director_ids || [],
-    keywords: filters.include_keyword_ids || [],
-    excludedKeywords: filters.exclude_keyword_ids || [],
     companies: filters.include_company_ids || [],
     excludedCompanies: filters.exclude_company_ids || [],
+    excludedKeywords: filters.exclude_keyword_ids || [],
   };
 
-  await Promise.all(Object.entries(idGroups).map(async ([key, ids]) => {
+  await Promise.all(Object.entries(otherGroups).map(async ([key, ids]) => {
     const config = ENTITY_CONFIG[key];
+    if (!config) return;
     state.selectedEntities[key] = await Promise.all(ids.map(async (id) => {
       try {
         const result = await fetchJSON(`${config.detailPath}${id}`);
@@ -627,11 +762,18 @@ function collectAdvancedFilters() {
     include_original_languages: getPickerValues("include-languages"),
     exclude_original_languages: getPickerValues("exclude-languages"),
     include_origin_countries: getPickerValues("include-countries"),
-    exclude_origin_countries: getPickerValues("exclude-countries"),
+    exclude_origin_countries: [],
     include_actor_ids: state.selectedEntities.actors.map((item) => item.id),
     include_director_ids: state.selectedEntities.directors.map((item) => item.id),
-    include_keyword_ids: state.selectedEntities.keywords.map((item) => item.id),
-    exclude_keyword_ids: state.selectedEntities.excludedKeywords.map((item) => item.id),
+    include_keyword_ids: state.selectedEntities.keywords
+      .filter((item) => item.mode !== "exclude")
+      .map((item) => item.id),
+    exclude_keyword_ids: [
+      ...state.selectedEntities.keywords
+        .filter((item) => item.mode === "exclude")
+        .map((item) => item.id),
+      ...(state.selectedEntities.excludedKeywords || []).map((item) => item.id),
+    ],
     include_company_ids: state.selectedEntities.companies.map((item) => item.id),
     exclude_company_ids: state.selectedEntities.excludedCompanies.map((item) => item.id),
     minimum_rating: readOptionalNumber(elements.minimumRating),
@@ -698,18 +840,22 @@ function scheduleSearchStateSave() {
 async function restoreSearchState() {
   try {
     const saved = await fetchJSON("/search-state");
-    await setAdvancedFilters(saved.filters || {});
+    const filters = saved.filters && Object.keys(saved.filters).length > 0
+      ? saved.filters
+      : DEFAULT_SYSTEM_FILTERS;
+    await setAdvancedFilters(filters);
     setPersonalFilters(saved.personal_filters || {});
     if (saved.selected_preference_id) {
       elements.profileSelect.value = String(saved.selected_preference_id);
     }
     updateProfileButtons();
-    state.discoveryMode = saved.mode || "simple";
+    state.discoveryMode = "super";
     setWorkspaceCollapsed(Boolean(saved.filters_collapsed), false);
-    return state.discoveryMode;
+    return "super";
   } catch {
+    await setAdvancedFilters(DEFAULT_SYSTEM_FILTERS);
     setWorkspaceCollapsed(false, false);
-    return "simple";
+    return "super";
   }
 }
 
@@ -717,6 +863,7 @@ function initializeCollapsibleFilters() {
   document.querySelectorAll(".filter-card").forEach((card) => {
     card.classList.add("is-collapsed");
     const heading = card.querySelector(".filter-card-heading");
+    if (!heading || heading.querySelector(".filter-card-toggle")) return;
     const button = document.createElement("button");
     button.type = "button";
     button.className = "filter-card-toggle";
@@ -726,9 +873,355 @@ function initializeCollapsibleFilters() {
       const collapsed = card.classList.toggle("is-collapsed");
       button.textContent = collapsed ? "Open" : "Close";
       button.setAttribute("aria-expanded", String(!collapsed));
+      updateFilterPillStates();
     });
     heading.append(button);
   });
+}
+
+function updateFilterPillStates() {
+  document.querySelectorAll(".filter-pill").forEach((pill) => {
+    const targetId = pill.dataset.target;
+    const card = document.getElementById(targetId);
+    if (card) {
+      pill.classList.toggle("is-open", !card.classList.contains("is-collapsed"));
+    }
+  });
+}
+
+function updateFilterPillBadges() {
+  // Genres badge
+  const genres = getPickerValues("include-genres").length;
+  const badgeGenres = document.querySelector("#badge-genres");
+  if (badgeGenres) {
+    badgeGenres.textContent = String(genres);
+    badgeGenres.classList.toggle("is-hidden", genres === 0);
+  }
+  document.querySelector("#pill-genres")?.classList.toggle("has-filters", genres > 0);
+
+  // Quality badge (rating or year)
+  const minRating = elements.minimumRating?.value?.trim();
+  const maxRating = elements.maximumRating?.value?.trim();
+  const yearFrom = elements.releaseYearFrom?.value?.trim();
+  const yearTo = elements.releaseYearTo?.value?.trim();
+  const qualityCount = (minRating || maxRating ? 1 : 0) + (yearFrom || yearTo ? 1 : 0);
+  const badgeQuality = document.querySelector("#badge-quality");
+  if (badgeQuality) {
+    badgeQuality.textContent = String(qualityCount);
+    badgeQuality.classList.toggle("is-hidden", qualityCount === 0);
+  }
+  document.querySelector("#pill-quality")?.classList.toggle("has-filters", qualityCount > 0);
+
+  // Origin badge
+  const incLang = getPickerValues("include-languages").length;
+  const excLang = getPickerValues("exclude-languages").length;
+  const incCountry = getPickerValues("include-countries").length;
+  const originCount = incLang + excLang + incCountry;
+  const badgeOrigin = document.querySelector("#badge-origin");
+  if (badgeOrigin) {
+    badgeOrigin.textContent = String(originCount);
+    badgeOrigin.classList.toggle("is-hidden", originCount === 0);
+  }
+  document.querySelector("#pill-origin")?.classList.toggle("has-filters", originCount > 0);
+
+  // People badge
+  const actors = state.selectedEntities?.actors?.length || 0;
+  const directors = state.selectedEntities?.directors?.length || 0;
+  const keywords = state.selectedEntities?.keywords?.length || 0;
+  const excKeywords = state.selectedEntities?.excludedKeywords?.length || 0;
+  const companies = state.selectedEntities?.companies?.length || 0;
+  const excCompanies = state.selectedEntities?.excludedCompanies?.length || 0;
+  const peopleCount = actors + directors + keywords + excKeywords + companies + excCompanies;
+  const badgePeople = document.querySelector("#badge-people");
+  if (badgePeople) {
+    badgePeople.textContent = String(peopleCount);
+    badgePeople.classList.toggle("is-hidden", peopleCount === 0);
+  }
+  document.querySelector("#pill-people")?.classList.toggle("has-filters", peopleCount > 0);
+
+  // Library badge
+  const checkedStatuses = document.querySelectorAll('input[name="included-status"]:checked').length;
+  const includeUntracked = elements.includeUntracked?.checked ? 1 : 0;
+  const libraryTotal = checkedStatuses + includeUntracked;
+  const badgeLibrary = document.querySelector("#badge-library");
+  if (badgeLibrary) {
+    badgeLibrary.textContent = String(libraryTotal);
+  }
+  const watchedChecked = document.querySelector('input[name="included-status"][value="watched"]')?.checked;
+  const rewatchChecked = document.querySelector('input[name="included-status"][value="rewatch"]')?.checked;
+  const nopeChecked = document.querySelector('input[name="included-status"][value="excluded"]')?.checked;
+  document.querySelector("#pill-library")?.classList.toggle("has-filters", Boolean(watchedChecked || rewatchChecked || nopeChecked));
+}
+
+function renderActiveFilterTags() {
+  const container = document.querySelector("#active-filter-tags");
+  if (!container) return;
+
+  const chips = [];
+
+  // Genres
+  getPickerValues("include-genres", true).forEach((id) => {
+    const pair = GENRE_OPTIONS.find((item) => item[0] === id);
+    const name = pair ? pair[1] : `Genre ${id}`;
+    chips.push({
+      label: name,
+      onRemove: () => {
+        const input = document.querySelector(`#include-genres input[value="${id}"]`);
+        if (input) input.checked = false;
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  });
+
+  // Rating
+  const minRating = elements.minimumRating?.value?.trim();
+  const maxRating = elements.maximumRating?.value?.trim();
+  if (minRating || maxRating) {
+    chips.push({
+      label: `⭐ ${minRating || '0'}–${maxRating || '10'}`,
+      onRemove: () => {
+        if (elements.minimumRating) elements.minimumRating.value = "";
+        if (elements.maximumRating) elements.maximumRating.value = "";
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  }
+
+  // Year
+  const yearFrom = elements.releaseYearFrom?.value?.trim();
+  const yearTo = elements.releaseYearTo?.value?.trim();
+  if (yearFrom || yearTo) {
+    chips.push({
+      label: `📅 ${yearFrom || '…'}–${yearTo || '…'}`,
+      onRemove: () => {
+        if (elements.releaseYearFrom) elements.releaseYearFrom.value = "";
+        if (elements.releaseYearTo) elements.releaseYearTo.value = "";
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  }
+
+  // Watched included
+  const watchedInput = document.querySelector('input[name="included-status"][value="watched"]');
+  if (watchedInput?.checked) {
+    chips.push({
+      label: `✓ Include Watched`,
+      onRemove: () => {
+        watchedInput.checked = false;
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  }
+
+  // Rewatch included
+  const rewatchInput = document.querySelector('input[name="included-status"][value="rewatch"]');
+  if (rewatchInput?.checked) {
+    chips.push({
+      label: `↻ Include Rewatch`,
+      onRemove: () => {
+        rewatchInput.checked = false;
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  }
+
+  // Nope included
+  const nopeInput = document.querySelector('input[name="included-status"][value="excluded"]');
+  if (nopeInput?.checked) {
+    chips.push({
+      label: `× Include Nope`,
+      onRemove: () => {
+        nopeInput.checked = false;
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  }
+
+  // People
+  (state.selectedEntities?.directors || []).forEach((d) => {
+    chips.push({
+      label: `Director: ${d.name}`,
+      onRemove: () => {
+        state.selectedEntities.directors = state.selectedEntities.directors.filter((item) => item.id !== d.id);
+        renderSelectedEntities("directors");
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  });
+  (state.selectedEntities?.actors || []).forEach((a) => {
+    chips.push({
+      label: `Actor: ${a.name}`,
+      onRemove: () => {
+        state.selectedEntities.actors = state.selectedEntities.actors.filter((item) => item.id !== a.id);
+        renderSelectedEntities("actors");
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  });
+  (state.selectedEntities?.keywords || []).forEach((k) => {
+    const isExcluded = k.mode === "exclude";
+    chips.push({
+      label: `${isExcluded ? "− " : "+ "}${k.name}`,
+      isExcluded: isExcluded,
+      onRemove: () => {
+        state.selectedEntities.keywords = state.selectedEntities.keywords.filter((item) => item.id !== k.id);
+        renderSelectedEntities("keywords");
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  });
+
+  if (!chips.length) {
+    container.replaceChildren();
+    container.classList.add("is-hidden");
+    return;
+  }
+
+  container.classList.remove("is-hidden");
+  container.replaceChildren();
+
+  chips.forEach((chip) => {
+    const el = document.createElement("span");
+    el.className = "active-filter-chip";
+    if (chip.isExcluded) {
+      el.classList.add("is-excluded");
+    }
+    el.textContent = chip.label;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.textContent = "✕";
+    btn.title = `Remove ${chip.label}`;
+    btn.addEventListener("click", chip.onRemove);
+    el.append(btn);
+    container.append(el);
+  });
+
+  const clearBtn = document.createElement("button");
+  clearBtn.type = "button";
+  clearBtn.className = "active-filter-clear-all";
+  clearBtn.textContent = "Clear all filters";
+  clearBtn.addEventListener("click", () => {
+    resetAdvancedFilters();
+    updateFilterPillBadges();
+    renderActiveFilterTags();
+    runDiscoverySearch();
+  });
+  container.append(clearBtn);
+}
+
+function setupFilterPills() {
+  const pills = document.querySelectorAll(".filter-pill");
+  pills.forEach((pill) => {
+    pill.addEventListener("click", () => {
+      const targetId = pill.dataset.target;
+      const card = document.getElementById(targetId);
+      if (!card) return;
+
+      const isCollapsed = card.classList.contains("is-collapsed");
+
+      // Accordion mode: collapse other cards or toggle this one
+      pills.forEach((p) => {
+        if (p !== pill) {
+          p.classList.remove("is-open");
+          const otherCard = document.getElementById(p.dataset.target);
+          if (otherCard) {
+            otherCard.classList.add("is-collapsed");
+            const btn = otherCard.querySelector(".filter-card-toggle");
+            if (btn) {
+              btn.textContent = "Open";
+              btn.setAttribute("aria-expanded", "false");
+            }
+          }
+        }
+      });
+
+      card.classList.toggle("is-collapsed", !isCollapsed);
+      pill.classList.toggle("is-open", isCollapsed);
+
+      const toggleBtn = card.querySelector(".filter-card-toggle");
+      if (toggleBtn) {
+        toggleBtn.textContent = isCollapsed ? "Close" : "Open";
+        toggleBtn.setAttribute("aria-expanded", String(isCollapsed));
+      }
+
+      setWorkspaceCollapsed(false);
+
+      if (isCollapsed) {
+        card.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+    });
+  });
+
+  // Top Search button
+  const topSearchBtn = document.querySelector("#run-advanced-search");
+  if (topSearchBtn) {
+    topSearchBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      pills.forEach((p) => {
+        p.classList.remove("is-open");
+        const c = document.getElementById(p.dataset.target);
+        if (c) {
+          c.classList.add("is-collapsed");
+          const btn = c.querySelector(".filter-card-toggle");
+          if (btn) {
+            btn.textContent = "Open";
+            btn.setAttribute("aria-expanded", "false");
+          }
+        }
+      });
+      await runDiscoverySearch();
+    });
+  }
+
+  // Top Reset button
+  const topResetBtn = document.querySelector("#reset-filters");
+  if (topResetBtn) {
+    topResetBtn.addEventListener("click", () => {
+      resetAdvancedFilters();
+      pills.forEach((p) => {
+        p.classList.remove("is-open");
+        const c = document.getElementById(p.dataset.target);
+        if (c) {
+          c.classList.add("is-collapsed");
+          const btn = c.querySelector(".filter-card-toggle");
+          if (btn) {
+            btn.textContent = "Open";
+            btn.setAttribute("aria-expanded", "false");
+          }
+        }
+      });
+      updateFilterPillBadges();
+      renderActiveFilterTags();
+      runDiscoverySearch();
+    });
+  }
+
+  elements.advancedForm?.addEventListener("change", () => {
+    updateFilterPillBadges();
+    renderActiveFilterTags();
+  });
+
+  updateFilterPillBadges();
+  renderActiveFilterTags();
+  updateFilterPillStates();
 }
 
 function initializeOutsideClosing() {
@@ -758,7 +1251,6 @@ async function setAdvancedFilters(filters = {}) {
   setPickerValues("include-languages", filters.include_original_languages);
   setPickerValues("exclude-languages", filters.exclude_original_languages);
   setPickerValues("include-countries", filters.include_origin_countries);
-  setPickerValues("exclude-countries", filters.exclude_origin_countries);
   elements.genreLogic.value = filters.genre_logic || "or";
   elements.minimumRating.value = filters.minimum_rating ?? "";
   elements.maximumRating.value = filters.maximum_rating ?? "";
@@ -767,6 +1259,8 @@ async function setAdvancedFilters(filters = {}) {
   elements.releaseYearTo.value = filters.release_year_to ?? "";
   elements.sortBy.value = filters.sort_by || "popularity.desc";
   await hydrateEntitySelections(filters);
+  updateFilterPillBadges();
+  renderActiveFilterTags();
 }
 
 function setPersonalFilters(filters = {}) {
@@ -778,7 +1272,11 @@ function setPersonalFilters(filters = {}) {
   });
   elements.includeUntracked.checked = filters.include_untracked ?? true;
   elements.notesQuery.value = filters.notes_query || "";
-  elements.favoriteOnly.checked = filters.favorite_only ?? false;
+  if (elements.favoriteOnly) {
+    elements.favoriteOnly.checked = false;
+  }
+  updateFilterPillBadges();
+  renderActiveFilterTags();
 }
 
 function showLoadingCards() {
@@ -899,6 +1397,10 @@ function createMovieCard(movie) {
   posterButton.type = "button";
   posterButton.className = "poster-button";
   posterButton.setAttribute("aria-label", `Open details for ${title}`);
+  const yearText = getMovieYear(movie);
+  const isNotesView = state.mode === "movie-notes" || state.mode === "movie-notes-search";
+  const notesText = isNotesView ? movie.user_data?.notes : null;
+  posterButton.title = `${title}${yearText ? ` (${yearText})` : ""}${notesText ? `\n📝 ${notesText}` : ""}`;
   posterButton.append(createPoster(movie));
   posterButton.addEventListener("click", () => openMovieDetails(movieId));
 
@@ -908,6 +1410,14 @@ function createMovieCard(movie) {
     favorite.textContent = "♥";
     favorite.setAttribute("aria-label", "Favourite");
     posterButton.append(favorite);
+  }
+
+  if (notesText) {
+    const noteMark = document.createElement("span");
+    noteMark.className = "card-note-mark";
+    noteMark.textContent = "📝";
+    noteMark.setAttribute("aria-label", "Has note");
+    posterButton.append(noteMark);
   }
 
   const statusBadge = document.createElement("span");
@@ -934,12 +1444,20 @@ function createMovieCard(movie) {
 
   const meta = document.createElement("p");
   const year = document.createElement("span");
-  year.textContent = getMovieYear(movie);
+  year.textContent = yearText;
   const language = document.createElement("span");
   language.textContent = getMovieLanguage(movie);
   meta.append(year, language);
 
   copy.append(heading, meta);
+
+  if (isNotesView && movie.user_data?.notes) {
+    const noteSnippet = document.createElement("p");
+    noteSnippet.className = "card-note-snippet";
+    noteSnippet.innerHTML = formatRichText(movie.user_data.notes);
+    copy.append(noteSnippet);
+  }
+
   article.append(posterButton, copy);
   return article;
 }
@@ -1059,17 +1577,42 @@ function setAuxiliaryView(view = null) {
   document.querySelector(".section-heading").classList.toggle("is-hidden", visible);
   elements.grid.classList.toggle("force-hidden", visible);
   elements.empty.classList.toggle("force-hidden", visible);
-  elements.pagination.classList.toggle("force-hidden", visible);
-  document.querySelector(".discovery-workspace").classList.toggle("force-hidden", visible);
+  if (elements.discoverWorkspace) {
+    elements.discoverWorkspace.classList.toggle("force-hidden", visible);
+  }
+  if (elements.notesSearchContainer) {
+    elements.notesSearchContainer.classList.toggle("force-hidden", visible);
+  }
 }
 
 function setEntriesVisible(visible) {
   setAuxiliaryView(visible ? "entries" : null);
 }
 
+async function activateDiscoverView() {
+  setSearchOriginMovie();
+  setEntriesVisible(false);
+  if (elements.discoverWorkspace) {
+    elements.discoverWorkspace.classList.remove("is-hidden");
+  }
+  if (elements.notesSearchContainer) {
+    elements.notesSearchContainer.classList.add("is-hidden");
+  }
+  setActiveView("discover");
+  await setDiscoveryMode(state.discoveryMode || "simple", true);
+}
+
 async function loadShelf(view, page = 1) {
   if (view === "entries") {
     await loadEntries(page);
+    return;
+  }
+  if (view === "discover") {
+    await activateDiscoverView();
+    return;
+  }
+  if (view === "movie-notes") {
+    await loadMovieNotes(page);
     return;
   }
   if (!(view in VIEW_COPY)) {
@@ -1078,6 +1621,12 @@ async function loadShelf(view, page = 1) {
 
   setSearchOriginMovie();
   setEntriesVisible(false);
+  if (elements.discoverWorkspace) {
+    elements.discoverWorkspace.classList.add("is-hidden");
+  }
+  if (elements.notesSearchContainer) {
+    elements.notesSearchContainer.classList.add("is-hidden");
+  }
   const requestNumber = ++state.requestNumber;
   state.mode = "shelf";
   state.currentView = view;
@@ -1097,16 +1646,28 @@ async function loadShelf(view, page = 1) {
       : `/movies/status/${encodeURIComponent(view)}`;
 
   try {
-    const response = await fetchJSON(`${url}?page=${page}`);
+    const basePage = (page - 1) * 3;
+    const [p1, p2, p3] = await Promise.all([
+      fetchJSON(`${url}?page=${basePage + 1}`),
+      fetchJSON(`${url}?page=${basePage + 2}`).catch(() => ({ results: [] })),
+      fetchJSON(`${url}?page=${basePage + 3}`).catch(() => ({ results: [] })),
+    ]);
 
     if (requestNumber !== state.requestNumber) {
       return;
     }
 
-    state.movies = Array.isArray(response.results) ? response.results : [];
-    state.searchPage = Number(response.page || page);
-    state.searchTotalPages = Number(response.total_pages || 1);
-    state.totalResults = Number(response.total_results || 0);
+    const combinedResults = [
+      ...(Array.isArray(p1.results) ? p1.results : []),
+      ...(Array.isArray(p2.results) ? p2.results : []),
+      ...(Array.isArray(p3.results) ? p3.results : []),
+    ];
+
+    state.movies = combinedResults;
+    state.searchPage = Number(page);
+    const backendTotalPages = Number(p1.total_pages || 1);
+    state.searchTotalPages = Math.max(1, Math.ceil(backendTotalPages / 3));
+    state.totalResults = Number(p1.total_results || combinedResults.length);
     state.pageLoader = (target) => loadShelf(view, target);
     renderMovies(state.movies, "library", state.totalResults);
     renderPagination(
@@ -1130,29 +1691,45 @@ async function loadMovieNotes(page = 1) {
   const requestNumber = ++state.requestNumber;
   setSearchOriginMovie();
   setEntriesVisible(false);
+  if (elements.discoverWorkspace) {
+    elements.discoverWorkspace.classList.add("is-hidden");
+  }
+  if (elements.notesSearchContainer) {
+    elements.notesSearchContainer.classList.remove("is-hidden");
+  }
   state.mode = "movie-notes";
-  state.currentView = null;
-  setActiveView(null);
+  state.currentView = "movie-notes";
+  setActiveView("movie-notes");
   setModeButton(null);
   elements.simpleControls.classList.add("is-hidden");
   elements.advancedControls.classList.add("is-hidden");
   elements.pagination.classList.add("is-hidden");
-  setSectionCopy({
-    kicker: "Personal memory",
-    title: "Movie Notes",
-    description: "Movies where you saved personal thoughts and observations.",
-  });
+  setSectionCopy(VIEW_COPY["movie-notes"]);
   clearNotice();
   showLoadingCards();
   elements.count.textContent = "Loading…";
 
   try {
-    const response = await fetchJSON(`/movies/notes?page=${page}`);
+    const basePage = (page - 1) * 3;
+    const [p1, p2, p3] = await Promise.all([
+      fetchJSON(`/movies/notes?page=${basePage + 1}`),
+      fetchJSON(`/movies/notes?page=${basePage + 2}`).catch(() => ({ results: [] })),
+      fetchJSON(`/movies/notes?page=${basePage + 3}`).catch(() => ({ results: [] })),
+    ]);
+
     if (requestNumber !== state.requestNumber) return;
-    state.movies = Array.isArray(response.results) ? response.results : [];
-    state.searchPage = Number(response.page || page);
-    state.searchTotalPages = Number(response.total_pages || 1);
-    state.totalResults = Number(response.total_results || 0);
+
+    const combinedResults = [
+      ...(Array.isArray(p1.results) ? p1.results : []),
+      ...(Array.isArray(p2.results) ? p2.results : []),
+      ...(Array.isArray(p3.results) ? p3.results : []),
+    ];
+
+    state.movies = combinedResults;
+    state.searchPage = Number(page);
+    const backendTotalPages = Number(p1.total_pages || 1);
+    state.searchTotalPages = Math.max(1, Math.ceil(backendTotalPages / 3));
+    state.totalResults = Number(p1.total_results || combinedResults.length);
     state.pageLoader = (target) => loadMovieNotes(target);
     renderMovies(state.movies, "library", state.totalResults);
     renderPagination(
@@ -1169,6 +1746,40 @@ async function loadMovieNotes(page = 1) {
   }
 }
 
+let notesSearchTimeout = null;
+
+async function searchLocalNotes(query) {
+  const cleaned = query.trim();
+  if (!cleaned) {
+    if (elements.clearNotesSearch) elements.clearNotesSearch.classList.add("is-hidden");
+    await loadMovieNotes(1);
+    return;
+  }
+
+  if (elements.clearNotesSearch) elements.clearNotesSearch.classList.remove("is-hidden");
+  const requestNumber = ++state.requestNumber;
+  state.mode = "movie-notes-search";
+  elements.pagination.classList.add("is-hidden");
+  showLoadingCards();
+  elements.count.textContent = "Searching notes…";
+
+  try {
+    const response = await fetchJSON(`/movies/notes/search?query=${encodeURIComponent(cleaned)}`);
+    if (requestNumber !== state.requestNumber) return;
+    const results = Array.isArray(response) ? response : (response.results || []);
+    state.movies = results;
+    state.totalResults = results.length;
+    renderMovies(results, "library", results.length);
+    elements.count.textContent = `${results.length} ${results.length === 1 ? "movie" : "movies"} matching "${cleaned}"`;
+  } catch (error) {
+    if (requestNumber !== state.requestNumber) return;
+    state.movies = [];
+    renderMovies([]);
+    showNotice(error.message);
+  }
+}
+
+
 async function searchMovies(query, page = 1) {
   const cleanedQuery = query.trim();
 
@@ -1180,6 +1791,12 @@ async function searchMovies(query, page = 1) {
   const requestNumber = ++state.requestNumber;
   setSearchOriginMovie();
   setEntriesVisible(false);
+  if (elements.discoverWorkspace) {
+    elements.discoverWorkspace.classList.add("is-hidden");
+  }
+  if (elements.notesSearchContainer) {
+    elements.notesSearchContainer.classList.add("is-hidden");
+  }
   state.mode = "search";
   state.currentView = null;
   setActiveView(null);
@@ -1244,9 +1861,9 @@ const DISCOVERY_COPY = {
     description: "Shape the search with genres, origin, rating and people.",
   },
   super: {
-    kicker: "TMDB + your library",
-    title: "Super Advanced results",
-    description: "The same filters, with your personal statuses applied.",
+    kicker: "Discover",
+    title: "Movie discovery",
+    description: "Explore movies from TMDB with your personal preferences and library rules.",
   },
 };
 
@@ -1261,20 +1878,29 @@ function setModeButton(mode) {
 
 async function setDiscoveryMode(mode, runSearch = false) {
   if (!(mode in DISCOVERY_COPY)) {
-    return;
+    mode = "super";
   }
 
   state.discoveryMode = mode;
   setEntriesVisible(false);
+  if (elements.discoverWorkspace) {
+    elements.discoverWorkspace.classList.remove("is-hidden");
+  }
+  if (elements.notesSearchContainer) {
+    elements.notesSearchContainer.classList.add("is-hidden");
+  }
   state.mode = "discovery";
-  state.currentView = null;
-  setActiveView(null);
+  state.currentView = "discover";
+  setActiveView("discover");
   setModeButton(mode);
   setSectionCopy(DISCOVERY_COPY[mode]);
-  elements.simpleControls.classList.toggle("is-hidden", mode !== "simple");
-  elements.advancedControls.classList.toggle("is-hidden", mode === "simple");
-  elements.personalFilters.classList.toggle("is-hidden", mode !== "super");
+  elements.simpleControls.classList.add("is-hidden");
+  elements.advancedControls.classList.remove("is-hidden");
+  elements.personalFilters.classList.remove("is-hidden");
   elements.pagination.classList.add("is-hidden");
+  updateFilterPillBadges();
+  renderActiveFilterTags();
+  updateFilterPillStates();
   scheduleSearchStateSave();
 
   if (runSearch || mode === "simple") {
@@ -1283,56 +1909,107 @@ async function setDiscoveryMode(mode, runSearch = false) {
 }
 
 function buildSearchSpec() {
-  if (state.discoveryMode === "simple") {
-    return { mode: "simple", filters: {} };
-  }
-
-  const spec = {
-    mode: state.discoveryMode,
+  return {
+    mode: "super",
     filters: collectAdvancedFilters(),
+    personalFilters: collectPersonalFilters(),
+  };
+}
+
+const discoveryCache = new Map();
+
+function clearDiscoveryCache() {
+  discoveryCache.clear();
+}
+
+function getDiscoveryCacheKey(spec, page) {
+  return JSON.stringify({ spec, page });
+}
+
+async function prefetchDiscoveryPage(spec, page) {
+  const nextKey = getDiscoveryCacheKey(spec, page);
+  if (discoveryCache.has(nextKey)) return;
+
+  const url = spec.mode === "advanced"
+    ? "/movies/discover/advanced"
+    : "/movies/discover/super-advanced";
+  const body = {
+    filters: spec.filters || {},
+    ...spec.personalFilters,
   };
 
-  if (state.discoveryMode === "super") {
-    spec.personalFilters = collectPersonalFilters();
-  }
+  const basePage = (page - 1) * 3;
+  const fetchOne = (p) => fetchJSON(url, {
+    method: "POST",
+    body: JSON.stringify({ ...body, page: p }),
+  });
 
-  return spec;
+  try {
+    const [p1, p2, p3] = await Promise.all([
+      fetchOne(basePage + 1),
+      fetchOne(basePage + 2).catch(() => ({ results: [] })),
+      fetchOne(basePage + 3).catch(() => ({ results: [] })),
+    ]);
+
+    const combined = [
+      ...(Array.isArray(p1.results) ? p1.results : []),
+      ...(Array.isArray(p2.results) ? p2.results : []),
+      ...(Array.isArray(p3.results) ? p3.results : []),
+    ];
+
+    const response = {
+      results: combined,
+      page: page,
+      tmdb_total_pages: Math.max(1, Math.ceil(Number(p1.tmdb_total_pages || 1) / 3)),
+      tmdb_total_results: Number(p1.tmdb_total_results || combined.length),
+      has_next_page: Boolean(p3.has_next_page || (basePage + 3 < Number(p1.tmdb_total_pages || 1))),
+      pagination_exact: p1.pagination_exact !== false,
+    };
+
+    discoveryCache.set(nextKey, response);
+  } catch {
+    // Background prefetch errors are safely ignored
+  }
 }
 
 async function executeDiscoverySearch(spec, page = 1) {
   const requestNumber = ++state.requestNumber;
   state.mode = "discovery";
-  state.currentView = null;
-  setActiveView(null);
-  setModeButton(spec.mode);
-  setSectionCopy(DISCOVERY_COPY[spec.mode]);
+  state.currentView = "discover";
+  setActiveView("discover");
+  setModeButton("super");
+
+  const hasActiveFilters = Boolean(
+    (spec.filters?.include_genre_ids && spec.filters.include_genre_ids.length) ||
+    (spec.filters?.exclude_genre_ids && spec.filters.exclude_genre_ids.length) ||
+    spec.filters?.minimum_rating ||
+    spec.filters?.release_year_from ||
+    spec.filters?.release_year_to ||
+    (spec.filters?.include_director_ids && spec.filters.include_director_ids.length) ||
+    (spec.filters?.include_cast_ids && spec.filters.include_cast_ids.length) ||
+    (spec.filters?.include_keyword_ids && spec.filters.include_keyword_ids.length)
+  );
+
+  setSectionCopy({
+    kicker: "Discover",
+    title: hasActiveFilters ? "Filtered discovery" : "Movie discovery",
+    description: hasActiveFilters
+      ? "Movies matching your chosen filters and library settings."
+      : "Popular TMDB discoveries with your personal library rules applied.",
+  });
   clearNotice();
-  elements.pagination.classList.add("is-hidden");
-  showLoadingCards();
-  elements.count.textContent = "Searching…";
 
-  let url = "/movies/discover/advanced";
-  let body = { filters: spec.filters, page };
+  const cacheKey = getDiscoveryCacheKey(spec, page);
 
-  if (spec.mode === "super") {
-    url = "/movies/discover/super-advanced";
-    body = {
-      filters: spec.filters,
-      page,
-      ...spec.personalFilters,
-    };
-  }
+  const url = spec.mode === "advanced"
+    ? "/movies/discover/advanced"
+    : "/movies/discover/super-advanced";
+  const body = {
+    filters: spec.filters || {},
+    ...spec.personalFilters,
+  };
 
-  try {
-    const response = await fetchJSON(url, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-
-    if (requestNumber !== state.requestNumber) {
-      return;
-    }
-
+  const applyResponse = (response) => {
     state.movies = Array.isArray(response.results) ? response.results : [];
 
     state.currentSearchSpec = JSON.parse(JSON.stringify(spec));
@@ -1360,6 +2037,56 @@ async function executeDiscoverySearch(spec, page = 1) {
       },
     );
     scheduleSearchStateSave();
+
+    // Prefetch the next 60 movies in the background
+    if (response.has_next_page || (state.searchPage < state.searchTotalPages)) {
+      prefetchDiscoveryPage(spec, state.searchPage + 1);
+    }
+  };
+
+  if (discoveryCache.has(cacheKey)) {
+    applyResponse(discoveryCache.get(cacheKey));
+    return;
+  }
+
+  elements.pagination.classList.add("is-hidden");
+  showLoadingCards();
+  elements.count.textContent = "Searching…";
+
+  const basePage = (page - 1) * 3;
+  const fetchOne = (p) => fetchJSON(url, {
+    method: "POST",
+    body: JSON.stringify({ ...body, page: p }),
+  });
+
+  try {
+    const [p1, p2, p3] = await Promise.all([
+      fetchOne(basePage + 1),
+      fetchOne(basePage + 2).catch(() => ({ results: [] })),
+      fetchOne(basePage + 3).catch(() => ({ results: [] })),
+    ]);
+
+    if (requestNumber !== state.requestNumber) {
+      return;
+    }
+
+    const combined = [
+      ...(Array.isArray(p1.results) ? p1.results : []),
+      ...(Array.isArray(p2.results) ? p2.results : []),
+      ...(Array.isArray(p3.results) ? p3.results : []),
+    ];
+
+    const response = {
+      results: combined,
+      page: page,
+      tmdb_total_pages: Math.max(1, Math.ceil(Number(p1.tmdb_total_pages || 1) / 3)),
+      tmdb_total_results: Number(p1.tmdb_total_results || combined.length),
+      has_next_page: Boolean(p3.has_next_page || (basePage + 3 < Number(p1.tmdb_total_pages || 1))),
+      pagination_exact: p1.pagination_exact !== false,
+    };
+
+    discoveryCache.set(cacheKey, response);
+    applyResponse(response);
   } catch (error) {
     if (requestNumber !== state.requestNumber) {
       return;
@@ -1438,9 +2165,14 @@ function resetAdvancedFilters({ notify = true } = {}) {
   });
   Object.keys(PICKER_CONFIG).forEach((id) => setPickerValues(id, []));
   setPersonalFilters();
+
+  const defaultPref = state.preferences?.find((item) => item.is_default);
+  const baseFilters = defaultPref?.filters || DEFAULT_SYSTEM_FILTERS;
+  setAdvancedFilters(baseFilters);
+
   updateProfileButtons();
   if (notify) {
-    showNotice("All filters cleared.");
+    showNotice("Reset to default filters.");
   }
   scheduleSearchStateSave();
 }
@@ -2005,6 +2737,7 @@ async function saveSelectedStatus() {
       body: JSON.stringify({ status }),
     });
     updateVisibleMovie(response.user_movie_data);
+    clearDiscoveryCache();
     renderPersonalControls(state.selectedMovie);
     elements.dialogKicker.textContent = STATUS_LABELS[status];
     elements.saveStatus.textContent = "✓ Saved";
@@ -2037,6 +2770,7 @@ async function toggleSelectedFavorite() {
       body: JSON.stringify({ is_favorite: shouldFavorite }),
     });
     updateVisibleMovie(response.user_movie_data);
+    clearDiscoveryCache();
     renderPersonalControls(state.selectedMovie);
     elements.favoriteButton.classList.remove("heart-pop");
     void elements.favoriteButton.offsetWidth;
@@ -2094,6 +2828,7 @@ async function saveSelectedNotes() {
       body: JSON.stringify({ notes }),
     });
     updateVisibleMovie(response.user_movie_data);
+    clearDiscoveryCache();
     elements.saveNotes.textContent = "✓ Saved";
     elements.saveNotes.classList.add("save-success");
     feedback(elements.notesFeedback, "Personal memory saved.");
@@ -2183,6 +2918,27 @@ async function removeSelectedKeyword(tag) {
   }
 }
 
+function formatRichText(text) {
+  if (!text) return "";
+  const escaped = String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+
+  // Markdown links: [Title](https://...)
+  const withMarkdown = escaped.replace(
+    /\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g,
+    '<a href="$2" target="_blank" rel="noreferrer noopener" class="note-link">$1</a>',
+  );
+
+  // Autolink bare URLs: https://...
+  return withMarkdown.replace(
+    /(^|[\s(])(https?:\/\/[^\s<)]+)/g,
+    '$1<a href="$2" target="_blank" rel="noreferrer noopener" class="note-link">$2</a>',
+  );
+}
+
 function appendEntryBody(container, body) {
   const lines = String(body || "").split(/\r?\n/);
   let list = null;
@@ -2194,14 +2950,14 @@ function appendEntryBody(container, body) {
         container.append(list);
       }
       const item = document.createElement("li");
-      item.textContent = match[1];
+      item.innerHTML = formatRichText(match[1]);
       list.append(item);
       return;
     }
     list = null;
     if (!line.trim()) return;
     const paragraph = document.createElement("p");
-    paragraph.textContent = line;
+    paragraph.innerHTML = formatRichText(line);
     container.append(paragraph);
   });
 }
@@ -2333,17 +3089,47 @@ function renderActiveEntryTag() {
   button.textContent = `Tag: ${state.entryTagFilter} ×`;
 }
 
-function appendEntryLinks(container, value) {
+function appendEntryLinks(container, value, onRemove = null) {
   container.replaceChildren();
-  String(value || "").split(/\r?\n/).map((url) => url.trim())
-    .filter(Boolean).forEach((raw) => {
-      const anchor = document.createElement("a");
-      anchor.href = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
-      anchor.textContent = raw;
-      anchor.target = "_blank";
-      anchor.rel = "noreferrer";
-      container.append(anchor);
-    });
+  const urls = String(value || "")
+    .split(/[\r\n,]+/)
+    .map((url) => url.trim())
+    .filter(Boolean);
+  if (!urls.length) return;
+
+  const heading = document.createElement("div");
+  heading.className = "entry-links-heading";
+  heading.textContent = "Attached Links";
+  container.append(heading);
+
+  urls.forEach((raw) => {
+    const row = document.createElement("div");
+    row.className = "entry-link-row";
+
+    const anchor = document.createElement("a");
+    anchor.href = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    anchor.textContent = raw;
+    anchor.target = "_blank";
+    anchor.rel = "noreferrer noopener";
+    row.append(anchor);
+
+    if (onRemove) {
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.className = "entry-link-remove";
+      deleteBtn.title = "Remove this link";
+      deleteBtn.setAttribute("aria-label", `Remove ${raw}`);
+      deleteBtn.innerHTML = "&times;";
+      deleteBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onRemove(raw);
+      });
+      row.append(deleteBtn);
+    }
+
+    container.append(row);
+  });
 }
 
 function renderEntries(entries) {
@@ -2470,7 +3256,32 @@ function openEntryReader(entry, index = null, { preserveScroll = false } = {}) {
   });
   elements.entryReaderBody.replaceChildren();
   appendEntryBody(elements.entryReaderBody, entry.body);
-  appendEntryLinks(elements.entryReaderLinks, entry.url);
+  appendEntryLinks(elements.entryReaderLinks, entry.url, async (removedUrl) => {
+    const currentUrls = String(entry.url || "").split(/[\r\n,]+/).map((u) => u.trim()).filter(Boolean);
+    const remainingUrls = currentUrls.filter((u) => u !== removedUrl);
+    const newUrlValue = remainingUrls.join("\n") || null;
+    const newType = newUrlValue && !entry.body ? "link" : "note";
+    try {
+      const response = await fetchJSON(`/entries/${entry.entry_id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          entry_type: newType,
+          title: entry.title,
+          body: entry.body || null,
+          url: newUrlValue,
+          tags: (entry.tags || []).map((t) => t.name),
+        }),
+      });
+      const updated = response.entry;
+      state.entryReaderEntry = updated;
+      const idx = state.entryResults.findIndex((e) => e.entry_id === updated.entry_id);
+      if (idx >= 0) state.entryResults[idx] = updated;
+      openEntryReader(updated, idx, { preserveScroll: true });
+      showNotice("Link removed.");
+    } catch (err) {
+      showNotice(err.message);
+    }
+  });
   elements.entryReaderLinks.classList.toggle("is-hidden", !entry.url);
   elements.entryReaderCreated.classList.toggle("is-hidden", !entryWasEdited(entry));
   elements.entryReaderCreated.textContent = entryWasEdited(entry)
@@ -2688,6 +3499,20 @@ async function loadStorage() {
   }
 }
 
+function updateBlogStats() {
+  const bodyText = elements.entryBody?.value || "";
+  const words = bodyText.trim().split(/\s+/).filter(Boolean).length;
+  const wordCountEl = document.querySelector("#blog-word-count");
+  const readTimeEl = document.querySelector("#blog-read-time");
+  if (wordCountEl) {
+    wordCountEl.textContent = `${words} ${words === 1 ? "word" : "words"}`;
+  }
+  if (readTimeEl) {
+    const minutes = Math.max(1, Math.ceil(words / 200));
+    readTimeEl.textContent = `${minutes} min read`;
+  }
+}
+
 function openEntryDialog(entry = null) {
   state.editingEntryId = entry?.entry_id || null;
   elements.entryForm.reset();
@@ -2696,16 +3521,17 @@ function openEntryDialog(entry = null) {
   elements.entryBody.value = entry?.body || "";
   elements.entryUrl.value = entry?.url || "";
   elements.entryTags.value = (entry?.tags || []).map((tag) => tag.name).join(", ");
-  elements.entryDialogTitle.textContent = entry ? "Edit entry" : "New note or link";
+  elements.entryDialogTitle.textContent = entry ? "Edit note" : "New note";
   updateEntryUrlField();
+  updateBlogStats();
   elements.entryDialog.showModal();
   elements.entryTitle.focus();
 }
 
 function updateEntryUrlField() {
-  const isLink = elements.entryType.value === "link";
-  elements.entryUrlField.classList.toggle("is-hidden", !isLink);
-  elements.entryUrl.required = isLink;
+  if (elements.entryUrlField) {
+    elements.entryUrlField.classList.remove("is-hidden");
+  }
 }
 
 async function saveEntry(event) {
@@ -2714,21 +3540,24 @@ async function saveEntry(event) {
   elements.saveEntry.disabled = true;
   elements.saveEntry.textContent = "Saving…";
   try {
+    const rawUrl = elements.entryUrl.value.trim();
+    const rawBody = elements.entryBody.value.trim();
+    const entryType = rawUrl && !rawBody ? "link" : "note";
     const response = await fetchJSON(
       editing ? `/entries/${state.editingEntryId}` : "/entries",
       {
         method: editing ? "PUT" : "POST",
         body: JSON.stringify({
-          entry_type: elements.entryType.value,
+          entry_type: entryType,
           title: elements.entryTitle.value,
           body: elements.entryBody.value || null,
-          url: elements.entryType.value === "link" ? elements.entryUrl.value : null,
+          url: rawUrl || null,
           tags: elements.entryTags.value.split(",").map((tag) => tag.trim()).filter(Boolean),
         }),
       },
     );
     elements.entryDialog.close();
-    showNotice(editing ? "Entry updated." : "Entry created.");
+    showNotice(editing ? "Note updated." : "Note saved.");
     if (editing && state.entryReaderEntry) {
       const updated = response.entry;
       const index = state.entryResults.findIndex(
@@ -2743,14 +3572,52 @@ async function saveEntry(event) {
     showNotice(error.message);
   } finally {
     elements.saveEntry.disabled = false;
-    elements.saveEntry.textContent = "Save entry";
+    elements.saveEntry.textContent = "Save note";
   }
 }
 
 elements.form.addEventListener("submit", (event) => {
   event.preventDefault();
+  if (elements.discoverWorkspace) {
+    elements.discoverWorkspace.classList.add("is-hidden");
+  }
+  if (elements.notesSearchContainer) {
+    elements.notesSearchContainer.classList.add("is-hidden");
+  }
   searchMovies(elements.query.value);
 });
+
+elements.viewModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    setViewMode(button.dataset.layout);
+  });
+});
+
+if (elements.notesSearchInput) {
+  elements.notesSearchInput.addEventListener("input", () => {
+    window.clearTimeout(notesSearchTimeout);
+    notesSearchTimeout = window.setTimeout(() => {
+      searchLocalNotes(elements.notesSearchInput.value);
+    }, 250);
+  });
+}
+
+if (elements.clearNotesSearch) {
+  elements.clearNotesSearch.addEventListener("click", () => {
+    if (elements.notesSearchInput) {
+      elements.notesSearchInput.value = "";
+      elements.notesSearchInput.focus();
+    }
+    searchLocalNotes("");
+  });
+}
+
+if (elements.refreshFeed) {
+  elements.refreshFeed.addEventListener("click", () => {
+    clearDiscoveryCache();
+    runDiscoverySearch();
+  });
+}
 
 elements.navLinks.forEach((button) => {
   button.addEventListener("click", () => {
@@ -2770,6 +3637,7 @@ elements.mobileView.addEventListener("change", () => {
 
 elements.modeButtons.forEach((button) => {
   button.addEventListener("click", () => {
+    clearDiscoveryCache();
     setSearchOriginMovie();
     setDiscoveryMode(button.dataset.discoveryMode).catch((error) => {
       showNotice(error.message);
@@ -2778,15 +3646,20 @@ elements.modeButtons.forEach((button) => {
 });
 
 elements.refreshDiscovery.addEventListener("click", () => {
+  clearDiscoveryCache();
   runDiscoverySearch();
 });
 
 elements.advancedForm.addEventListener("submit", (event) => {
   event.preventDefault();
+  clearDiscoveryCache();
   runDiscoverySearch();
 });
 
-elements.resetFilters.addEventListener("click", resetAdvancedFilters);
+elements.resetFilters.addEventListener("click", () => {
+  clearDiscoveryCache();
+  resetAdvancedFilters();
+});
 
 elements.advancedForm.addEventListener("input", markSelectedProfileModified);
 elements.advancedForm.addEventListener("change", markSelectedProfileModified);
@@ -2881,6 +3754,13 @@ elements.newEntry.addEventListener("click", () => openEntryDialog());
 elements.cancelEntry.addEventListener("click", () => elements.entryDialog.close());
 elements.entryType.addEventListener("change", updateEntryUrlField);
 elements.entryForm.addEventListener("submit", saveEntry);
+elements.entryBody.addEventListener("input", updateBlogStats);
+elements.entryForm.addEventListener("keydown", (event) => {
+  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    event.preventDefault();
+    elements.entryForm.requestSubmit();
+  }
+});
 elements.entryFilters.addEventListener("submit", (event) => {
   event.preventDefault();
   loadEntries(1);
@@ -2971,15 +3851,24 @@ elements.footerViews.forEach((button) => {
 });
 
 async function initializeApp() {
+  setViewMode(getSavedViewMode());
   initializePickers();
   initializeEntityPickers();
   initializeCollapsibleFilters();
+  setupFilterPills();
   initializeOutsideClosing();
   populateJournalYears();
   resetEntryFiltersToCurrent();
   await loadProfiles();
   const restoredMode = await restoreSearchState();
-  await setDiscoveryMode(restoredMode, true);
+  if (elements.discoverWorkspace) {
+    elements.discoverWorkspace.classList.remove("is-hidden");
+  }
+  if (elements.notesSearchContainer) {
+    elements.notesSearchContainer.classList.add("is-hidden");
+  }
+  setActiveView("discover");
+  await setDiscoveryMode(restoredMode || "super", true);
   await refreshReleaseAlertBadge();
 }
 

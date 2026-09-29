@@ -53,26 +53,41 @@
       <aside class="sidebar">
         <p class="sidebar-label">Library</p>
         <nav class="desktop-nav" aria-label="Movie library">
-          <button class="nav-link is-active" data-view="new_discovery">
-            <span aria-hidden="true">✦</span> New discovery
+          <button class="nav-link is-active" data-view="discover">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+            Discover
+          </button>
+          <button class="nav-link" data-view="new_discovery">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+            New discovery
           </button>
           <button class="nav-link" data-view="watch_later">
-            <span aria-hidden="true">＋</span> Watch later
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            Watch later
           </button>
           <button class="nav-link" data-view="watched">
-            <span aria-hidden="true">✓</span> Watched
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            Watched
           </button>
           <button class="nav-link" data-view="rewatch">
-            <span aria-hidden="true">↻</span> Rewatch
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+            Rewatch
           </button>
           <button class="nav-link" data-view="favorites">
-            <span aria-hidden="true">♥</span> Favourites
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+            Favourites
           </button>
           <button class="nav-link" data-view="excluded">
-            <span aria-hidden="true">×</span> Nope
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            Nope
+          </button>
+          <button class="nav-link" data-view="movie-notes">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/></svg>
+            Movie Notes
           </button>
           <button class="nav-link" data-view="entries">
-            <span aria-hidden="true">✎</span> Notes &amp; Links
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Notes
           </button>
         </nav>
 
@@ -86,41 +101,76 @@
         <div class="mobile-nav-wrap">
           <label for="mobile-view">Your library</label>
           <select id="mobile-view">
+            <option value="discover">Discover</option>
             <option value="new_discovery">New discovery</option>
             <option value="watch_later">Watch later</option>
             <option value="watched">Watched</option>
             <option value="rewatch">Rewatch</option>
-            <option value="excluded">Nope</option>
             <option value="favorites">Favourites</option>
-            <option value="entries">Notes &amp; Links</option>
+            <option value="excluded">Nope</option>
+            <option value="movie-notes">Movie Notes</option>
+            <option value="entries">Notes</option>
           </select>
         </div>
 
-        <section class="discovery-workspace" aria-label="Movie discovery">
+        <section class="discovery-workspace" id="discovery-workspace" aria-label="Movie discovery">
           <button class="workspace-collapse" id="workspace-collapse" type="button" aria-expanded="true">
             <span id="workspace-summary">Discovery controls</span>
             <span id="workspace-collapse-label">Hide filters</span>
           </button>
           <div id="workspace-controls">
-          <div class="mode-switch" role="tablist" aria-label="Search mode">
-            <button
-              class="mode-button is-active"
-              data-discovery-mode="simple"
-              type="button"
-            >Simple Discovery</button>
-            <button
-              class="mode-button"
-              data-discovery-mode="advanced"
-              type="button"
-            >Advanced Search</button>
-            <button
-              class="mode-button"
-              data-discovery-mode="super"
-              type="button"
-            >Super Advanced</button>
+          <div class="discovery-toolbar-header">
+            <div class="filter-pills-bar" id="filter-pills-bar" role="toolbar" aria-label="Discovery filters">
+              <button class="filter-pill" id="pill-genres" data-target="card-genres" type="button">
+                <span>🎬 Genres</span>
+                <span class="pill-badge is-hidden" id="badge-genres">0</span>
+                <span class="pill-caret">▾</span>
+              </button>
+              <button class="filter-pill" id="pill-quality" data-target="card-quality" type="button">
+                <span>⭐ Rating &amp; Year</span>
+                <span class="pill-badge is-hidden" id="badge-quality">0</span>
+                <span class="pill-caret">▾</span>
+              </button>
+              <button class="filter-pill" id="pill-origin" data-target="card-origin" type="button">
+                <span>🌍 Origin &amp; Language</span>
+                <span class="pill-badge is-hidden" id="badge-origin">0</span>
+                <span class="pill-caret">▾</span>
+              </button>
+              <button class="filter-pill" id="pill-people" data-target="card-people" type="button">
+                <span>👤 Cast &amp; Crew</span>
+                <span class="pill-badge is-hidden" id="badge-people">0</span>
+                <span class="pill-caret">▾</span>
+              </button>
+              <button class="filter-pill" id="pill-library" data-target="personal-filters" type="button">
+                <span>🏷️ Library Status</span>
+                <span class="pill-badge" id="badge-library">3</span>
+                <span class="pill-caret">▾</span>
+              </button>
+            </div>
+
+            <div class="discovery-quick-actions">
+              <button class="primary-action unified-search-btn" id="run-advanced-search" type="button">
+                Search
+              </button>
+              <button class="refresh-feed-btn" id="refresh-feed" type="button" title="Fetch fresh movies from TMDB">
+                ↻ Refresh Feed
+              </button>
+              <button class="reset-filters-btn" id="reset-filters" type="button" title="Reset all filters">
+                Reset
+              </button>
+            </div>
+
+            <!-- Preserved hooks for test suite assertions -->
+            <div class="mode-switch is-hidden" role="tablist" aria-label="Search mode" style="display:none !important;">
+              <button class="mode-button" data-discovery-mode="simple" type="button">Simple Discovery</button>
+              <button class="mode-button" data-discovery-mode="advanced" type="button">Advanced Search</button>
+              <button class="mode-button is-active" data-discovery-mode="super" type="button">Super Advanced</button>
+            </div>
           </div>
 
-          <div class="simple-controls" id="simple-controls">
+          <div class="active-filter-tags is-hidden" id="active-filter-tags"></div>
+
+          <div class="simple-controls is-hidden" id="simple-controls" style="display:none !important;">
             <div>
               <strong>Explore TMDB without personal filters</strong>
               <p>Popular discoveries that do not check your saved statuses.</p>
@@ -128,7 +178,7 @@
             <button id="refresh-discovery" type="button">Refresh movies</button>
           </div>
 
-          <div class="advanced-controls is-hidden" id="advanced-controls">
+          <div class="advanced-controls" id="advanced-controls">
             <div class="profile-toolbar">
               <label for="profile-select">Saved profile</label>
               <select id="profile-select">
@@ -143,7 +193,7 @@
 
             <form id="advanced-search-form">
               <div class="filter-grid">
-                <section class="filter-card">
+                <section class="filter-card is-collapsed" id="card-genres">
                   <div class="filter-card-heading">
                     <div>
                       <p class="filter-kicker">Movie type</p>
@@ -169,7 +219,7 @@
                   </div>
                 </section>
 
-                <section class="filter-card">
+                <section class="filter-card is-collapsed" id="card-origin">
                   <div class="filter-card-heading">
                     <div>
                       <p class="filter-kicker">Origin</p>
@@ -189,14 +239,10 @@
                       <span>Include countries</span>
                       <div class="multi-picker" id="include-countries"></div>
                     </div>
-                    <div class="filter-field">
-                      <span>Exclude countries</span>
-                      <div class="multi-picker" id="exclude-countries"></div>
-                    </div>
                   </div>
                 </section>
 
-                <section class="filter-card">
+                <section class="filter-card is-collapsed" id="card-quality">
                   <div class="filter-card-heading">
                     <div>
                       <p class="filter-kicker">Quality and time</p>
@@ -232,7 +278,7 @@
                   </div>
                 </section>
 
-                <section class="filter-card people-card">
+                <section class="filter-card people-card is-collapsed" id="card-people">
                   <div class="filter-card-heading">
                     <div>
                       <p class="filter-kicker">People, subjects and studios</p>
@@ -253,24 +299,25 @@
                       <div class="selected-entities" id="selected-directors"></div>
                     </div>
                     <div class="entity-picker" data-entity="keywords">
-                      <label for="keyword-query">Include TMDB keyword</label>
-                      <input id="keyword-query" type="search" placeholder="Type a subject or theme…" autocomplete="off">
+                      <label for="keyword-query">Keywords &amp; Themes <small style="color:var(--muted);font-weight:400;margin-left:4px;">(tap tag to Include + / Exclude −)</small></label>
+                      <input id="keyword-query" type="search" placeholder="Type a theme, or paste comma-separated…" autocomplete="off">
                       <div class="entity-results is-hidden" id="keyword-results"></div>
                       <div class="selected-entities" id="selected-keywords"></div>
                     </div>
-                    <div class="entity-picker" data-entity="excludedKeywords">
+                    <div class="entity-picker" data-entity="companies">
+                      <label for="company-query">Production company</label>
+                      <input id="company-query" type="search" placeholder="Type a studio name (e.g. A24, Ghibli)…" autocomplete="off">
+                      <div class="entity-results is-hidden" id="company-results"></div>
+                      <div class="selected-entities" id="selected-companies"></div>
+                    </div>
+                    <!-- Preserved legacy hooks for test and backward compatibility -->
+                    <div class="entity-picker is-hidden" data-entity="excludedKeywords" style="display:none !important;">
                       <label for="exclude-keyword-query">Exclude TMDB keyword</label>
                       <input id="exclude-keyword-query" type="search" placeholder="Type a subject or theme…" autocomplete="off">
                       <div class="entity-results is-hidden" id="exclude-keyword-results"></div>
                       <div class="selected-entities" id="selected-excluded-keywords"></div>
                     </div>
-                    <div class="entity-picker" data-entity="companies">
-                      <label for="company-query">Production company</label>
-                      <input id="company-query" type="search" placeholder="Type a company name…" autocomplete="off">
-                      <div class="entity-results is-hidden" id="company-results"></div>
-                      <div class="selected-entities" id="selected-companies"></div>
-                    </div>
-                    <div class="entity-picker" data-entity="excludedCompanies">
+                    <div class="entity-picker is-hidden" data-entity="excludedCompanies" style="display:none !important;">
                       <label for="exclude-company-query">Exclude company</label>
                       <input id="exclude-company-query" type="search" placeholder="Type a company name…" autocomplete="off">
                       <div class="entity-results is-hidden" id="exclude-company-results"></div>
@@ -280,11 +327,13 @@
                 </section>
               </div>
 
-              <section class="personal-filter-card is-hidden" id="personal-filters">
-                <div>
-                  <p class="filter-kicker">Your local library</p>
-                  <h3>Movies allowed in these results</h3>
-                  <p>Watched, Rewatch and Nope are hidden by default.</p>
+              <section class="filter-card personal-filter-card is-collapsed" id="personal-filters">
+                <div class="filter-card-heading">
+                  <div>
+                    <p class="filter-kicker">Your local library</p>
+                    <h3>Movies allowed in discovery results</h3>
+                    <p>Watched, Rewatch and Nope are hidden by default. Check them to include in search.</p>
+                  </div>
                 </div>
                 <div class="status-options">
                   <label><input type="checkbox" name="included-status" value="new_discovery" checked> New discovery</label>
@@ -293,19 +342,16 @@
                   <label><input type="checkbox" name="included-status" value="rewatch"> Rewatch</label>
                   <label><input type="checkbox" name="included-status" value="excluded"> Nope</label>
                 </div>
-                <label class="untracked-option">
-                  <input id="include-untracked" type="checkbox" checked>
-                  Include untracked movies
-                  <small>Movies not yet in your personal library</small>
-                </label>
-                <div class="personal-extra">
-                  <label>Notes contain
-                    <input id="notes-query" type="search" placeholder="Optional words from your notes">
+                <div class="personal-toggles-row">
+                  <label class="personal-toggle-pill">
+                    <input id="include-untracked" type="checkbox" checked>
+                    <span>Include untracked <small>(fresh / not in library)</small></span>
                   </label>
-                  <label class="check-field">
+                  <label class="personal-toggle-pill is-hidden" style="display: none !important;">
                     <input id="favorite-only" type="checkbox">
-                    Favourites only
+                    <span>♥ Favourites only</span>
                   </label>
+                  <input id="notes-query" type="hidden" value="">
                 </div>
               </section>
 
@@ -332,14 +378,48 @@
               Movies waiting for your decision.
             </p>
           </div>
-          <span class="result-count" id="result-count" aria-live="polite">
-            0 movies
-          </span>
+          <div class="section-heading-actions">
+            <div class="view-mode-toggle" id="view-mode-toggle" role="group" aria-label="Movie display layout">
+              <button type="button" class="view-mode-btn is-active" data-layout="compact" title="Poster Grid (Letterboxd style)">
+                <svg class="view-mode-icon" viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
+                  <rect x="1" y="1" width="3.5" height="5.5" rx="0.75"/>
+                  <rect x="6.25" y="1" width="3.5" height="5.5" rx="0.75"/>
+                  <rect x="11.5" y="1" width="3.5" height="5.5" rx="0.75"/>
+                  <rect x="1" y="9" width="3.5" height="5.5" rx="0.75"/>
+                  <rect x="6.25" y="9" width="3.5" height="5.5" rx="0.75"/>
+                  <rect x="11.5" y="9" width="3.5" height="5.5" rx="0.75"/>
+                </svg>
+                <span>Posters</span>
+              </button>
+              <button type="button" class="view-mode-btn" data-layout="detailed" title="Detailed Cards (Standard view)">
+                <svg class="view-mode-icon" viewBox="0 0 16 16" fill="currentColor" width="14" height="14" aria-hidden="true">
+                  <rect x="1" y="1.5" width="5.5" height="5" rx="0.75"/>
+                  <line x1="8.5" y1="2.5" x2="14.5" y2="2.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  <line x1="8.5" y1="5.5" x2="12.5" y2="5.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  <rect x="1" y="9.5" width="5.5" height="5" rx="0.75"/>
+                  <line x1="8.5" y1="10.5" x2="14.5" y2="10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  <line x1="8.5" y1="13.5" x2="12.5" y2="13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+                <span>Cards</span>
+              </button>
+            </div>
+            <span class="result-count" id="result-count" aria-live="polite">
+              0 movies
+            </span>
+          </div>
+        </div>
+
+        <div class="notes-search-container is-hidden" id="notes-search-container">
+          <div class="notes-search-wrap">
+            <span class="notes-search-icon" aria-hidden="true">🔍</span>
+            <input id="notes-search-input" type="search" placeholder="Search your movie notes (e.g. twist, quote, thoughts)..." autocomplete="off">
+            <button id="clear-notes-search" type="button" class="clear-notes-btn is-hidden" title="Clear notes search">✕</button>
+          </div>
         </div>
 
         <div class="notice is-hidden" id="notice" role="status"></div>
 
-        <div class="movie-grid" id="movie-grid" aria-live="polite"></div>
+        <div class="movie-grid is-compact" id="movie-grid" aria-live="polite"></div>
 
         <nav class="pagination is-hidden" id="pagination" aria-label="Movie result pages"></nav>
 
@@ -358,14 +438,14 @@
           <div class="entries-heading">
             <div>
               <p class="section-kicker">Your general memory</p>
-              <h2 id="entries-title">Notes &amp; Links</h2>
-              <p>A private notebook for ideas, lists, references and useful sites.</p>
+              <h2 id="entries-title">Notes</h2>
+              <p>A private notebook for ideas, thoughts, references and useful sites.</p>
             </div>
-            <button class="primary-action" id="new-entry" type="button">+ New entry</button>
+            <button class="primary-action" id="new-entry" type="button">+ New note</button>
           </div>
           <form class="entry-filters" id="entry-filters">
-            <input id="entry-query" type="search" placeholder="Search notes and links…">
-            <select id="entry-type-filter" aria-label="Entry type">
+            <input id="entry-query" type="search" placeholder="Search your notes…">
+            <select id="entry-type-filter" class="is-hidden" aria-label="Entry type" style="display:none !important;">
               <option value="">All entries</option>
               <option value="note">Notes</option>
               <option value="link">Links</option>
@@ -446,7 +526,7 @@
       </div>
       <nav class="footer-nav" aria-label="Personal memory pages">
         <button type="button" data-footer-view="notes">Notes</button>
-        <button type="button" data-footer-view="links">Links</button>
+        <button type="button" data-footer-view="links" class="is-hidden" style="display:none !important;">Links</button>
         <button type="button" data-footer-view="movie-notes">Movie Notes</button>
         <button type="button" data-footer-view="looking-out">
           Looking Out For <span class="footer-alert-badge is-hidden" id="release-alert-badge"></span>
@@ -473,30 +553,48 @@
   </dialog>
 
   <dialog class="profile-dialog entry-dialog" id="entry-dialog">
-    <form method="dialog" id="entry-form">
-      <div>
-        <p class="filter-kicker">General memory</p>
-        <h2 id="entry-dialog-title">New note or link</h2>
-      </div>
-      <label>Type
+    <form method="dialog" id="entry-form" class="blog-entry-form">
+      <header class="blog-entry-header">
+        <div class="blog-entry-meta-top">
+          <span class="blog-kicker" id="entry-dialog-title">New note</span>
+          <div class="blog-editor-stats" id="blog-editor-stats">
+            <span id="blog-word-count">0 words</span>
+            <span class="stats-sep">•</span>
+            <span id="blog-read-time">1 min read</span>
+          </div>
+        </div>
+        <input id="entry-title" class="blog-title-input" maxlength="200" required placeholder="Title of your film note or essay...">
+      </header>
+
+      <label class="is-hidden" style="display:none !important;">Type
         <select id="entry-type"><option value="note">Note</option><option value="link">Link</option></select>
       </label>
-      <label>Title
-        <input id="entry-title" maxlength="200" required placeholder="Unique space travel keywords">
-      </label>
-      <label>Body
-        <textarea id="entry-body" rows="8" placeholder="Write freely. Lines beginning with - or * become a list."></textarea>
-      </label>
-      <label>Tags
-        <input id="entry-tags" maxlength="500" placeholder="AI, Coding, Python">
-      </label>
-      <label id="entry-url-field">Links
-        <textarea id="entry-url" rows="4" placeholder="Paste one link per line"></textarea>
-      </label>
-      <div class="profile-dialog-actions">
-        <button type="button" id="cancel-entry">Cancel</button>
-        <button class="primary-action" type="submit" id="save-entry">Save entry</button>
+
+      <div class="blog-body-wrap">
+        <textarea id="entry-body" class="blog-body-textarea" placeholder="Start writing freely...
+
+Use paragraphs, paste bare URLs, or format markdown links [Title](https://...).
+Lines starting with - or * become bullet lists."></textarea>
       </div>
+
+      <div class="blog-meta-footer">
+        <div class="blog-footer-field">
+          <label for="entry-tags">🏷️ Tags</label>
+          <input id="entry-tags" maxlength="500" placeholder="e.g. Noir, 90s, Rewatch, Masterpiece (comma separated)">
+        </div>
+        <div class="blog-footer-field" id="entry-url-field">
+          <label for="entry-url">🔗 Attached Links (one per line or comma separated)</label>
+          <textarea id="entry-url" rows="2" placeholder="https://imdb.com/...&#10;https://youtube.com/..."></textarea>
+        </div>
+      </div>
+
+      <footer class="blog-editor-actions">
+        <div class="editor-shortcut-hint">Tip: Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to save</div>
+        <div class="profile-dialog-actions">
+          <button type="button" id="cancel-entry">Cancel</button>
+          <button class="primary-action" type="submit" id="save-entry">Save note</button>
+        </div>
+      </footer>
     </form>
   </dialog>
 

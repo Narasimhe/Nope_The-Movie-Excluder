@@ -525,6 +525,16 @@ def initialize_database() -> None:
         _create_search_state_table(connection)
         _create_general_entries_table(connection)
         _create_looking_out_for_tables(connection)
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS movie_country_cache (
+                tmdb_id INTEGER PRIMARY KEY,
+                origin_country TEXT,
+                production_countries TEXT,
+                fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
 
 
 if __name__ == "__main__":

@@ -80,11 +80,14 @@ class AdvancedSearchService:
                 if not self._is_valid_tmdb_id(movie_id):
                     continue
 
-                details = (
-                    self.tmdb_client.get_movie_filter_details(
-                        movie_id
+                try:
+                    details = (
+                        self.tmdb_client.get_movie_filter_details(
+                            movie_id
+                        )
                     )
-                )
+                except Exception:
+                    details = {}
                 country_detail_lookups += 1
                 candidate["origin_country"] = (
                     details.get("origin_country") or []

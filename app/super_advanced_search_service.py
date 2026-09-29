@@ -134,21 +134,28 @@ class SuperAdvancedSearchService(AdvancedSearchService):
         results = []
         country_detail_lookups = 0
 
-        for candidate in status_matches:
-            if filters.needs_country_details(candidate):
-                details = (
-                    self.tmdb_client.get_movie_filter_details(
-                        candidate["id"]
-                    )
-                )
-                country_detail_lookups += 1
-                candidate["origin_country"] = (
-                    details.get("origin_country") or []
-                )
-                candidate["production_countries"] = (
-                    details.get("production_countries") or []
-                )
+        movies_needing_country = [
+            c for c in status_matches if filters.needs_country_details(c)
+        ]
+        if movies_needing_country:
+            from concurrent.futures import ThreadPoolExecutor
 
+            def _fetch_country(c):
+                try:
+                    return c["id"], self.tmdb_client.get_movie_filter_details(c["id"])
+                except Exception:
+                    return c["id"], {}
+
+            with ThreadPoolExecutor(max_workers=6) as executor:
+                country_map = dict(executor.map(_fetch_country, movies_needing_country))
+
+            country_detail_lookups = len(movies_needing_country)
+            for c in movies_needing_country:
+                details = country_map.get(c["id"]) or {}
+                c["origin_country"] = details.get("origin_country") or []
+                c["production_countries"] = details.get("production_countries") or []
+
+        for candidate in status_matches:
             if filters.matches_local_rules(candidate):
                 results.append(candidate)
 
