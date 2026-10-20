@@ -5023,6 +5023,23 @@ function appendEntryBody(container, body) {
     const line = lines[i];
     const trimmed = line.trim();
 
+    // 0. Empty lines: 2 consecutive blank lines exit an active Notion toggle back to root
+    if (!trimmed) {
+      ulList = null;
+      olList = null;
+      blockquote = null;
+      if (activeDetails && !activeDetailsIsTag) {
+        consecutiveEmptyLines += 1;
+        if (consecutiveEmptyLines >= 2) {
+          closeToggle();
+        }
+      }
+      continue;
+    }
+
+    // A non-empty line resets the consecutive blank line counter
+    consecutiveEmptyLines = 0;
+
     // 1. Explicit HTML </details> closing tag
     if (trimmed.toLowerCase() === "</details>") {
       closeToggle();
@@ -5110,7 +5127,6 @@ function appendEntryBody(container, body) {
         closeToggle();
       }
     }
-    consecutiveEmptyLines = 0;
 
     // Heading 3: ### Heading
     const h3Match = line.match(/^\s*###\s+(.+)/);
@@ -5178,19 +5194,6 @@ function appendEntryBody(container, body) {
       continue;
     }
     ulList = null;
-
-    if (!trimmed) {
-      ulList = null;
-      olList = null;
-      blockquote = null;
-      if (activeDetails && !activeDetailsIsTag) {
-        consecutiveEmptyLines += 1;
-        if (consecutiveEmptyLines >= 2) {
-          closeToggle();
-        }
-      }
-      continue;
-    }
 
     const paragraph = document.createElement("p");
     paragraph.innerHTML = formatRichText(line);
