@@ -112,16 +112,29 @@ class MovieRepository:
         ]
 
     def search_movies(self, query: str) -> list[dict]:
+        cleaned = " ".join((query or "").split())
+        if not cleaned:
+            return []
+        exact = cleaned
+        starts = f"{cleaned}%"
+        contains = f"%{cleaned}%"
         with get_connection() as connection:
             rows = connection.execute(
                 """
                 SELECT *
                 FROM movies
-                WHERE title LIKE ?
-                   OR original_title LIKE ?
-                ORDER BY title
+                WHERE title LIKE ? COLLATE NOCASE
+                   OR original_title LIKE ? COLLATE NOCASE
+                ORDER BY
+                    CASE
+                        WHEN lower(title) = lower(?) THEN 1
+                        WHEN title LIKE ? COLLATE NOCASE THEN 2
+                        WHEN title LIKE ? COLLATE NOCASE THEN 3
+                        ELSE 4
+                    END ASC,
+                    title COLLATE NOCASE ASC
                 """,
-                (f"%{query}%", f"%{query}%"),
+                (contains, contains, exact, starts, contains),
             ).fetchall()
 
         return [dict(row) for row in rows]
@@ -133,7 +146,9 @@ class MovieRepository:
     ) -> list[dict]:
         cleaned_query = " ".join((query or "").split())
         where_parts: list[str] = []
-        params: list[Any] = []
+        where_params: list[Any] = []
+        order_params: list[Any] = []
+        order_clause = "m.title COLLATE NOCASE ASC"
 
         if cleaned_query:
             escaped_query = (
@@ -141,7 +156,10 @@ class MovieRepository:
                 .replace("%", "!%")
                 .replace("_", "!_")
             )
-            like_pattern = f"%{escaped_query}%"
+            exact_query = cleaned_query
+            starts_query = f"{escaped_query}%"
+            contains_query = f"%{escaped_query}%"
+
             where_parts.append(
                 """(
                     m.title LIKE ? ESCAPE '!' COLLATE NOCASE
@@ -156,7 +174,28 @@ class MovieRepository:
                     )
                 )"""
             )
-            params.extend([like_pattern, like_pattern, like_pattern, like_pattern, like_pattern])
+            where_params.extend([contains_query, contains_query, contains_query, contains_query, contains_query])
+
+            order_clause = """
+                CASE
+                    WHEN lower(m.title) = lower(?) THEN 1
+                    WHEN m.title LIKE ? ESCAPE '!' COLLATE NOCASE THEN 2
+                    WHEN m.title LIKE ? ESCAPE '!' COLLATE NOCASE THEN 3
+                    WHEN m.original_title LIKE ? ESCAPE '!' COLLATE NOCASE THEN 4
+                    WHEN u.notes IS NOT NULL AND u.notes LIKE ? ESCAPE '!' COLLATE NOCASE THEN 5
+                    WHEN m.overview LIKE ? ESCAPE '!' COLLATE NOCASE THEN 6
+                    ELSE 7
+                END ASC,
+                m.title COLLATE NOCASE ASC
+            """
+            order_params = [
+                exact_query,
+                starts_query,
+                contains_query,
+                contains_query,
+                contains_query,
+                contains_query,
+            ]
 
         if status:
             if status == "favorites":
@@ -171,7 +210,7 @@ class MovieRepository:
                 target_status = "excluded" if status == "nope" else status
                 validated_status = validate_movie_status(target_status)
                 where_parts.append("u.status = ?")
-                params.append(validated_status)
+                where_params.append(validated_status)
         else:
             where_parts.append("(u.status IS NOT NULL OR u.is_favorite = 1 OR (u.notes IS NOT NULL AND TRIM(u.notes) <> ''))")
 
@@ -184,9 +223,9 @@ class MovieRepository:
                 FROM movies m
                 JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
                 WHERE {where_clause}
-                ORDER BY m.title COLLATE NOCASE
+                ORDER BY {order_clause}
                 """,
-                tuple(params),
+                tuple(where_params + order_params),
             ).fetchall()
 
         return [dict(row) for row in rows]

@@ -278,6 +278,7 @@ const elements = {
   readerEditDate: document.querySelector("#reader-edit-date"),
   readerTagsChips: document.querySelector("#reader-tags-chips"),
   readerTagInput: document.querySelector("#reader-tag-input"),
+  readerTagSuggestions: document.querySelector("#reader-tag-suggestions"),
   readerBodyInput: document.querySelector("#reader-body-input"),
   readerCancel: document.querySelector("#reader-cancel"),
   readerSaveDraft: document.querySelector("#reader-save-draft"),
@@ -401,6 +402,7 @@ const state = {
   activeFilmographyPerson: null,
   readerEditing: false,
   readerTags: [],
+  allKnownTags: [],
   readerBannerUrl: null,
 };
 
@@ -5458,6 +5460,7 @@ async function renderNotesTags() {
     const archivedEntries = data.archived_entries || 0;
     const draftEntries = data.draft_entries || 0;
     const tags = data.tags || [];
+    state.allKnownTags = tags;
 
     if (elements.notesTotalCount) {
       elements.notesTotalCount.textContent = String(totalEntries);
@@ -6136,19 +6139,95 @@ function renderReaderTagChips() {
   });
 }
 
-function addReaderTagFromInput() {
-  if (!elements.readerTagInput) return;
-  const raw = elements.readerTagInput.value.replace(/,/g, " ").trim();
-  if (raw) {
-    const parts = raw.split(/\s+/).filter(Boolean);
-    parts.forEach((tag) => {
-      if (!state.readerTags.some((t) => t.toLowerCase() === tag.toLowerCase())) {
-        state.readerTags.push(tag);
-      }
-    });
-    elements.readerTagInput.value = "";
+function addTagToReader(tagName) {
+  const clean = String(tagName || "").trim();
+  if (!clean) return;
+  if (!state.readerTags.some((t) => t.toLowerCase() === clean.toLowerCase())) {
+    state.readerTags.push(clean);
     renderReaderTagChips();
   }
+}
+
+function addReaderTagFromInput() {
+  if (!elements.readerTagInput) return;
+  const raw = elements.readerTagInput.value.trim();
+  if (raw) {
+    // Only split on commas (so multi-word tags like "movie philosophy" stay intact!)
+    const parts = raw.split(/,+/).map((t) => t.trim()).filter(Boolean);
+    parts.forEach((tag) => {
+      addTagToReader(tag);
+    });
+    elements.readerTagInput.value = "";
+    if (elements.readerTagSuggestions) {
+      elements.readerTagSuggestions.classList.add("is-hidden");
+    }
+  }
+}
+
+async function ensureAllKnownTags() {
+  if (state.allKnownTags && state.allKnownTags.length > 0) return state.allKnownTags;
+  try {
+    const data = await fetchJSON("/entries/tags");
+    state.allKnownTags = data.tags || [];
+    return state.allKnownTags;
+  } catch (_) {
+    return [];
+  }
+}
+
+async function renderReaderTagSuggestions(filterText = "") {
+  if (!elements.readerTagSuggestions) return;
+  const allTags = await ensureAllKnownTags();
+  const q = String(filterText || "").trim().toLowerCase();
+  const existing = state.readerTags.map((t) => t.toLowerCase());
+
+  const matched = (allTags || []).filter((tagObj) => {
+    const name = typeof tagObj === "string" ? tagObj : tagObj.name;
+    if (!name) return false;
+    const lower = name.toLowerCase();
+    if (existing.includes(lower)) return false;
+    if (!q) return true;
+    return lower.includes(q);
+  });
+
+  elements.readerTagSuggestions.replaceChildren();
+
+  if (matched.length === 0) {
+    elements.readerTagSuggestions.classList.add("is-hidden");
+    return;
+  }
+
+  matched.forEach((tagObj) => {
+    const tagName = typeof tagObj === "string" ? tagObj : tagObj.name;
+    const count = typeof tagObj === "object" ? tagObj.count : null;
+
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "reader-tag-suggestion-item";
+
+    const label = document.createElement("span");
+    label.textContent = tagName;
+    item.append(label);
+
+    if (count != null && count > 0) {
+      const cnt = document.createElement("span");
+      cnt.className = "reader-tag-suggestion-count";
+      cnt.textContent = String(count);
+      item.append(cnt);
+    }
+
+    item.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      addTagToReader(tagName);
+      elements.readerTagInput.value = "";
+      renderReaderTagSuggestions("");
+      elements.readerTagInput.focus();
+    });
+
+    elements.readerTagSuggestions.append(item);
+  });
+
+  elements.readerTagSuggestions.classList.remove("is-hidden");
 }
 
 function renderReaderBannerEditor() {
@@ -6607,13 +6686,32 @@ elements.readerBodyInput.addEventListener("input", () => {
 });
 window.addEventListener("resize", autoResizeReaderBody);
 
-elements.readerTagInput.addEventListener("keydown", (event) => {
-  if (event.key === "Enter" || event.key === ",") {
-    event.preventDefault();
-    addReaderTagFromInput();
-  }
-});
-elements.readerTagInput.addEventListener("blur", addReaderTagFromInput);
+if (elements.readerTagInput) {
+  elements.readerTagInput.addEventListener("focus", () => {
+    renderReaderTagSuggestions(elements.readerTagInput.value);
+  });
+
+  elements.readerTagInput.addEventListener("input", () => {
+    renderReaderTagSuggestions(elements.readerTagInput.value);
+  });
+
+  elements.readerTagInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === ",") {
+      event.preventDefault();
+      addReaderTagFromInput();
+      renderReaderTagSuggestions("");
+    } else if (event.key === "Escape") {
+      elements.readerTagSuggestions?.classList.add("is-hidden");
+    }
+  });
+
+  elements.readerTagInput.addEventListener("blur", () => {
+    setTimeout(() => {
+      addReaderTagFromInput();
+      elements.readerTagSuggestions?.classList.add("is-hidden");
+    }, 180);
+  });
+}
 
 elements.readerAddBannerBtn?.addEventListener("click", () => {
   elements.entryBannerPickerBar?.classList.toggle("is-hidden");
