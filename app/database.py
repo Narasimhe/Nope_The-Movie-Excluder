@@ -10,6 +10,7 @@ DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
 DATABASE_PATH = DATA_DIR / "movie_excluder.db"
+PRODUCTION_DATABASE_PATH = DATABASE_PATH
 DEFAULT_DATABASE_PATH = DATABASE_PATH
 DEMO_DATABASE_PATH = DATA_DIR / "demo.db"
 
@@ -34,6 +35,12 @@ class DatabaseConnection(sqlite3.Connection):
 
 
 def get_connection() -> sqlite3.Connection:
+    import sys
+    if "pytest" in sys.modules and DATABASE_PATH == PRODUCTION_DATABASE_PATH:
+        raise RuntimeError(
+            "SAFETY VIOLATION: Tests must never connect to live production DATABASE_PATH. "
+            "Use an isolated temporary test database."
+        )
     ensure_database_exists()
     connection = sqlite3.connect(
         DATABASE_PATH,
@@ -354,6 +361,35 @@ def _create_general_entries_table(connection: sqlite3.Connection) -> None:
         ON general_entry_tag_links (tag_id, entry_id);
         """
     )
+    entry_cols = {
+        row[1]
+        for row in connection.execute("PRAGMA table_info(general_entries)").fetchall()
+    }
+    if "is_pinned" not in entry_cols:
+        connection.execute(
+            "ALTER TABLE general_entries ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0 CHECK (is_pinned IN (0, 1))"
+        )
+    if "is_archived" not in entry_cols:
+        connection.execute(
+            "ALTER TABLE general_entries ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0 CHECK (is_archived IN (0, 1))"
+        )
+    if "status" not in entry_cols:
+        connection.execute(
+            "ALTER TABLE general_entries ADD COLUMN status TEXT NOT NULL DEFAULT 'published' CHECK (status IN ('published', 'draft'))"
+        )
+    if "image_url" not in entry_cols:
+        connection.execute(
+            "ALTER TABLE general_entries ADD COLUMN image_url TEXT"
+        )
+    connection.executescript(
+        """
+        CREATE INDEX IF NOT EXISTS idx_general_entries_pinned_archived
+        ON general_entries (is_deleted, is_archived, is_pinned DESC, updated_at DESC);
+
+        CREATE INDEX IF NOT EXISTS idx_general_entries_status
+        ON general_entries (is_deleted, status, is_archived, updated_at DESC);
+        """
+    )
 
 
 def _create_looking_out_for_tables(
@@ -476,6 +512,7 @@ def initialize_database() -> None:
                 poster_path TEXT,
                 backdrop_path TEXT,
                 vote_average REAL,
+                vote_count INTEGER DEFAULT 0,
                 original_language TEXT,
                 fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 metadata_fetched_at TEXT,
@@ -490,6 +527,14 @@ def initialize_database() -> None:
                 "PRAGMA table_info(movies)"
             ).fetchall()
         }
+
+        if "vote_count" not in movie_columns:
+            connection.execute(
+                """
+                ALTER TABLE movies
+                ADD COLUMN vote_count INTEGER DEFAULT 0
+                """
+            )
 
         if "metadata_fetched_at" not in movie_columns:
             connection.execute(
@@ -517,6 +562,15 @@ def initialize_database() -> None:
 
         _ensure_movie_cache_columns(connection, movie_columns)
 
+        connection.execute(
+            """
+            UPDATE movies
+            SET original_language = 'en'
+            WHERE original_language IS NOT NULL
+              AND (original_language LIKE '2026%' OR LENGTH(original_language) > 10)
+            """
+        )
+
         _migrate_legacy_user_movie_data(connection)
         _create_user_movie_data_table(connection)
         _ensure_user_movie_favorite_column(connection)
@@ -525,14 +579,31 @@ def initialize_database() -> None:
         _create_search_state_table(connection)
         _create_general_entries_table(connection)
         _create_looking_out_for_tables(connection)
-        connection.execute(
+        connection.executescript(
             """
             CREATE TABLE IF NOT EXISTS movie_country_cache (
                 tmdb_id INTEGER PRIMARY KEY,
                 origin_country TEXT,
                 production_countries TEXT,
                 fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )
+            );
+
+            CREATE TABLE IF NOT EXISTS tmdb_discover_cache (
+                cache_key TEXT PRIMARY KEY,
+                response_json TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_tmdb_discover_cache_updated
+            ON tmdb_discover_cache (updated_at);
+
+            CREATE TABLE IF NOT EXISTS tmdb_person_credits_cache (
+                person_id INTEGER PRIMARY KEY,
+                response_json TEXT NOT NULL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
             """
         )
 

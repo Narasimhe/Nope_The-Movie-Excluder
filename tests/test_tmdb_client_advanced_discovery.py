@@ -18,8 +18,10 @@ class FakeResponse:
 class FakeSession:
     def __init__(self) -> None:
         self.last_request: dict | None = None
+        self.call_count: int = 0
 
     def get(self, url: str, **kwargs) -> FakeResponse:
+        self.call_count += 1
         self.last_request = {
             "url": url,
             **kwargs,
@@ -210,6 +212,47 @@ class TMDBClientAdvancedDiscoveryTests(unittest.TestCase):
             with self.subTest(call=call):
                 with self.assertRaises(ValueError):
                     call()
+
+    def test_discover_movies_caches_in_sqlite_and_respects_force_refresh(self) -> None:
+        client = TMDBClient.__new__(TMDBClient)
+        client.headers = {"Authorization": "Bearer test"}
+        client.session = FakeSession()
+
+        filters = AdvancedMovieFilters(include_genre_ids=[28, 12])
+
+        # 1. First call fetches via session (call_count=1)
+        res1 = client.discover_movies(filters, page=1)
+        self.assertEqual(client.session.call_count, 1)
+        self.assertEqual(res1["results"][0]["id"], 603)
+
+        # 2. Second call with same filters and page hits SQLite cache (call_count stays 1!)
+        res2 = client.discover_movies(filters, page=1)
+        self.assertEqual(client.session.call_count, 1)
+        self.assertEqual(res2["results"][0]["title"], "The Matrix")
+
+        # 3. Third call with force_refresh=True forces network call (call_count=2)
+        res3 = client.discover_movies(filters, page=1, force_refresh=True)
+        self.assertEqual(client.session.call_count, 2)
+        self.assertEqual(res3["results"][0]["id"], 603)
+
+    def test_person_movie_credits_caches_in_sqlite_and_respects_force_refresh(self) -> None:
+        client = TMDBClient.__new__(TMDBClient)
+        client.headers = {"Authorization": "Bearer test"}
+        client.session = FakeSession()
+
+        # 1. First call fetches via session
+        res1 = client.get_person_movie_credits(525)
+        self.assertEqual(client.session.call_count, 1)
+        self.assertEqual(res1["crew"][0]["title"], "Inception")
+
+        # 2. Second call uses SQLite cache (call_count stays 1!)
+        res2 = client.get_person_movie_credits(525)
+        self.assertEqual(client.session.call_count, 1)
+        self.assertEqual(res2["crew"][0]["id"], 27205)
+
+        # 3. Third call with force_refresh=True forces network call (call_count=2)
+        res3 = client.get_person_movie_credits(525, force_refresh=True)
+        self.assertEqual(client.session.call_count, 2)
 
 
 if __name__ == "__main__":

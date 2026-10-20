@@ -18,22 +18,41 @@ const GENRE_OPTIONS = [
 ];
 
 const LANGUAGE_OPTIONS = [
-  ["en", "English"], ["te", "Telugu"], ["hi", "Hindi"],
-  ["ta", "Tamil"], ["ml", "Malayalam"], ["kn", "Kannada"],
-  ["bn", "Bengali"], ["ur", "Urdu"], ["ja", "Japanese"],
-  ["ko", "Korean"], ["zh", "Chinese"], ["fr", "French"],
-  ["es", "Spanish"], ["de", "German"], ["it", "Italian"],
-  ["ru", "Russian"], ["pt", "Portuguese"], ["ar", "Arabic"],
+  ["en", "English"],
+  ["fr", "French"], ["es", "Spanish"], ["de", "German"],
+  ["it", "Italian"], ["pt", "Portuguese"], ["sv", "Swedish"],
+  ["no", "Norwegian"], ["da", "Danish"], ["fi", "Finnish"],
+  ["is", "Icelandic"], ["nl", "Dutch"], ["pl", "Polish"],
+  ["cs", "Czech"], ["hu", "Hungarian"], ["ro", "Romanian"],
+  ["el", "Greek"], ["tr", "Turkish"], ["ru", "Russian"],
+  ["uk", "Ukrainian"], ["he", "Hebrew"], ["fa", "Persian"],
+  ["ja", "Japanese"], ["ko", "Korean"], ["zh", "Chinese"],
+  ["cn", "Cantonese"], ["th", "Thai"], ["vi", "Vietnamese"],
+  ["id", "Indonesian"], ["ms", "Malay"], ["tl", "Tagalog"],
+  ["hi", "Hindi"], ["te", "Telugu"], ["ta", "Tamil"],
+  ["ml", "Malayalam"], ["kn", "Kannada"], ["bn", "Bengali"],
+  ["mr", "Marathi"], ["pa", "Punjabi"], ["ur", "Urdu"],
+  ["ar", "Arabic"],
 ];
 
 const COUNTRY_OPTIONS = [
-  ["US", "United States"], ["GB", "United Kingdom"], ["IN", "India"],
-  ["PK", "Pakistan"], ["CA", "Canada"], ["AU", "Australia"],
-  ["JP", "Japan"], ["KR", "South Korea"], ["CN", "China"],
+  ["US", "United States"], ["GB", "United Kingdom"], ["CA", "Canada"],
+  ["AU", "Australia"], ["NZ", "New Zealand"], ["IE", "Ireland"],
   ["FR", "France"], ["DE", "Germany"], ["IT", "Italy"],
-  ["ES", "Spain"], ["RU", "Russia"], ["BR", "Brazil"],
-  ["MX", "Mexico"], ["NZ", "New Zealand"], ["IE", "Ireland"],
+  ["ES", "Spain"], ["SE", "Sweden"], ["NO", "Norway"],
+  ["DK", "Denmark"], ["FI", "Finland"], ["IS", "Iceland"],
+  ["NL", "Netherlands"], ["BE", "Belgium"], ["CH", "Switzerland"],
+  ["AT", "Austria"], ["PL", "Poland"], ["RU", "Russia"],
+  ["TR", "Turkey"], ["IL", "Israel"], ["IR", "Iran"],
+  ["BR", "Brazil"], ["MX", "Mexico"], ["AR", "Argentina"],
+  ["ZA", "South Africa"], ["JP", "Japan"], ["KR", "South Korea"],
+  ["CN", "China"], ["HK", "Hong Kong"], ["TW", "Taiwan"],
+  ["TH", "Thailand"], ["IN", "India"],
 ];
+
+// Compact chip clouds: only these are always visible. Anything else is added on demand via the "+" chip.
+const PRIMARY_LANGUAGE_CODES = ["en", "fr", "es", "de", "ja", "ko"];
+const PRIMARY_COUNTRY_CODES = ["US", "GB", "FR", "DE", "JP", "KR"];
 
 const PICKER_CONFIG = {
   "include-genres": { options: GENRE_OPTIONS, opposite: "exclude-genres" },
@@ -44,6 +63,8 @@ const PICKER_CONFIG = {
 };
 
 const DEFAULT_SYSTEM_FILTERS = {
+  include_original_languages: ["en"],
+  exclude_origin_countries: ["PK", "IN"],
   exclude_genre_ids: [16, 37, 99],
   exclude_original_languages: ["hi", "te", "ta", "ml", "kn", "bn", "mr", "pa", "ur", "ar"],
   minimum_rating: 6.0,
@@ -114,14 +135,22 @@ const elements = {
   notice: document.querySelector("#notice"),
   kicker: document.querySelector("#library-kicker"),
   title: document.querySelector("#library-title"),
+  shelfCount: document.querySelector("#shelf-count"),
   description: document.querySelector("#library-description"),
   count: document.querySelector("#result-count"),
   navLinks: [...document.querySelectorAll("[data-view]")],
+  masterTabs: [...document.querySelectorAll(".master-tab")],
+  sidebarPaneDiscover: document.querySelector("#sidebar-pane-discover"),
+  sidebarPaneLibrary: document.querySelector("#sidebar-pane-library"),
+  sidebarPaneNotes: document.querySelector("#sidebar-pane-notes"),
+  ribbonChips: [...document.querySelectorAll(".ribbon-chip")],
+  sidebar: document.querySelector("#app-sidebar"),
+  appLayout: document.querySelector(".app-layout"),
   mobileView: document.querySelector("#mobile-view"),
   discoverWorkspace: document.querySelector("#discovery-workspace"),
   refreshFeed: document.querySelector("#refresh-feed"),
-  viewModeToggle: document.querySelector("#view-mode-toggle"),
-  viewModeButtons: [...document.querySelectorAll(".view-mode-btn")],
+  nopeModeToggle: document.querySelector("#nope-mode-toggle"),
+  nopeUndoCounter: document.querySelector("#nope-undo-counter"),
   notesSearchContainer: document.querySelector("#notes-search-container"),
   notesSearchInput: document.querySelector("#notes-search-input"),
   clearNotesSearch: document.querySelector("#clear-notes-search"),
@@ -145,6 +174,15 @@ const elements = {
   resetFilters: document.querySelector("#reset-filters"),
   pagination: document.querySelector("#pagination"),
   returnToOrigin: document.querySelector("#return-to-origin"),
+  quickUpdateProfile: document.querySelector("#quick-update-profile"),
+  filmographyToolbar: document.querySelector("#filmography-toolbar"),
+  filmographyAvatar: document.querySelector("#filmography-avatar"),
+  filmographyName: document.querySelector("#filmography-name"),
+  filmographyKicker: document.querySelector("#filmography-kicker"),
+  filmographyTabs: document.querySelector("#filmography-tabs"),
+  filmTabAll: document.querySelector("#film-tab-all"),
+  filmTabDirecting: document.querySelector("#film-tab-directing"),
+  filmTabActing: document.querySelector("#film-tab-acting"),
   workspaceCollapse: document.querySelector("#workspace-collapse"),
   workspaceControls: document.querySelector("#workspace-controls"),
   workspaceSummary: document.querySelector("#workspace-summary"),
@@ -163,6 +201,9 @@ const elements = {
   dialogClose: document.querySelector("#dialog-close"),
   detailBackLabel: document.querySelector("#detail-back-label"),
   detailTrail: document.querySelector("#detail-trail"),
+  detailNavStepper: document.querySelector("#detail-nav-stepper"),
+  detailPrevBtn: document.querySelector("#detail-prev-btn"),
+  detailNextBtn: document.querySelector("#detail-next-btn"),
   dialogLoading: document.querySelector("#dialog-loading"),
   dialogContent: document.querySelector("#dialog-content"),
   dialogPoster: document.querySelector("#dialog-poster-wrap"),
@@ -205,19 +246,9 @@ const elements = {
   entryMonthFilter: document.querySelector("#entry-month-filter"),
   clearEntryFilters: document.querySelector("#clear-entry-filters"),
   newEntry: document.querySelector("#new-entry"),
-  entryDialog: document.querySelector("#entry-dialog"),
-  entryForm: document.querySelector("#entry-form"),
-  entryDialogTitle: document.querySelector("#entry-dialog-title"),
-  entryType: document.querySelector("#entry-type"),
-  entryTitle: document.querySelector("#entry-title"),
-  entryBody: document.querySelector("#entry-body"),
-  entryUrl: document.querySelector("#entry-url"),
-  entryTags: document.querySelector("#entry-tags"),
-  entryUrlField: document.querySelector("#entry-url-field"),
-  cancelEntry: document.querySelector("#cancel-entry"),
-  saveEntry: document.querySelector("#save-entry"),
   entryReader: document.querySelector("#entry-reader"),
   entryReaderBack: document.querySelector("#entry-reader-back"),
+  entryReaderPublish: document.querySelector("#entry-reader-publish"),
   entryReaderEdit: document.querySelector("#entry-reader-edit"),
   entryReaderPrevious: document.querySelector("#entry-reader-previous"),
   entryReaderNext: document.querySelector("#entry-reader-next"),
@@ -229,6 +260,30 @@ const elements = {
   entryReaderBody: document.querySelector("#entry-reader-body"),
   entryReaderLinks: document.querySelector("#entry-reader-links"),
   entryReaderCreated: document.querySelector("#entry-reader-created"),
+  entryBannerWrapper: document.querySelector("#entry-banner-wrapper"),
+  entryBannerView: document.querySelector("#entry-banner-view"),
+  entryBannerImg: document.querySelector("#entry-banner-img"),
+  entryBannerEdit: document.querySelector("#entry-banner-edit"),
+  entryBannerPreviewBox: document.querySelector("#entry-banner-preview-box"),
+  entryBannerPreviewImg: document.querySelector("#entry-banner-preview-img"),
+  entryBannerPickerBar: document.querySelector("#entry-banner-picker-bar"),
+  readerAddBannerBtn: document.querySelector("#reader-add-banner-btn"),
+  readerCloseBannerPickerBtn: document.querySelector("#reader-close-banner-picker-btn"),
+  readerChangeBannerBtn: document.querySelector("#reader-change-banner-btn"),
+  readerRemoveBannerBtn: document.querySelector("#reader-remove-banner-btn"),
+  readerUploadBannerBtn: document.querySelector("#reader-upload-banner-btn"),
+  readerUrlBannerBtn: document.querySelector("#reader-url-banner-btn"),
+  readerBannerFileInput: document.querySelector("#reader-banner-file-input"),
+  readerTitleInput: document.querySelector("#reader-title-input"),
+  readerEditDate: document.querySelector("#reader-edit-date"),
+  readerTagsChips: document.querySelector("#reader-tags-chips"),
+  readerTagInput: document.querySelector("#reader-tag-input"),
+  readerBodyInput: document.querySelector("#reader-body-input"),
+  readerCancel: document.querySelector("#reader-cancel"),
+  readerSaveDraft: document.querySelector("#reader-save-draft"),
+  readerSavePublish: document.querySelector("#reader-save-publish"),
+  readerWordCount: document.querySelector("#reader-word-count"),
+  readerReadTime: document.querySelector("#reader-read-time"),
   lookingOutPage: document.querySelector("#looking-out-page"),
   lookingOutGrid: document.querySelector("#looking-out-grid"),
   lookingOutPagination: document.querySelector("#looking-out-pagination"),
@@ -241,10 +296,60 @@ const elements = {
   purgeDeletedEntries: document.querySelector("#purge-deleted-entries"),
   storageFeedback: document.querySelector("#storage-feedback"),
   footerViews: [...document.querySelectorAll("[data-footer-view]")],
+  libraryFiltersWorkspace: document.querySelector("#library-filters-workspace"),
+  libraryFilterQuery: document.querySelector("#library-filter-query"),
+  resetLibraryFilters: document.querySelector("#reset-library-filters"),
+  librarySearchScope: document.querySelector("#library-search-scope"),
+  scopeBtnAll: document.querySelector("#scope-btn-all"),
+  scopeBtnShelf: document.querySelector("#scope-btn-shelf"),
+  libGenresCloud: document.querySelector("#lib-genres-cloud"),
+  libYearFrom: document.querySelector("#lib-year-from"),
+  libYearTo: document.querySelector("#lib-year-to"),
+  libLanguagesCloud: document.querySelector("#lib-languages-cloud"),
+  libSortCloud: document.querySelector("#lib-sort-cloud"),
+  badgeLibGenres: document.querySelector("#badge-lib-genres"),
+  badgeLibYear: document.querySelector("#badge-lib-year"),
+  badgeLibKeywords: document.querySelector("#badge-lib-keywords"),
+  badgeLibPeople: document.querySelector("#badge-lib-people"),
+  badgeLibLanguages: document.querySelector("#badge-lib-languages"),
+  notesTagList: document.querySelector("#notes-tag-list"),
+  notesTotalCount: document.querySelector("#notes-total-count"),
+  notesViewAll: document.querySelector("#notes-view-all"),
+  notesViewDrafts: document.querySelector("#notes-view-drafts"),
+  notesDraftsCount: document.querySelector("#notes-drafts-count"),
+  notesViewArchive: document.querySelector("#notes-view-archive"),
+  notesArchiveCount: document.querySelector("#notes-archive-count"),
+  notesTimelineSection: document.querySelector("#notes-timeline-section"),
+  notesTimelineList: document.querySelector("#notes-timeline-list"),
+  notesTagsSection: document.querySelector("#notes-tags-section"),
+  notesTagsToggle: document.querySelector("#notes-tags-toggle"),
+  notesTimelineToggle: document.querySelector("#notes-timeline-toggle"),
+  greyContainer: document.querySelector("#grey-container"),
+  greyToggle: document.querySelector("#grey-toggle"),
+  greyDrawer: document.querySelector("#grey-drawer"),
+  greyCloseBtn: document.querySelector("#grey-close-btn"),
+  greyClearBtn: document.querySelector("#grey-clear-btn"),
+  greyContextView: document.querySelector("#grey-context-view"),
+  greyContextDetail: document.querySelector("#grey-context-detail"),
+  greyStatusText: document.querySelector("#grey-status-text"),
+  greyMessages: document.querySelector("#grey-messages"),
+  greyForm: document.querySelector("#grey-form"),
+  greyInput: document.querySelector("#grey-input"),
+  greySendBtn: document.querySelector("#grey-send-btn"),
+  greyModelTag: document.querySelector("#grey-model-tag"),
+  greyModelName: document.querySelector("#grey-model-name"),
+  greySkillsBar: document.querySelector("#grey-skills-bar"),
+  greySlashMenu: document.querySelector("#grey-slash-menu"),
 };
 
 const state = {
+  greyModelMode: "auto",
   movies: [],
+  unfilteredShelfMovies: [],
+  libSelectedGenres: new Set(),
+  libSelectedLanguages: new Set(),
+  librarySearchScope: "all",
+  isSearchingLibrary: false,
   mode: "shelf",
   currentView: "new_discovery",
   selectedMovie: null,
@@ -261,6 +366,9 @@ const state = {
     excludedKeywords: [],
     companies: [],
     excludedCompanies: [],
+    libKeywords: [],
+    libDirectors: [],
+    libActors: [],
   },
   currentSearchSpec: null,
   searchPage: 1,
@@ -268,6 +376,8 @@ const state = {
   totalResults: 0,
   pageLoader: null,
   paginationExact: true,
+  nopeMode: false,
+  nopeUndoStack: [],
   filtersCollapsed: false,
   searchStateTimer: null,
   editingEntryId: null,
@@ -278,12 +388,20 @@ const state = {
   entryReaderEntry: null,
   entryReturnScroll: 0,
   entryTagFilter: "",
+  notesCurrentView: "all",
+  notesTimelineFilter: null,
   lookingOutPage: 1,
   showRelatedFamiliar: false,
+  detailRelatedMovies: [],
   profileDialogMode: "create",
   detailTrail: [],
   detailReturnLabel: "Back to movies",
   searchOriginMovie: null,
+  savedSearchSnapshot: null,
+  activeFilmographyPerson: null,
+  readerEditing: false,
+  readerTags: [],
+  readerBannerUrl: null,
 };
 
 async function fetchJSON(url, options = {}) {
@@ -315,30 +433,323 @@ function setSectionCopy({ kicker, title, description }) {
   elements.kicker.textContent = kicker;
   elements.title.textContent = title;
   elements.description.textContent = description;
+  if (elements.shelfCount) {
+    elements.shelfCount.textContent = "";
+  }
 }
 
 function setActiveView(view) {
+  state.currentView = view;
+  if (view && elements.filmographyToolbar) {
+    elements.filmographyToolbar.classList.add("is-hidden");
+    state.activeFilmographyPerson = null;
+  }
   elements.navLinks.forEach((button) => {
     button.classList.toggle("is-active", button.dataset.view === view);
   });
 
+  elements.masterTabs.forEach((tab) => {
+    const tabType = tab.dataset.masterTab;
+    let isActive = false;
+    if (tabType === "discover" && view === "discover") isActive = true;
+    else if (tabType === "library" && ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes"].includes(view)) isActive = true;
+    else if (tabType === "notes" && view === "entries") isActive = true;
+    tab.classList.toggle("is-active", isActive);
+  });
+
+  // Switch sidebar pane based on master pillar
+  const isDiscover = view === "discover";
+  const isLibrary = ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes"].includes(view);
+  const isNotes = view === "entries";
+
+  if (view !== null && view !== "filmography") {
+    if (elements.sidebarPaneDiscover) {
+      elements.sidebarPaneDiscover.classList.toggle("is-hidden", !isDiscover);
+    }
+    if (elements.sidebarPaneLibrary) {
+      elements.sidebarPaneLibrary.classList.toggle("is-hidden", !isLibrary);
+    }
+    if (elements.sidebarPaneNotes) {
+      elements.sidebarPaneNotes.classList.toggle("is-hidden", !isNotes);
+    }
+    if (elements.discoverWorkspace) {
+      elements.discoverWorkspace.classList.toggle("is-hidden", !isDiscover);
+    }
+  }
+
+  const appSidebar = document.querySelector("#app-sidebar");
+  if (appSidebar) {
+    appSidebar.classList.toggle("is-notes-mode", isNotes);
+  }
+
+  const discoverHeader = document.querySelector("#discover-canvas-header");
+  if (discoverHeader) {
+    discoverHeader.classList.toggle("is-hidden", !isDiscover || state.mode === "filmography");
+  }
+  const sectionHeadingBlock = document.querySelector("#section-heading-block");
+  if (sectionHeadingBlock) {
+    sectionHeadingBlock.classList.toggle("is-hidden", isDiscover || state.mode === "filmography");
+  }
+
   if (view in VIEW_COPY) {
     elements.mobileView.value = view;
   }
+
+  // Nope Mode is ONLY available in Discover view
+  if (!isDiscover) {
+    if (state.nopeMode) {
+      toggleNopeMode(false);
+    }
+    elements.nopeModeToggle?.classList.add("is-hidden");
+  } else {
+    elements.nopeModeToggle?.classList.remove("is-hidden");
+  }
+
+  if (view && history.replaceState) {
+    history.replaceState(null, "", `#${view}`);
+  }
+
+  if (view && ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes", "entries", "discover"].includes(view)) {
+    try {
+      localStorage.setItem("nope_current_view", view);
+      if (["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes"].includes(view)) {
+        localStorage.setItem("nope_last_library_shelf", view);
+      }
+    } catch {}
+  }
 }
 
-function getSavedViewMode() {
-  return localStorage.getItem("movie_excluder_card_layout") || "compact";
+function toggleNopeMode(forceState) {
+  // Disallow Nope Mode outside of Discover view
+  if (state.currentView !== "discover") {
+    state.nopeMode = false;
+    elements.nopeModeToggle?.classList.remove("is-active");
+    elements.nopeModeToggle?.setAttribute("aria-pressed", "false");
+    elements.grid?.classList.remove("is-nope-mode");
+    state.nopeUndoStack = [];
+    updateNopeUndoCounter();
+    return;
+  }
+
+  state.nopeMode = typeof forceState === "boolean" ? forceState : !state.nopeMode;
+  elements.nopeModeToggle?.classList.toggle("is-active", state.nopeMode);
+  elements.nopeModeToggle?.setAttribute("aria-pressed", String(state.nopeMode));
+  elements.grid?.classList.toggle("is-nope-mode", state.nopeMode);
+
+  if (!state.nopeMode) {
+    state.nopeUndoStack = [];
+    updateNopeUndoCounter();
+  }
 }
 
-function setViewMode(mode) {
-  const isCompact = mode !== "detailed";
-  localStorage.setItem("movie_excluder_card_layout", isCompact ? "compact" : "detailed");
-  elements.grid.classList.toggle("is-compact", isCompact);
-  elements.grid.classList.toggle("is-detailed", !isCompact);
-  elements.viewModeButtons.forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.layout === (isCompact ? "compact" : "detailed"));
+function updateNopeUndoCounter() {
+  if (!elements.nopeUndoCounter) return;
+  const count = state.nopeUndoStack.length;
+  if (count > 0 && state.nopeMode) {
+    elements.nopeUndoCounter.textContent = `Undo (${count})`;
+    elements.nopeUndoCounter.classList.remove("is-hidden");
+  } else {
+    elements.nopeUndoCounter.classList.add("is-hidden");
+  }
+}
+
+function clearNopeUndo() {
+  state.nopeUndoStack = [];
+  updateNopeUndoCounter();
+}
+
+async function handleLiberateMovie(movie, article) {
+  const movieId = getMovieId(movie);
+  const title = movie.title || movie.original_title || "Untitled movie";
+  const badge = article.querySelector(".status-badge");
+
+  // Determine what prior status the movie had
+  const undoIndex = state.nopeUndoStack.findLastIndex ? state.nopeUndoStack.findLastIndex(item => item.movieId === movieId) : -1;
+  let priorStatus = "untracked";
+  if (undoIndex !== -1) {
+    priorStatus = state.nopeUndoStack[undoIndex].previousStatus;
+    state.nopeUndoStack.splice(undoIndex, 1);
+    updateNopeUndoCounter();
+  } else if (movie._priorStatus) {
+    priorStatus = movie._priorStatus;
+  }
+
+  // Optimistic DOM update
+  article.classList.remove("is-noped");
+  if (badge) {
+    badge.dataset.status = priorStatus;
+    badge.textContent = priorStatus === "untracked" ? "Untracked" : (STATUS_LABELS[priorStatus] || priorStatus);
+  }
+
+  try {
+    if (priorStatus === "untracked") {
+      await fetchJSON(`/movies/${movieId}/status`, { method: "DELETE" });
+      movie.user_data = null;
+      clearDiscoveryCache();
+    } else {
+      const response = await fetchJSON(`/movies/${movieId}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status: priorStatus }),
+      });
+      movie.user_data = response.user_movie_data;
+      clearDiscoveryCache();
+    }
+  } catch (error) {
+    // Rollback on failure
+    article.classList.add("is-noped");
+    if (badge) {
+      badge.dataset.status = "excluded";
+      badge.textContent = STATUS_LABELS.excluded;
+    }
+    if (!movie.user_data) movie.user_data = {};
+    movie.user_data.status = "excluded";
+    showNotice(`Could not liberate "${title}": ${error.message}`);
+  }
+}
+
+async function handleQuickNope(movie, article) {
+  if (state.currentView !== "discover" || !state.nopeMode) return;
+
+  const movieId = getMovieId(movie);
+  const currentStatus = getStatus(movie) || "untracked";
+  const title = movie.title || movie.original_title || "Untitled movie";
+
+  // If already noped, click liberates it from Nope jail!
+  if (currentStatus === "excluded" || article.classList.contains("is-noped")) {
+    await handleLiberateMovie(movie, article);
+    return;
+  }
+
+  // Remember prior status before noping
+  const priorStatus = currentStatus;
+  movie._priorStatus = priorStatus;
+
+  // Push to undo stack (max 3)
+  state.nopeUndoStack.push({
+    movieId,
+    previousStatus: priorStatus,
+    title,
+    userData: movie.user_data ? { ...movie.user_data } : null,
   });
+  if (state.nopeUndoStack.length > 3) {
+    state.nopeUndoStack.shift();
+  }
+  updateNopeUndoCounter();
+
+  // Optimistic UI update
+  article.classList.add("is-noped");
+  let badge = article.querySelector(".status-badge");
+  if (!badge) {
+    badge = document.createElement("span");
+    badge.className = "status-badge";
+    const posterBtn = article.querySelector(".poster-button");
+    if (posterBtn) posterBtn.append(badge);
+  }
+  if (badge) {
+    badge.dataset.status = "excluded";
+    badge.textContent = STATUS_LABELS.excluded;
+  }
+  if (!movie.user_data) {
+    movie.user_data = {};
+  }
+  movie.user_data.status = "excluded";
+
+  try {
+    const response = await fetchJSON(`/movies/${movieId}/status`, {
+      method: "PUT",
+      body: JSON.stringify({ status: "excluded" }),
+    });
+    movie.user_data = response.user_movie_data;
+    clearDiscoveryCache();
+  } catch (error) {
+    // Rollback on failure
+    article.classList.remove("is-noped");
+    if (badge) {
+      badge.dataset.status = priorStatus;
+      badge.textContent = priorStatus === "untracked" ? "Untracked" : STATUS_LABELS[priorStatus];
+    }
+    movie.user_data.status = priorStatus;
+    state.nopeUndoStack = state.nopeUndoStack.filter((item) => item.movieId !== movieId);
+    updateNopeUndoCounter();
+    showNotice(`Could not nope "${title}": ${error.message}`);
+  }
+}
+
+async function handleNopeUndo() {
+  if (!state.nopeMode || state.nopeUndoStack.length === 0) return;
+
+  const lastItem = state.nopeUndoStack.pop();
+  updateNopeUndoCounter();
+
+  const { movieId, previousStatus, title, userData } = lastItem;
+  const article = elements.grid?.querySelector(`.movie-card[data-movie-id="${movieId}"]`);
+  const restoreStatus = (previousStatus && previousStatus !== "untracked") ? previousStatus : "untracked";
+
+  if (article) {
+    article.classList.remove("is-noped");
+    const badge = article.querySelector(".status-badge");
+    if (badge) {
+      badge.dataset.status = previousStatus;
+      badge.textContent = previousStatus === "untracked" ? "Untracked" : (STATUS_LABELS[previousStatus] || previousStatus);
+    }
+  }
+
+  const movie = state.movies.find((m) => getMovieId(m) === movieId);
+
+  try {
+    if (restoreStatus === "untracked") {
+      await fetchJSON(`/movies/${movieId}/status`, { method: "DELETE" });
+      if (movie) {
+        movie.user_data = null;
+      }
+    } else {
+      const response = await fetchJSON(`/movies/${movieId}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status: restoreStatus }),
+      });
+      if (movie) {
+        movie.user_data = response.user_movie_data;
+      }
+    }
+    clearDiscoveryCache();
+  } catch (error) {
+    showNotice(`Could not undo "${title}": ${error.message}`);
+  }
+}
+
+function updateMovieCardDOM(movieId, userData) {
+  if (!movieId) return;
+  const card = elements.grid?.querySelector(`.movie-card[data-movie-id="${movieId}"]`);
+  if (!card) return;
+
+  const status = userData?.status;
+  const badge = card.querySelector(".status-badge");
+  if (badge) {
+    badge.dataset.status = status || "untracked";
+    badge.textContent = status ? (STATUS_LABELS[status] || status) : "Untracked";
+  }
+
+  const posterBtn = card.querySelector(".poster-button");
+  if (posterBtn) {
+    let favMark = posterBtn.querySelector(".favorite-mark");
+    if (userData?.is_favorite) {
+      if (!favMark) {
+        favMark = document.createElement("span");
+        favMark.className = "favorite-mark";
+        favMark.textContent = "♥";
+        favMark.setAttribute("aria-label", "Favourite");
+        posterBtn.append(favMark);
+      }
+    } else if (favMark) {
+      favMark.remove();
+    }
+  }
+
+  if (state.currentView === "discover") {
+    card.classList.toggle("is-noped", status === "excluded");
+  } else {
+    card.classList.remove("is-noped");
+  }
 }
 
 function showNotice(message) {
@@ -351,84 +762,159 @@ function clearNotice() {
   elements.notice.classList.add("is-hidden");
 }
 
-function updatePickerSummary(container) {
-  const checked = [...container.querySelectorAll("input:checked")];
-  const summary = container.querySelector("summary");
-
-  if (checked.length === 0) {
-    summary.textContent = "Any";
-  } else if (checked.length === 1) {
-    summary.textContent = checked[0].dataset.label;
-  } else {
-    summary.textContent = `${checked.length} selected`;
-  }
+function updatePickerSummary() {
+  // Chips show their active state directly
 }
 
 function buildMultiPicker(container, config) {
-  const details = document.createElement("details");
-  const summary = document.createElement("summary");
-  const options = document.createElement("div");
-  details.className = "multi-picker-menu";
-  summary.textContent = "Any";
-  options.className = "multi-picker-options";
-
-  const actions = document.createElement("div");
-  const clear = document.createElement("button");
-  const done = document.createElement("button");
-  actions.className = "picker-actions";
-  clear.type = "button";
-  clear.className = "picker-clear is-hidden";
-  clear.textContent = "Clear";
-  done.type = "button";
-  done.textContent = "Done";
-  actions.append(clear, done);
+  if (!container) return;
+  const chipCloud = document.createElement("div");
+  chipCloud.className = "chip-cloud";
 
   config.options.forEach(([value, label]) => {
-    const option = document.createElement("label");
+    const chip = document.createElement("label");
+    chip.className = "filter-chip";
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.value = String(value);
     checkbox.dataset.label = label;
-    option.append(checkbox, document.createTextNode(label));
-    options.append(option);
+    const text = document.createElement("span");
+    text.className = "chip-label";
+    text.textContent = label;
+
+    chip.append(checkbox, text);
+    chipCloud.append(chip);
 
     checkbox.addEventListener("change", () => {
+      chip.classList.toggle("is-active", checkbox.checked);
+
       if (checkbox.checked && config.opposite) {
         const opposite = document.querySelector(`#${config.opposite}`);
-        const oppositeCheckbox = [...opposite.querySelectorAll("input")].find(
+        const oppositeCheckbox = opposite ? [...opposite.querySelectorAll("input")].find(
           (item) => item.value === checkbox.value,
-        );
+        ) : null;
 
         if (oppositeCheckbox) {
           oppositeCheckbox.checked = false;
-          updatePickerSummary(opposite);
+          oppositeCheckbox.closest(".filter-chip")?.classList.remove("is-active");
         }
       }
 
-      updatePickerSummary(container);
-      clear.classList.toggle(
-        "is-hidden",
-        !container.querySelector("input:checked"),
-      );
+      updateFilterPillBadges();
       scheduleSearchStateSave();
     });
   });
 
-  clear.addEventListener("click", () => {
-    container.querySelectorAll("input:checked").forEach((input) => {
-      input.checked = false;
+  container.replaceChildren(chipCloud);
+}
+
+const TRI_PICKER_CONFIG = {
+  "genres-picker": {
+    options: GENRE_OPTIONS,
+    includeId: "include-genres",
+    excludeId: "exclude-genres",
+    numeric: true,
+  },
+  "languages-picker": {
+    options: LANGUAGE_OPTIONS,
+    includeId: "include-languages",
+    excludeId: "exclude-languages",
+    numeric: false,
+  },
+};
+
+function buildTriStatePicker(containerId, config) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+
+  const chipCloud = document.createElement("div");
+  chipCloud.className = "tri-chip-cloud";
+
+  config.options.forEach(([value, label]) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "tri-chip";
+    chip.dataset.value = String(value);
+    chip.dataset.state = "off";
+
+    const icon = document.createElement("span");
+    icon.className = "tri-chip-icon";
+
+    const text = document.createElement("span");
+    text.className = "tri-chip-label";
+    text.textContent = label;
+
+    chip.append(icon, text);
+    chipCloud.append(chip);
+
+    chip.addEventListener("click", (e) => {
+      e.preventDefault();
+      const current = chip.dataset.state;
+      let next = "off";
+      if (containerId === "genres-picker") {
+        const mode = state.genreMode || "exclude";
+        if (mode === "exclude") {
+          next = current === "exclude" ? "off" : "exclude";
+        } else {
+          next = current === "include" ? "off" : "include";
+        }
+      } else {
+        next = current === "off" ? "exclude" : current === "exclude" ? "include" : "off";
+      }
+      setTriChipState(chip, next, config);
+      updateFilterPillBadges();
+      renderActiveFilterTags();
+      scheduleSearchStateSave();
     });
-    updatePickerSummary(container);
-    clear.classList.add("is-hidden");
-    scheduleSearchStateSave();
-  });
-  done.addEventListener("click", () => {
-    details.open = false;
   });
 
-  options.append(actions);
-  details.append(summary, options);
-  container.append(details);
+  container.replaceChildren(chipCloud);
+}
+
+function setTriChipState(chip, state, config) {
+  chip.dataset.state = state;
+  chip.classList.toggle("is-included", state === "include");
+  chip.classList.toggle("is-excluded", state === "exclude");
+
+  const icon = chip.querySelector(".tri-chip-icon");
+  if (icon) {
+    icon.textContent = state === "include" ? "+" : state === "exclude" ? "−" : "";
+  }
+
+  const val = chip.dataset.value;
+  const incCheckbox = document.querySelector(`#${config.includeId} input[value="${val}"]`);
+  const excCheckbox = document.querySelector(`#${config.excludeId} input[value="${val}"]`);
+
+  if (incCheckbox) incCheckbox.checked = (state === "include");
+  if (excCheckbox) excCheckbox.checked = (state === "exclude");
+}
+
+function syncTriPickers() {
+  Object.entries(TRI_PICKER_CONFIG).forEach(([containerId, config]) => {
+    const incValues = new Set(getPickerValues(config.includeId).map(String));
+    const excValues = new Set(getPickerValues(config.excludeId).map(String));
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    container.querySelectorAll(".tri-chip").forEach((chip) => {
+      const val = chip.dataset.value;
+      let state = "off";
+      if (incValues.has(val)) {
+        state = "include";
+      } else if (excValues.has(val)) {
+        state = "exclude";
+      }
+      chip.dataset.state = state;
+      chip.classList.toggle("is-included", state === "include");
+      chip.classList.toggle("is-excluded", state === "exclude");
+
+      const icon = chip.querySelector(".tri-chip-icon");
+      if (icon) {
+        icon.textContent = state === "include" ? "+" : state === "exclude" ? "−" : "";
+      }
+    });
+  });
+  refreshCompactClouds();
 }
 
 function initializePickers() {
@@ -436,7 +922,246 @@ function initializePickers() {
     const container = document.querySelector(`#${id}`);
     buildMultiPicker(container, config);
   });
+  Object.entries(TRI_PICKER_CONFIG).forEach(([id, config]) => {
+    buildTriStatePicker(id, config);
+  });
+  refreshCompactClouds();
 }
+
+/* ---------- Compact language / country chip clouds ---------- */
+
+// Languages excluded by default are applied silently by the search engine and never shown as chips.
+const BACKGROUND_EXCLUDED_LANGUAGES = new Set(DEFAULT_SYSTEM_FILTERS.exclude_original_languages);
+
+const COMPACT_CLOUD_CONFIG = [
+  {
+    hostSelector: "#languages-picker",
+    cloudSelector: ".tri-chip-cloud",
+    chipSelector: ".tri-chip",
+    kind: "languages",
+    noun: "language",
+    options: LANGUAGE_OPTIONS,
+    primary: PRIMARY_LANGUAGE_CODES,
+    valueOf: (chip) => chip.dataset.value,
+    isActive: (chip) => chip.dataset.state && chip.dataset.state !== "off",
+    isBackground: (chip) => chip.dataset.state === "exclude" && BACKGROUND_EXCLUDED_LANGUAGES.has(chip.dataset.value),
+    backgroundHint: (value) => (BACKGROUND_EXCLUDED_LANGUAGES.has(value) ? "excluded by default" : ""),
+  },
+  {
+    hostSelector: "#include-countries",
+    cloudSelector: ".chip-cloud",
+    chipSelector: ".filter-chip",
+    kind: "countries",
+    noun: "country",
+    options: COUNTRY_OPTIONS,
+    primary: PRIMARY_COUNTRY_CODES,
+    valueOf: (chip) => chip.querySelector("input")?.value,
+    isActive: (chip) => Boolean(chip.querySelector("input")?.checked),
+    isBackground: () => false,
+    backgroundHint: (value) => (DEFAULT_SYSTEM_FILTERS.exclude_origin_countries.includes(value) ? "excluded by default" : ""),
+  },
+  {
+    hostSelector: "#lib-languages-cloud",
+    cloudSelector: null,
+    chipSelector: ".filter-chip",
+    kind: "languages",
+    noun: "language",
+    options: LANGUAGE_OPTIONS,
+    primary: PRIMARY_LANGUAGE_CODES,
+    valueOf: (chip) => chip.dataset.langCode,
+    isActive: (chip) => chip.classList.contains("is-active"),
+    isBackground: () => false,
+    backgroundHint: () => "",
+  },
+];
+
+function getPinnedChips(kind) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(`nope_pinned_${kind}`) || "[]");
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setPinnedChips(kind, values) {
+  try {
+    localStorage.setItem(`nope_pinned_${kind}`, JSON.stringify([...new Set(values.map(String))]));
+  } catch {}
+}
+
+function getCompactCloud(config) {
+  const host = document.querySelector(config.hostSelector);
+  if (!host) return null;
+  return config.cloudSelector ? host.querySelector(config.cloudSelector) : host;
+}
+
+function refreshCompactClouds() {
+  COMPACT_CLOUD_CONFIG.forEach(refreshCompactCloud);
+}
+
+function refreshCompactCloud(config) {
+  const cloud = getCompactCloud(config);
+  if (!cloud) return;
+
+  const primary = new Set(config.primary);
+  const pinned = new Set(getPinnedChips(config.kind));
+
+  cloud.querySelectorAll(config.chipSelector).forEach((chip) => {
+    const value = config.valueOf(chip);
+    const isPrimary = primary.has(value);
+    const isPinned = pinned.has(value) && !isPrimary;
+    const visible = isPrimary || isPinned || (config.isActive(chip) && !config.isBackground(chip));
+    chip.classList.toggle("is-hidden", !visible);
+    chip.classList.toggle("is-pinned", isPinned);
+
+    chip.querySelector(".chip-unpin")?.remove();
+    if (isPinned) {
+      const unpin = document.createElement("span");
+      unpin.className = "chip-unpin";
+      unpin.setAttribute("role", "button");
+      const chipName = (chip.querySelector(".tri-chip-label, .chip-label")?.textContent || chip.textContent).trim();
+      unpin.setAttribute("aria-label", `Remove ${chipName} from the list`);
+      unpin.title = "Remove from list";
+      unpin.textContent = "×";
+      unpin.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setPinnedChips(config.kind, getPinnedChips(config.kind).filter((item) => item !== value));
+        refreshCompactClouds();
+      });
+      chip.append(unpin);
+    }
+  });
+
+  let adder = cloud.querySelector(":scope > .chip-adder");
+  if (!adder) {
+    adder = document.createElement("button");
+    adder.type = "button";
+    adder.className = "chip-adder";
+    adder.textContent = "+";
+    adder.title = `Add a ${config.noun}`;
+    adder.setAttribute("aria-label", `Add a ${config.noun}`);
+    adder.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      toggleCompactAdderPanel(config, adder);
+    });
+  }
+  cloud.append(adder); // always keep the + chip last
+}
+
+function closeCompactAdderPanels(except = null) {
+  document.querySelectorAll(".chip-adder-panel").forEach((panel) => {
+    if (panel !== except) {
+      panel.remove();
+    }
+  });
+  document.querySelectorAll(".chip-adder.is-open").forEach((button) => {
+    if (!except || button !== except.__adderButton) {
+      button.classList.remove("is-open");
+    }
+  });
+}
+
+function toggleCompactAdderPanel(config, adderButton) {
+  const host = document.querySelector(config.hostSelector);
+  if (!host) return;
+
+  const existing = host.parentElement?.querySelector(`.chip-adder-panel[data-host="${config.hostSelector}"]`);
+  if (existing) {
+    closeCompactAdderPanels();
+    return;
+  }
+  closeCompactAdderPanels();
+
+  const panel = document.createElement("div");
+  panel.className = "chip-adder-panel";
+  panel.dataset.host = config.hostSelector;
+  panel.__adderButton = adderButton;
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.className = "chip-adder-input";
+  input.placeholder = `Find a ${config.noun}…`;
+  input.autocomplete = "off";
+  input.setAttribute("aria-label", `Find a ${config.noun}`);
+
+  const list = document.createElement("div");
+  list.className = "chip-adder-list";
+  list.setAttribute("role", "listbox");
+
+  const renderOptions = () => {
+    const query = input.value.trim().toLowerCase();
+    const cloud = getCompactCloud(config);
+    const visibleValues = new Set(
+      [...(cloud?.querySelectorAll(config.chipSelector) || [])]
+        .filter((chip) => !chip.classList.contains("is-hidden"))
+        .map((chip) => config.valueOf(chip)),
+    );
+    const matches = config.options.filter(([value, label]) =>
+      !visibleValues.has(String(value)) &&
+      (!query || label.toLowerCase().includes(query) || String(value).toLowerCase() === query),
+    );
+
+    list.replaceChildren();
+    if (!matches.length) {
+      const empty = document.createElement("p");
+      empty.className = "chip-adder-empty";
+      empty.textContent = query ? `No ${config.noun} matches “${input.value.trim()}”.` : `All ${config.kind} are already shown.`;
+      list.append(empty);
+      return;
+    }
+
+    matches.forEach(([value, label]) => {
+      const option = document.createElement("button");
+      option.type = "button";
+      option.className = "chip-adder-option";
+      option.setAttribute("role", "option");
+      option.textContent = label;
+      const hint = config.backgroundHint(String(value));
+      if (hint) {
+        const hintEl = document.createElement("span");
+        hintEl.className = "chip-adder-hint";
+        hintEl.textContent = hint;
+        option.append(hintEl);
+      }
+      option.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setPinnedChips(config.kind, [...getPinnedChips(config.kind), String(value)]);
+        refreshCompactClouds();
+        closeCompactAdderPanels();
+      });
+      list.append(option);
+    });
+  };
+
+  input.addEventListener("input", renderOptions);
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeCompactAdderPanels();
+      adderButton.focus();
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      list.querySelector(".chip-adder-option")?.click();
+    }
+  });
+  panel.addEventListener("click", (event) => event.stopPropagation());
+
+  panel.append(input, list);
+  host.after(panel);
+  adderButton.classList.add("is-open");
+  renderOptions();
+  input.focus();
+}
+
+document.addEventListener("click", (event) => {
+  if (!event.target.closest?.(".chip-adder-panel, .chip-adder")) {
+    closeCompactAdderPanels();
+  }
+});
 
 function getPickerValues(id, numeric = false) {
   return [...document.querySelectorAll(`#${id} input:checked`)].map((input) =>
@@ -444,19 +1169,40 @@ function getPickerValues(id, numeric = false) {
   );
 }
 
+function syncSortChips(val) {
+  const currentVal = val || elements.sortBy?.value || "popularity.desc";
+  document.querySelectorAll(".sort-chip").forEach((chip) => {
+    chip.classList.toggle("is-active", chip.dataset.value === currentVal);
+  });
+}
+
+function initializeSortChips() {
+  document.querySelectorAll(".sort-chip").forEach((chip) => {
+    chip.addEventListener("click", () => {
+      const val = chip.dataset.value;
+      if (elements.sortBy) {
+        elements.sortBy.value = val;
+        elements.sortBy.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      syncSortChips(val);
+      updateFilterPillBadges();
+      scheduleSearchStateSave();
+      runDiscoverySearch();
+    });
+  });
+  syncSortChips();
+}
+
 function setPickerValues(id, values = []) {
   const selected = new Set(values.map((value) => String(value)));
   const container = document.querySelector(`#${id}`);
+  if (!container) return;
 
   container.querySelectorAll("input").forEach((input) => {
     input.checked = selected.has(input.value);
+    input.closest(".filter-chip")?.classList.toggle("is-active", input.checked);
   });
-
-  updatePickerSummary(container);
-  const clear = container.querySelector(".picker-clear");
-  if (clear) {
-    clear.classList.toggle("is-hidden", selected.size === 0);
-  }
+  syncTriPickers();
 }
 
 const ENTITY_CONFIG = {
@@ -502,6 +1248,27 @@ const ENTITY_CONFIG = {
     searchPath: "/companies/search",
     detailPath: "/companies/",
   },
+  libKeywords: {
+    queryId: "lib-keyword-query",
+    resultsId: "lib-keyword-results",
+    selectedId: "selected-lib-keywords",
+    searchPath: "/movies/library/keywords",
+    detailPath: "/tmdb-keywords/",
+  },
+  libDirectors: {
+    queryId: "lib-director-query",
+    resultsId: "lib-director-results",
+    selectedId: "selected-lib-directors",
+    searchPath: "/movies/library/people?type=director",
+    detailPath: "/people/",
+  },
+  libActors: {
+    queryId: "lib-actor-query",
+    resultsId: "lib-actor-results",
+    selectedId: "selected-lib-actors",
+    searchPath: "/movies/library/people?type=actor",
+    detailPath: "/people/",
+  },
 };
 
 function renderSelectedEntities(key) {
@@ -509,6 +1276,17 @@ function renderSelectedEntities(key) {
   const container = document.querySelector(`#${config.selectedId}`);
   if (!container) return;
   container.replaceChildren();
+
+  // Deduplicate items in state to guarantee zero repeats
+  const seen = new Set();
+  state.selectedEntities[key] = (state.selectedEntities[key] || []).filter((entity) => {
+    const idKey = Number(entity.id);
+    const nameKey = (entity.name || "").trim().toLowerCase();
+    const compound = `${idKey}:${nameKey}`;
+    if (seen.has(compound)) return false;
+    seen.add(compound);
+    return true;
+  });
 
   state.selectedEntities[key].forEach((entity) => {
     const chip = document.createElement("span");
@@ -540,6 +1318,14 @@ function renderSelectedEntities(key) {
     }
 
     name.textContent = entity.name;
+    if (key === "actors" || key === "directors") {
+      name.classList.add("is-filmography-link");
+      name.title = `View full career filmography for ${entity.name}`;
+      name.addEventListener("click", (event) => {
+        event.stopPropagation();
+        loadPersonFilmography(entity, key.includes("Actor") ? "actors" : "directors");
+      });
+    }
     remove.type = "button";
     remove.textContent = "×";
     remove.setAttribute("aria-label", `Remove ${entity.name}`);
@@ -552,6 +1338,7 @@ function renderSelectedEntities(key) {
       updateFilterPillBadges();
       renderActiveFilterTags();
       scheduleSearchStateSave();
+      if (key.startsWith("lib")) searchPersonalLibrary();
     });
     chip.append(name, remove);
     container.append(chip);
@@ -568,6 +1355,7 @@ function renderSelectedEntities(key) {
       updateFilterPillBadges();
       renderActiveFilterTags();
       scheduleSearchStateSave();
+      if (key.startsWith("lib")) searchPersonalLibrary();
     });
     container.append(clear);
   }
@@ -577,11 +1365,21 @@ function addSelectedEntity(key, entity) {
   if (key === "keywords" && !entity.mode) {
     entity.mode = "include";
   }
-  if (!state.selectedEntities[key].some((item) => item.id === entity.id)) {
+  const entityId = Number(entity.id);
+  const rawEntityName = (entity.raw_name || entity.name || "").replace(/^[🏷️\s]+/, "").trim().toLowerCase();
+  const alreadySelected = state.selectedEntities[key].some((item) => {
+    const itemId = Number(item.id);
+    const rawItemName = (item.raw_name || item.name || "").replace(/^[🏷️\s]+/, "").trim().toLowerCase();
+    if (itemId === entityId && itemId > 0) return true;
+    if (key.toLowerCase().includes("keyword") && rawEntityName && rawItemName === rawEntityName) return true;
+    return false;
+  });
+  if (!alreadySelected) {
     state.selectedEntities[key].push(entity);
     renderSelectedEntities(key);
     updateFilterPillBadges();
     renderActiveFilterTags();
+    if (key.startsWith("lib")) searchPersonalLibrary();
   }
 
   const config = ENTITY_CONFIG[key];
@@ -595,12 +1393,26 @@ function renderEntityResults(key, results) {
   const container = document.querySelector(`#${config.resultsId}`);
   container.replaceChildren();
 
-  if (!results.length) {
+  // Deduplicate results by ID and case-insensitive name
+  const seenIds = new Set();
+  const seenNames = new Set();
+  const dedupedResults = [];
+  for (const item of results) {
+    const id = Number(item.id);
+    const name = (item.name || "").trim().toLowerCase();
+    if (seenIds.has(id)) continue;
+    if (name && seenNames.has(name)) continue;
+    seenIds.add(id);
+    if (name) seenNames.add(name);
+    dedupedResults.push(item);
+  }
+
+  if (!dedupedResults.length) {
     const empty = document.createElement("p");
     empty.textContent = "No matches found";
     container.append(empty);
   } else {
-    results.slice(0, 6).forEach((result) => {
+    dedupedResults.slice(0, 6).forEach((result) => {
       const button = document.createElement("button");
       const name = document.createElement("strong");
       const context = document.createElement("span");
@@ -609,12 +1421,14 @@ function renderEntityResults(key, results) {
       context.textContent = result.known_for_department
         || result.origin_country
         || (result.known_for_titles || []).slice(0, 2).join(" · ")
-        || "TMDB result";
+        || (result.is_custom ? "Personal tag" : (key.startsWith("lib") ? "Library keyword" : "TMDB result"));
       button.append(name, context);
       button.addEventListener("click", () => {
         addSelectedEntity(key, {
           id: Number(result.id),
           name: result.name || `TMDB #${result.id}`,
+          raw_name: result.raw_name || result.name || "",
+          is_custom: Boolean(result.is_custom),
         });
       });
       container.append(button);
@@ -682,9 +1496,12 @@ function initializeEntityPickers() {
 
       timer = window.setTimeout(async () => {
         try {
-          const response = await fetchJSON(
-            `${config.searchPath}?query=${encodeURIComponent(query)}`,
-          );
+          const sep = config.searchPath.includes("?") ? "&" : "?";
+          let searchUrl = `${config.searchPath}${sep}query=${encodeURIComponent(query)}`;
+          if (key.startsWith("lib") && state.librarySearchScope === "shelf" && state.currentView && state.currentView !== "discover" && state.currentView !== "entries") {
+            searchUrl += `&status=${encodeURIComponent(state.currentView)}`;
+          }
+          const response = await fetchJSON(searchUrl);
           renderEntityResults(key, response.results || []);
         } catch (error) {
           results.replaceChildren();
@@ -699,7 +1516,10 @@ function initializeEntityPickers() {
 }
 
 async function hydrateEntitySelections(filters) {
-  const incKeywords = await Promise.all((filters.include_keyword_ids || []).map(async (id) => {
+  const incIds = [...new Set((filters.include_keyword_ids || []).map(Number))];
+  const excIds = [...new Set((filters.exclude_keyword_ids || []).map(Number))];
+
+  const incKeywords = await Promise.all(incIds.map(async (id) => {
     try {
       const result = await fetchJSON(`${ENTITY_CONFIG.keywords.detailPath}${id}`);
       return { id: Number(id), name: result.name || `TMDB #${id}`, mode: "include" };
@@ -708,7 +1528,7 @@ async function hydrateEntitySelections(filters) {
     }
   }));
 
-  const excKeywords = await Promise.all((filters.exclude_keyword_ids || []).map(async (id) => {
+  const excKeywords = await Promise.all(excIds.map(async (id) => {
     try {
       const result = await fetchJSON(`${ENTITY_CONFIG.keywords.detailPath}${id}`);
       return { id: Number(id), name: result.name || `TMDB #${id}`, mode: "exclude" };
@@ -717,15 +1537,25 @@ async function hydrateEntitySelections(filters) {
     }
   }));
 
-  state.selectedEntities.keywords = [...incKeywords, ...excKeywords];
+  const allKeywords = [...incKeywords, ...excKeywords];
+  const seenIds = new Set();
+  const seenNames = new Set();
+  state.selectedEntities.keywords = [];
+  for (const k of allKeywords) {
+    const id = Number(k.id);
+    const name = (k.name || "").trim().toLowerCase();
+    if (seenIds.has(id) || (name && seenNames.has(name))) continue;
+    seenIds.add(id);
+    if (name) seenNames.add(name);
+    state.selectedEntities.keywords.push(k);
+  }
   renderSelectedEntities("keywords");
 
   const otherGroups = {
-    actors: filters.include_actor_ids || [],
-    directors: filters.include_director_ids || [],
-    companies: filters.include_company_ids || [],
-    excludedCompanies: filters.exclude_company_ids || [],
-    excludedKeywords: filters.exclude_keyword_ids || [],
+    actors: [...new Set((filters.include_actor_ids || []).map(Number))],
+    directors: [...new Set((filters.include_director_ids || []).map(Number))],
+    companies: [...new Set((filters.include_company_ids || []).map(Number))],
+    excludedCompanies: [...new Set((filters.exclude_company_ids || []).map(Number))],
   };
 
   await Promise.all(Object.entries(otherGroups).map(async ([key, ids]) => {
@@ -762,17 +1592,26 @@ function collectAdvancedFilters() {
     include_original_languages: getPickerValues("include-languages"),
     exclude_original_languages: getPickerValues("exclude-languages"),
     include_origin_countries: getPickerValues("include-countries"),
-    exclude_origin_countries: [],
+    exclude_origin_countries: [
+      ...new Set([
+        ...(state.profilePassthroughFilters.exclude_origin_countries || DEFAULT_SYSTEM_FILTERS.exclude_origin_countries),
+      ]),
+    ],
     include_actor_ids: state.selectedEntities.actors.map((item) => item.id),
     include_director_ids: state.selectedEntities.directors.map((item) => item.id),
-    include_keyword_ids: state.selectedEntities.keywords
-      .filter((item) => item.mode !== "exclude")
-      .map((item) => item.id),
+    include_keyword_ids: [
+      ...new Set(
+        state.selectedEntities.keywords
+          .filter((item) => item.mode !== "exclude")
+          .map((item) => Number(item.id))
+      ),
+    ],
     exclude_keyword_ids: [
-      ...state.selectedEntities.keywords
-        .filter((item) => item.mode === "exclude")
-        .map((item) => item.id),
-      ...(state.selectedEntities.excludedKeywords || []).map((item) => item.id),
+      ...new Set(
+        state.selectedEntities.keywords
+          .filter((item) => item.mode === "exclude")
+          .map((item) => Number(item.id))
+      ),
     ],
     include_company_ids: state.selectedEntities.companies.map((item) => item.id),
     exclude_company_ids: state.selectedEntities.excludedCompanies.map((item) => item.id),
@@ -860,23 +1699,28 @@ async function restoreSearchState() {
 }
 
 function initializeCollapsibleFilters() {
-  document.querySelectorAll(".filter-card").forEach((card) => {
-    card.classList.add("is-collapsed");
-    const heading = card.querySelector(".filter-card-heading");
-    if (!heading || heading.querySelector(".filter-card-toggle")) return;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "filter-card-toggle";
-    button.textContent = "Open";
-    button.setAttribute("aria-expanded", "false");
-    button.addEventListener("click", () => {
-      const collapsed = card.classList.toggle("is-collapsed");
-      button.textContent = collapsed ? "Open" : "Close";
-      button.setAttribute("aria-expanded", String(!collapsed));
-      updateFilterPillStates();
+  // Legacy collapsible filter buttons eradicated in favor of direct accordion triggers
+}
+
+function initializeNotesCollapsibleSections() {
+  const setupToggle = (toggleBtn, sectionEl, storageKey) => {
+    if (!toggleBtn || !sectionEl) return;
+    const isSavedCollapsed = localStorage.getItem(storageKey) === "1";
+    if (isSavedCollapsed) {
+      sectionEl.classList.add("is-collapsed");
+      toggleBtn.setAttribute("aria-expanded", "false");
+    }
+    toggleBtn.addEventListener("click", () => {
+      const isCurrentlyCollapsed = sectionEl.classList.toggle("is-collapsed");
+      toggleBtn.setAttribute("aria-expanded", isCurrentlyCollapsed ? "false" : "true");
+      try {
+        localStorage.setItem(storageKey, isCurrentlyCollapsed ? "1" : "0");
+      } catch {}
     });
-    heading.append(button);
-  });
+  };
+
+  setupToggle(elements.notesTagsToggle, elements.notesTagsSection, "nope_notes_tags_collapsed");
+  setupToggle(elements.notesTimelineToggle, elements.notesTimelineSection, "nope_notes_timeline_collapsed");
 }
 
 function updateFilterPillStates() {
@@ -899,39 +1743,81 @@ function updateFilterPillBadges() {
   }
   document.querySelector("#pill-genres")?.classList.toggle("has-filters", genres > 0);
 
-  // Quality badge (rating or year)
+  // Rating badge
   const minRating = elements.minimumRating?.value?.trim();
   const maxRating = elements.maximumRating?.value?.trim();
+  const ratingCount = minRating || maxRating ? 1 : 0;
+  const badgeRating = document.querySelector("#badge-rating") || document.querySelector("#badge-quality");
+  if (badgeRating) {
+    badgeRating.textContent = String(ratingCount);
+    badgeRating.classList.toggle("is-hidden", ratingCount === 0);
+  }
+  document.querySelector("#pill-rating")?.classList.toggle("has-filters", ratingCount > 0);
+  document.querySelector("#pill-quality")?.classList.toggle("has-filters", ratingCount > 0);
+
+  // Votes badge
+  const minVotes = elements.minimumVotes?.value?.trim();
+  const votesCount = minVotes ? 1 : 0;
+  const badgeVotes = document.querySelector("#badge-votes");
+  if (badgeVotes) {
+    badgeVotes.textContent = String(votesCount);
+    badgeVotes.classList.toggle("is-hidden", votesCount === 0);
+  }
+  document.querySelector("#pill-votes")?.classList.toggle("has-filters", votesCount > 0);
+
+  // Sort badge
+  const sortBy = elements.sortBy?.value;
+  const isCustomSort = sortBy && sortBy !== "popularity.desc";
+  document.querySelector("#pill-sort")?.classList.toggle("has-filters", Boolean(isCustomSort));
+
+  // Year badge
   const yearFrom = elements.releaseYearFrom?.value?.trim();
   const yearTo = elements.releaseYearTo?.value?.trim();
-  const qualityCount = (minRating || maxRating ? 1 : 0) + (yearFrom || yearTo ? 1 : 0);
-  const badgeQuality = document.querySelector("#badge-quality");
-  if (badgeQuality) {
-    badgeQuality.textContent = String(qualityCount);
-    badgeQuality.classList.toggle("is-hidden", qualityCount === 0);
+  const yearCount = yearFrom || yearTo ? 1 : 0;
+  const badgeYear = document.querySelector("#badge-year");
+  if (badgeYear) {
+    badgeYear.textContent = String(yearCount);
+    badgeYear.classList.toggle("is-hidden", yearCount === 0);
   }
-  document.querySelector("#pill-quality")?.classList.toggle("has-filters", qualityCount > 0);
+  document.querySelector("#pill-year")?.classList.toggle("has-filters", yearCount > 0);
 
-  // Origin badge
-  const incLang = getPickerValues("include-languages").length;
-  const excLang = getPickerValues("exclude-languages").length;
-  const incCountry = getPickerValues("include-countries").length;
-  const originCount = incLang + excLang + incCountry;
-  const badgeOrigin = document.querySelector("#badge-origin");
-  if (badgeOrigin) {
-    badgeOrigin.textContent = String(originCount);
-    badgeOrigin.classList.toggle("is-hidden", originCount === 0);
-  }
-  document.querySelector("#pill-origin")?.classList.toggle("has-filters", originCount > 0);
-
-  // People badge
-  const actors = state.selectedEntities?.actors?.length || 0;
-  const directors = state.selectedEntities?.directors?.length || 0;
+  // Keywords badge
   const keywords = state.selectedEntities?.keywords?.length || 0;
   const excKeywords = state.selectedEntities?.excludedKeywords?.length || 0;
-  const companies = state.selectedEntities?.companies?.length || 0;
-  const excCompanies = state.selectedEntities?.excludedCompanies?.length || 0;
-  const peopleCount = actors + directors + keywords + excKeywords + companies + excCompanies;
+  const keywordCount = keywords + excKeywords;
+  const badgeKeywords = document.querySelector("#badge-keywords");
+  if (badgeKeywords) {
+    badgeKeywords.textContent = String(keywordCount);
+    badgeKeywords.classList.toggle("is-hidden", keywordCount === 0);
+  }
+  document.querySelector("#pill-keywords")?.classList.toggle("has-filters", keywordCount > 0);
+
+  // Languages badge (silent default exclusions are not counted — they are not shown as chips)
+  const incLang = getPickerValues("include-languages").length;
+  const excLang = getPickerValues("exclude-languages")
+    .filter((code) => !BACKGROUND_EXCLUDED_LANGUAGES.has(code)).length;
+  const langCount = incLang + excLang;
+  const badgeLang = document.querySelector("#badge-languages") || document.querySelector("#badge-origin");
+  if (badgeLang) {
+    badgeLang.textContent = String(langCount);
+    badgeLang.classList.toggle("is-hidden", langCount === 0);
+  }
+  document.querySelector("#pill-languages")?.classList.toggle("has-filters", langCount > 0);
+  document.querySelector("#pill-origin")?.classList.toggle("has-filters", langCount > 0);
+
+  // Countries badge
+  const incCountry = getPickerValues("include-countries").length;
+  const badgeCountry = document.querySelector("#badge-countries");
+  if (badgeCountry) {
+    badgeCountry.textContent = String(incCountry);
+    badgeCountry.classList.toggle("is-hidden", incCountry === 0);
+  }
+  document.querySelector("#pill-countries")?.classList.toggle("has-filters", incCountry > 0);
+
+  // Cast & Crew badge
+  const actors = state.selectedEntities?.actors?.length || 0;
+  const directors = state.selectedEntities?.directors?.length || 0;
+  const peopleCount = actors + directors;
   const badgePeople = document.querySelector("#badge-people");
   if (badgePeople) {
     badgePeople.textContent = String(peopleCount);
@@ -939,13 +1825,24 @@ function updateFilterPillBadges() {
   }
   document.querySelector("#pill-people")?.classList.toggle("has-filters", peopleCount > 0);
 
+  // Studios badge
+  const companies = state.selectedEntities?.companies?.length || 0;
+  const excCompanies = state.selectedEntities?.excludedCompanies?.length || 0;
+  const companyCount = companies + excCompanies;
+  const badgeCompanies = document.querySelector("#badge-companies");
+  if (badgeCompanies) {
+    badgeCompanies.textContent = String(companyCount);
+    badgeCompanies.classList.toggle("is-hidden", companyCount === 0);
+  }
+  document.querySelector("#pill-companies")?.classList.toggle("has-filters", companyCount > 0);
+
   // Library badge
   const checkedStatuses = document.querySelectorAll('input[name="included-status"]:checked').length;
   const includeUntracked = elements.includeUntracked?.checked ? 1 : 0;
   const libraryTotal = checkedStatuses + includeUntracked;
   const badgeLibrary = document.querySelector("#badge-library");
   if (badgeLibrary) {
-    badgeLibrary.textContent = String(libraryTotal);
+    badgeLibrary.classList.add("is-hidden");
   }
   const watchedChecked = document.querySelector('input[name="included-status"][value="watched"]')?.checked;
   const rewatchChecked = document.querySelector('input[name="included-status"][value="rewatch"]')?.checked;
@@ -967,6 +1864,40 @@ function renderActiveFilterTags() {
       label: name,
       onRemove: () => {
         const input = document.querySelector(`#include-genres input[value="${id}"]`);
+        if (input) input.checked = false;
+        syncTriPickers();
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  });
+
+  // Languages Include
+  getPickerValues("include-languages").forEach((code) => {
+    const pair = LANGUAGE_OPTIONS.find((item) => item[0] === code);
+    const name = pair ? pair[1] : code;
+    chips.push({
+      label: name,
+      onRemove: () => {
+        const input = document.querySelector(`#include-languages input[value="${code}"]`);
+        if (input) input.checked = false;
+        syncTriPickers();
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  });
+
+  // Countries
+  getPickerValues("include-countries").forEach((code) => {
+    const pair = COUNTRY_OPTIONS.find((item) => item[0] === code);
+    const name = pair ? pair[1] : code;
+    chips.push({
+      label: name,
+      onRemove: () => {
+        const input = document.querySelector(`#include-countries input[value="${code}"]`);
         if (input) input.checked = false;
         updateFilterPillBadges();
         renderActiveFilterTags();
@@ -1127,44 +2058,36 @@ function renderActiveFilterTags() {
   container.append(clearBtn);
 }
 
+function updateSidebarExpandedState() {
+  // Static fixed sidebar width: zero dynamic expansion or layout shifting
+}
+
 function setupFilterPills() {
   const pills = document.querySelectorAll(".filter-pill");
   pills.forEach((pill) => {
-    pill.addEventListener("click", () => {
+    pill.addEventListener("click", (e) => {
+      e.stopPropagation();
       const targetId = pill.dataset.target;
       const card = document.getElementById(targetId);
       if (!card) return;
 
-      const isCollapsed = card.classList.contains("is-collapsed");
+      const willOpen = card.classList.contains("is-collapsed");
 
-      // Accordion mode: collapse other cards or toggle this one
-      pills.forEach((p) => {
-        if (p !== pill) {
-          p.classList.remove("is-open");
-          const otherCard = document.getElementById(p.dataset.target);
-          if (otherCard) {
-            otherCard.classList.add("is-collapsed");
-            const btn = otherCard.querySelector(".filter-card-toggle");
-            if (btn) {
-              btn.textContent = "Open";
-              btn.setAttribute("aria-expanded", "false");
-            }
-          }
-        }
-      });
-
-      card.classList.toggle("is-collapsed", !isCollapsed);
-      pill.classList.toggle("is-open", isCollapsed);
-
-      const toggleBtn = card.querySelector(".filter-card-toggle");
-      if (toggleBtn) {
-        toggleBtn.textContent = isCollapsed ? "Close" : "Open";
-        toggleBtn.setAttribute("aria-expanded", String(isCollapsed));
+      // Independent drawer: toggle only this drawer
+      if (willOpen) {
+        card.classList.remove("is-collapsed");
+        pill.classList.add("is-open");
+        pill.setAttribute("aria-expanded", "true");
+      } else {
+        card.classList.add("is-collapsed");
+        pill.classList.remove("is-open");
+        pill.setAttribute("aria-expanded", "false");
       }
 
+      updateSidebarExpandedState();
       setWorkspaceCollapsed(false);
 
-      if (isCollapsed) {
+      if (willOpen) {
         card.scrollIntoView({ behavior: "smooth", block: "nearest" });
       }
     });
@@ -1177,16 +2100,11 @@ function setupFilterPills() {
       e.preventDefault();
       pills.forEach((p) => {
         p.classList.remove("is-open");
+        p.setAttribute("aria-expanded", "false");
         const c = document.getElementById(p.dataset.target);
-        if (c) {
-          c.classList.add("is-collapsed");
-          const btn = c.querySelector(".filter-card-toggle");
-          if (btn) {
-            btn.textContent = "Open";
-            btn.setAttribute("aria-expanded", "false");
-          }
-        }
+        if (c) c.classList.add("is-collapsed");
       });
+      updateSidebarExpandedState();
       await runDiscoverySearch();
     });
   }
@@ -1198,16 +2116,11 @@ function setupFilterPills() {
       resetAdvancedFilters();
       pills.forEach((p) => {
         p.classList.remove("is-open");
+        p.setAttribute("aria-expanded", "false");
         const c = document.getElementById(p.dataset.target);
-        if (c) {
-          c.classList.add("is-collapsed");
-          const btn = c.querySelector(".filter-card-toggle");
-          if (btn) {
-            btn.textContent = "Open";
-            btn.setAttribute("aria-expanded", "false");
-          }
-        }
+        if (c) c.classList.add("is-collapsed");
       });
+      updateSidebarExpandedState();
       updateFilterPillBadges();
       renderActiveFilterTags();
       runDiscoverySearch();
@@ -1222,6 +2135,47 @@ function setupFilterPills() {
   updateFilterPillBadges();
   renderActiveFilterTags();
   updateFilterPillStates();
+  updateSidebarExpandedState();
+}
+
+function setupSidebarMasterToggle() {
+  const masterToggle = document.querySelector("#sidebar-master-toggle");
+  const masterIcon = document.querySelector("#sidebar-master-toggle-icon");
+  const appLayout = document.querySelector("#app-layout");
+  const sidebar = document.querySelector("#app-sidebar");
+
+  if (!masterToggle || !sidebar || !appLayout) return;
+
+  masterToggle.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const isNowCollapsed = !sidebar.classList.contains("is-collapsed");
+    sidebar.classList.toggle("is-collapsed", isNowCollapsed);
+    appLayout.classList.toggle("has-collapsed-sidebar", isNowCollapsed);
+    if (masterIcon) {
+      masterIcon.textContent = isNowCollapsed ? "▶" : "◀";
+    }
+    masterToggle.setAttribute("aria-label", isNowCollapsed ? "Expand sidebar" : "Collapse sidebar");
+    masterToggle.setAttribute("title", isNowCollapsed ? "Expand sidebar" : "Collapse sidebar");
+  });
+}
+
+function setupGenreModeToggle() {
+  const excludeBtn = document.querySelector("#genre-mode-exclude");
+  const includeBtn = document.querySelector("#genre-mode-include");
+  if (!excludeBtn || !includeBtn) return;
+
+  excludeBtn.addEventListener("click", () => {
+    state.genreMode = "exclude";
+    excludeBtn.classList.add("is-active");
+    includeBtn.classList.remove("is-active");
+  });
+
+  includeBtn.addEventListener("click", () => {
+    state.genreMode = "include";
+    includeBtn.classList.add("is-active");
+    excludeBtn.classList.remove("is-active");
+  });
 }
 
 function initializeOutsideClosing() {
@@ -1241,24 +2195,45 @@ function initializeOutsideClosing() {
     document.querySelectorAll(".entity-results").forEach((menu) => {
       menu.classList.add("is-hidden");
     });
+    document.querySelectorAll(".filter-pill.is-open").forEach((p) => {
+      p.classList.remove("is-open");
+      p.setAttribute("aria-expanded", "false");
+      const c = document.getElementById(p.dataset.target);
+      if (c) c.classList.add("is-collapsed");
+    });
+    updateSidebarExpandedState();
   });
 }
 
 async function setAdvancedFilters(filters = {}) {
-  state.profilePassthroughFilters = { ...filters };
-  setPickerValues("include-genres", filters.include_genre_ids);
-  setPickerValues("exclude-genres", filters.exclude_genre_ids);
-  setPickerValues("include-languages", filters.include_original_languages);
-  setPickerValues("exclude-languages", filters.exclude_original_languages);
-  setPickerValues("include-countries", filters.include_origin_countries);
-  elements.genreLogic.value = filters.genre_logic || "or";
-  elements.minimumRating.value = filters.minimum_rating ?? "";
-  elements.maximumRating.value = filters.maximum_rating ?? "";
-  elements.minimumVotes.value = filters.minimum_vote_count ?? "";
-  elements.releaseYearFrom.value = filters.release_year_from ?? "";
-  elements.releaseYearTo.value = filters.release_year_to ?? "";
-  elements.sortBy.value = filters.sort_by || "popularity.desc";
-  await hydrateEntitySelections(filters);
+  const mergedFilters = {
+    ...DEFAULT_SYSTEM_FILTERS,
+    ...filters,
+    include_original_languages: (filters.include_original_languages && filters.include_original_languages.length > 0)
+      ? filters.include_original_languages
+      : DEFAULT_SYSTEM_FILTERS.include_original_languages,
+    exclude_original_languages: (filters.exclude_original_languages && filters.exclude_original_languages.length > 0)
+      ? filters.exclude_original_languages
+      : DEFAULT_SYSTEM_FILTERS.exclude_original_languages,
+    exclude_origin_countries: (filters.exclude_origin_countries && filters.exclude_origin_countries.length > 0)
+      ? filters.exclude_origin_countries
+      : DEFAULT_SYSTEM_FILTERS.exclude_origin_countries,
+  };
+  state.profilePassthroughFilters = { ...mergedFilters };
+  setPickerValues("include-genres", mergedFilters.include_genre_ids);
+  setPickerValues("exclude-genres", mergedFilters.exclude_genre_ids);
+  setPickerValues("include-languages", mergedFilters.include_original_languages);
+  setPickerValues("exclude-languages", mergedFilters.exclude_original_languages);
+  setPickerValues("include-countries", mergedFilters.include_origin_countries);
+  elements.genreLogic.value = mergedFilters.genre_logic || "or";
+  elements.minimumRating.value = mergedFilters.minimum_rating ?? "";
+  elements.maximumRating.value = mergedFilters.maximum_rating ?? "";
+  elements.minimumVotes.value = mergedFilters.minimum_vote_count ?? "";
+  elements.releaseYearFrom.value = mergedFilters.release_year_from ?? "";
+  elements.releaseYearTo.value = mergedFilters.release_year_to ?? "";
+  elements.sortBy.value = mergedFilters.sort_by || "popularity.desc";
+  syncSortChips(elements.sortBy.value);
+  await hydrateEntitySelections(mergedFilters);
   updateFilterPillBadges();
   renderActiveFilterTags();
 }
@@ -1401,8 +2376,20 @@ function createMovieCard(movie) {
   const isNotesView = state.mode === "movie-notes" || state.mode === "movie-notes-search";
   const notesText = isNotesView ? movie.user_data?.notes : null;
   posterButton.title = `${title}${yearText ? ` (${yearText})` : ""}${notesText ? `\n📝 ${notesText}` : ""}`;
+  if (status === "excluded" && state.currentView === "discover") {
+    article.classList.add("is-noped");
+  }
+
   posterButton.append(createPoster(movie));
-  posterButton.addEventListener("click", () => openMovieDetails(movieId));
+  posterButton.addEventListener("click", (event) => {
+    if (state.nopeMode && state.currentView === "discover") {
+      event.preventDefault();
+      event.stopPropagation();
+      handleQuickNope(movie, article);
+      return;
+    }
+    openMovieDetails(movieId);
+  });
 
   if (movie.user_data?.is_favorite) {
     const favorite = document.createElement("span");
@@ -1452,6 +2439,7 @@ function createMovieCard(movie) {
   copy.append(heading, meta);
 
   if (isNotesView && movie.user_data?.notes) {
+    article.classList.add("has-notes");
     const noteSnippet = document.createElement("p");
     noteSnippet.className = "card-note-snippet";
     noteSnippet.innerHTML = formatRichText(movie.user_data.notes);
@@ -1462,12 +2450,36 @@ function createMovieCard(movie) {
   return article;
 }
 
+function hasActiveShelfFilters() {
+  const q = (elements.libraryFilterQuery?.value || "").trim();
+  const yearFrom = parseInt(elements.libYearFrom?.value, 10);
+  const yearTo = parseInt(elements.libYearTo?.value, 10);
+  const selectedKw = state.selectedEntities?.libKeywords || [];
+  const selectedPeople = [
+    ...(state.selectedEntities?.libDirectors || []),
+    ...(state.selectedEntities?.libActors || []),
+  ];
+  return Boolean(
+    q ||
+    state.libSelectedGenres?.size > 0 ||
+    !isNaN(yearFrom) ||
+    !isNaN(yearTo) ||
+    state.libSelectedLanguages?.size > 0 ||
+    selectedKw.length > 0 ||
+    selectedPeople.length > 0
+  );
+}
+
 function renderMovies(movies, emptyContext = "library", total = null) {
+  clearNopeUndo();
   elements.grid.replaceChildren();
   const count = total ?? movies.length;
   elements.count.textContent = `${count} ${
     count === 1 ? "movie" : "movies"
   }`;
+  if (elements.shelfCount) {
+    elements.shelfCount.textContent = `${count} ${count === 1 ? "movie" : "movies"}`;
+  }
 
   if (movies.length === 0) {
     elements.grid.classList.add("is-hidden");
@@ -1477,10 +2489,65 @@ function renderMovies(movies, emptyContext = "library", total = null) {
       elements.emptyTitle.textContent = "No matching movies";
       elements.emptyCopy.textContent =
         "Try another title or use fewer words in your search.";
-    } else {
-      elements.emptyTitle.textContent = "Nothing here yet";
+      if (elements.emptySearchButton) {
+        elements.emptySearchButton.textContent = "Search movies";
+        elements.emptySearchButton.classList.remove("is-hidden");
+        elements.emptySearchButton.onclick = () => elements.query?.focus();
+      }
+    } else if (hasActiveShelfFilters() || state.isSearchingLibrary) {
+      elements.emptyTitle.textContent = "No movies match your filters";
       elements.emptyCopy.textContent =
-        "Search for a movie above and give it a personal status.";
+        "Try adjusting or clearing your active filters to see your movies.";
+      if (elements.emptySearchButton) {
+        elements.emptySearchButton.textContent = "Reset filters";
+        elements.emptySearchButton.classList.remove("is-hidden");
+        elements.emptySearchButton.onclick = () => {
+          resetLibraryFilters();
+        };
+      }
+    } else if (state.currentView === "movie-notes") {
+      if (state.mode === "movie-notes-search") {
+        elements.emptyTitle.textContent = "No matching notes";
+        elements.emptyCopy.textContent =
+          "No movies found with notes matching that search.";
+        if (elements.emptySearchButton) {
+          elements.emptySearchButton.textContent = "Clear notes search";
+          elements.emptySearchButton.classList.remove("is-hidden");
+          elements.emptySearchButton.onclick = () => {
+            if (elements.notesSearchInput) elements.notesSearchInput.value = "";
+            searchLocalNotes("");
+          };
+        }
+      } else {
+        elements.emptyTitle.textContent = "No movie notes yet";
+        elements.emptyCopy.textContent =
+          "Open any movie and write your personal thoughts or reflections to collect them here.";
+        if (elements.emptySearchButton) {
+          elements.emptySearchButton.textContent = "Search movies";
+          elements.emptySearchButton.classList.remove("is-hidden");
+          elements.emptySearchButton.onclick = () => elements.query?.focus();
+        }
+      }
+    } else {
+      const shelfEmptyInfo = {
+        watched: { title: "No watched movies yet", copy: "Movies you mark as watched will appear here." },
+        watch_later: { title: "Watch Later is empty", copy: "Add movies you plan to watch to keep track of them here." },
+        rewatch: { title: "Rewatch list is empty", copy: "Mark movies for a rewatch to see them here." },
+        favorites: { title: "No favourites yet", copy: "Star your favorite movies to keep them in this collection." },
+        excluded: { title: "No excluded movies", copy: "Movies you NOPE will be safely stored here." },
+        new_discovery: { title: "No new discoveries", copy: "Discover new movies to explore them here." },
+      };
+      const info = shelfEmptyInfo[state.currentView] || {
+        title: "Nothing here yet",
+        copy: "Search for a movie above and give it a personal status.",
+      };
+      elements.emptyTitle.textContent = info.title;
+      elements.emptyCopy.textContent = info.copy;
+      if (elements.emptySearchButton) {
+        elements.emptySearchButton.textContent = "Search movies";
+        elements.emptySearchButton.classList.remove("is-hidden");
+        elements.emptySearchButton.onclick = () => elements.query?.focus();
+      }
     }
 
     return;
@@ -1574,14 +2641,31 @@ function setAuxiliaryView(view = null) {
     section.classList.toggle("is-hidden", view !== name);
   });
   const visible = Boolean(view);
-  document.querySelector(".section-heading").classList.toggle("is-hidden", visible);
-  elements.grid.classList.toggle("force-hidden", visible);
-  elements.empty.classList.toggle("force-hidden", visible);
+  document.querySelector(".section-heading")?.classList.toggle("is-hidden", visible);
+  elements.grid?.classList.toggle("force-hidden", visible);
+  elements.empty?.classList.toggle("force-hidden", visible);
+  const discoverHeader = document.querySelector("#discover-canvas-header");
+  if (discoverHeader) {
+    discoverHeader.classList.toggle("is-hidden", visible || state.currentView !== "discover");
+    discoverHeader.classList.toggle("force-hidden", visible || state.currentView !== "discover");
+  }
+  if (elements.pagination) {
+    elements.pagination.classList.toggle("force-hidden", visible);
+    if (visible) elements.pagination.classList.add("is-hidden");
+  }
   if (elements.discoverWorkspace) {
     elements.discoverWorkspace.classList.toggle("force-hidden", visible);
+    if (visible) elements.discoverWorkspace.classList.add("is-hidden");
   }
   if (elements.notesSearchContainer) {
     elements.notesSearchContainer.classList.toggle("force-hidden", visible);
+  }
+  if (view && history.replaceState) {
+    if (view === "entry-reader" && state.entryReaderEntry?.entry_id) {
+      history.replaceState(null, "", `#entry-reader:${state.entryReaderEntry.entry_id}`);
+    } else {
+      history.replaceState(null, "", `#${view}`);
+    }
   }
 }
 
@@ -1602,7 +2686,419 @@ async function activateDiscoverView() {
   await setDiscoveryMode(state.discoveryMode || "simple", true);
 }
 
+function updateLibraryFilterBadges() {
+  const setBadge = (el, count) => {
+    if (!el) return;
+    el.textContent = String(count);
+    el.classList.toggle("is-hidden", count <= 0);
+  };
+  setBadge(elements.badgeLibGenres, state.libSelectedGenres.size);
+  const yearCount = (elements.libYearFrom?.value ? 1 : 0) + (elements.libYearTo?.value ? 1 : 0);
+  setBadge(elements.badgeLibYear, yearCount);
+  setBadge(elements.badgeLibKeywords, (state.selectedEntities.libKeywords || []).length);
+  const peopleCount = (state.selectedEntities.libDirectors || []).length + (state.selectedEntities.libActors || []).length;
+  setBadge(elements.badgeLibPeople, peopleCount);
+  setBadge(elements.badgeLibLanguages, state.libSelectedLanguages.size);
+}
+
+function applyLibraryFilters(targetPage = 1) {
+  if (!state.unfilteredShelfMovies) {
+    state.unfilteredShelfMovies = [...(state.movies || [])];
+  }
+  let list = [...state.unfilteredShelfMovies];
+
+  // 1. Text filter
+  const q = (elements.libraryFilterQuery?.value || "").trim().toLowerCase();
+  if (q) {
+    list = list.filter((m) => {
+      const title = (m.title || "").toLowerCase();
+      const overview = (m.overview || "").toLowerCase();
+      const notes = (m.user_data?.notes || "").toLowerCase();
+      return title.includes(q) || overview.includes(q) || notes.includes(q);
+    });
+  }
+
+  // 2. Genres
+  if (state.libSelectedGenres.size > 0) {
+    list = list.filter((m) => {
+      const movieGenreIds = (m.genres || [])
+        .map((g) => Number(g.id || g.tmdb_genre_id))
+        .concat((m.genre_ids || []).map(Number))
+        .filter((id) => !isNaN(id) && id > 0);
+      return [...state.libSelectedGenres].some((id) => movieGenreIds.includes(id));
+    });
+  }
+
+  // 3. Release Year
+  const yearFrom = parseInt(elements.libYearFrom?.value, 10);
+  const yearTo = parseInt(elements.libYearTo?.value, 10);
+  if (!isNaN(yearFrom)) {
+    list = list.filter((m) => {
+      const y = parseInt(getMovieYear(m), 10);
+      return !isNaN(y) && y >= yearFrom;
+    });
+  }
+  if (!isNaN(yearTo)) {
+    list = list.filter((m) => {
+      const y = parseInt(getMovieYear(m), 10);
+      return !isNaN(y) && y <= yearTo;
+    });
+  }
+
+  // 4. Languages
+  if (state.libSelectedLanguages.size > 0) {
+    list = list.filter((m) => {
+      const code = String(m.original_language || "").toLowerCase();
+      return state.libSelectedLanguages.has(code);
+    });
+  }
+
+  // 5. Keywords
+  const selectedKw = (state.selectedEntities.libKeywords || []).map((k) =>
+    (k.raw_name || k.name || "").replace(/^[🏷️\s]+/, "").trim().toLowerCase()
+  );
+  if (selectedKw.length > 0) {
+    list = list.filter((m) => {
+      const overview = (m.overview || "").toLowerCase();
+      const title = (m.title || "").toLowerCase();
+      const notes = (m.user_data?.notes || "").toLowerCase();
+      const movieKeywords = (m.keywords || []).map((k) => (k.name || "").toLowerCase());
+      return selectedKw.some((kw) =>
+        movieKeywords.some((mk) => mk.includes(kw) || kw.includes(mk)) ||
+        overview.includes(kw) ||
+        title.includes(kw) ||
+        notes.includes(kw)
+      );
+    });
+  }
+
+  // 6. People (Actors / Directors)
+  const selectedDirectors = (state.selectedEntities.libDirectors || []).map((p) => (p.name || "").trim().toLowerCase());
+  if (selectedDirectors.length > 0) {
+    list = list.filter((m) => {
+      const movieDirs = (m.directors || []).map((d) => (typeof d === "string" ? d : d.name || "").toLowerCase());
+      return selectedDirectors.some((name) => movieDirs.some((d) => d.includes(name) || name.includes(d)));
+    });
+  }
+
+  const selectedActors = (state.selectedEntities.libActors || []).map((p) => (p.name || "").trim().toLowerCase());
+  if (selectedActors.length > 0) {
+    list = list.filter((m) => {
+      const movieActors = (m.actors || []).map((a) => (typeof a === "string" ? a : a.name || "").toLowerCase());
+      return selectedActors.some((name) => movieActors.some((a) => a.includes(name) || name.includes(a)));
+    });
+  }
+
+  // 7. Sorting — applied across the ENTIRE collection before pagination
+  const sortBy = elements.libSortCloud?.querySelector(".filter-chip.is-active")?.dataset.sort || "recent";
+  if (sortBy === "title_asc") {
+    list.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+  } else if (sortBy === "year_desc") {
+    list.sort((a, b) => {
+      const dateA = a.release_date || (a.release_year ? `${a.release_year}-01-01` : "");
+      const dateB = b.release_date || (b.release_year ? `${b.release_year}-01-01` : "");
+      const comp = dateB.localeCompare(dateA);
+      return comp !== 0 ? comp : (a.title || "").localeCompare(b.title || "");
+    });
+  } else if (sortBy === "year_asc") {
+    list.sort((a, b) => {
+      const dateA = a.release_date || (a.release_year ? `${a.release_year}-01-01` : "9999-99-99");
+      const dateB = b.release_date || (b.release_year ? `${b.release_year}-01-01` : "9999-99-99");
+      const comp = (dateA || "9999-99-99").localeCompare(dateB || "9999-99-99");
+      return comp !== 0 ? comp : (a.title || "").localeCompare(b.title || "");
+    });
+  } else if (sortBy === "recent") {
+    list.sort((a, b) => {
+      const dateA = a.user_data?.updated_at || a.user_data?.created_at || "";
+      const dateB = b.user_data?.updated_at || b.user_data?.created_at || "";
+      const comp = dateB.localeCompare(dateA);
+      return comp !== 0 ? comp : (a.title || "").localeCompare(b.title || "");
+    });
+  }
+
+  updateLibraryFilterBadges();
+
+  const hasActiveFilters = hasActiveLibraryFilters();
+  state.allFilteredMovies = list;
+  const totalMatches = list.length;
+  const pageSize = 30;
+  const totalPages = Math.max(1, Math.ceil(totalMatches / pageSize));
+  const safePage = Math.min(Math.max(1, targetPage), totalPages);
+  state.searchPage = safePage;
+  state.searchTotalPages = totalPages;
+
+  const pageResults = list.slice((safePage - 1) * pageSize, safePage * pageSize);
+  state.movies = pageResults;
+
+  renderMovies(state.movies, "library", totalMatches);
+
+  if (hasActiveFilters || state.isSearchingLibrary) {
+    if (state.totalResults && state.totalResults > totalMatches) {
+      const text = `${totalMatches} of ${state.totalResults} ${state.totalResults === 1 ? "movie" : "movies"}`;
+      elements.count.textContent = text;
+      if (elements.shelfCount) elements.shelfCount.textContent = text;
+    } else {
+      const text = `${totalMatches} ${totalMatches === 1 ? "movie" : "movies"}`;
+      elements.count.textContent = text;
+      if (elements.shelfCount) elements.shelfCount.textContent = text;
+    }
+  } else {
+    const text = `${totalMatches} ${totalMatches === 1 ? "movie" : "movies"}`;
+    elements.count.textContent = text;
+    if (elements.shelfCount) elements.shelfCount.textContent = text;
+  }
+
+  if (totalPages > 1) {
+    elements.pagination.classList.remove("is-hidden");
+    elements.pagination.classList.remove("force-hidden");
+    renderPagination(
+      elements.pagination,
+      state.searchPage,
+      state.searchTotalPages,
+      (target) => {
+        applyLibraryFilters(target);
+        scrollToResults();
+      }
+    );
+  } else {
+    elements.pagination.classList.add("is-hidden");
+  }
+}
+
+function hasActiveLibraryFilters() {
+  const q = (elements.libraryFilterQuery?.value || "").trim();
+  const yearFrom = parseInt(elements.libYearFrom?.value, 10);
+  const yearTo = parseInt(elements.libYearTo?.value, 10);
+  const hasGenres = Boolean(state.libSelectedGenres && state.libSelectedGenres.size > 0);
+  const hasLangs = Boolean(state.libSelectedLanguages && state.libSelectedLanguages.size > 0);
+  const hasKw = Boolean(state.selectedEntities.libKeywords && state.selectedEntities.libKeywords.length > 0);
+  const hasDirs = Boolean(state.selectedEntities.libDirectors && state.selectedEntities.libDirectors.length > 0);
+  const hasActors = Boolean(state.selectedEntities.libActors && state.selectedEntities.libActors.length > 0);
+  return Boolean(
+    q ||
+    hasGenres ||
+    !isNaN(yearFrom) ||
+    !isNaN(yearTo) ||
+    hasLangs ||
+    hasKw ||
+    hasDirs ||
+    hasActors
+  );
+}
+
+function reloadCurrentLibraryView() {
+  if (state.currentView === "movie-notes") {
+    return loadMovieNotes(1);
+  }
+  if (state.currentView && state.currentView !== "discover" && state.currentView in VIEW_COPY) {
+    return loadShelf(state.currentView, 1);
+  }
+  return null;
+}
+
+function resetLibraryFilters({ silent = false } = {}) {
+  const wasSearching = state.isSearchingLibrary;
+  if (elements.libraryFilterQuery) elements.libraryFilterQuery.value = "";
+  if (elements.libYearFrom) elements.libYearFrom.value = "";
+  if (elements.libYearTo) elements.libYearTo.value = "";
+  if (elements.libSortCloud) {
+    elements.libSortCloud.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("is-active"));
+    const defaultChip = elements.libSortCloud.querySelector('[data-sort="recent"]');
+    if (defaultChip) defaultChip.classList.add("is-active");
+  }
+  state.libSelectedGenres.clear();
+  state.libSelectedLanguages.clear();
+  state.selectedEntities.libKeywords = [];
+  state.selectedEntities.libDirectors = [];
+  state.selectedEntities.libActors = [];
+  renderSelectedEntities("libKeywords");
+  renderSelectedEntities("libDirectors");
+  renderSelectedEntities("libActors");
+  if (elements.libGenresCloud) {
+    elements.libGenresCloud.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("is-active"));
+  }
+  if (elements.libLanguagesCloud) {
+    elements.libLanguagesCloud.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("is-active"));
+  }
+  state.isSearchingLibrary = false;
+  refreshCompactClouds();
+  if (silent) return;
+  reloadCurrentLibraryView();
+}
+
+let librarySearchDebounce = null;
+
+function onLibraryFilterChange() {
+  if (hasActiveLibraryFilters()) {
+    searchPersonalLibrary();
+  } else {
+    if (state.isSearchingLibrary) {
+      state.isSearchingLibrary = false;
+      reloadCurrentLibraryView();
+    } else {
+      applyLibraryFilters();
+    }
+  }
+}
+
+async function searchPersonalLibrary() {
+  const query = (elements.libraryFilterQuery?.value || "").trim();
+  const hasFilters = hasActiveLibraryFilters();
+
+  if (!query && !hasFilters) {
+    if (state.isSearchingLibrary) {
+      state.isSearchingLibrary = false;
+      await reloadCurrentLibraryView();
+    } else {
+      applyLibraryFilters();
+    }
+    return;
+  }
+
+  const scope = state.librarySearchScope || "all";
+  const requestNumber = ++state.requestNumber;
+  state.isSearchingLibrary = true;
+  elements.pagination.classList.add("is-hidden");
+  const shelfTitle = VIEW_COPY[state.currentView]?.title || "Current shelf";
+  setSectionCopy({
+    kicker: "Personal library search",
+    title: scope === "all" ? "Personal Library" : shelfTitle,
+    description: scope === "all" ? "Results from every shelf." : `Results from ${shelfTitle}.`,
+  });
+  showLoadingCards();
+  elements.count.textContent = `Searching ${scope === "all" ? "personal library" : "current shelf"}…`;
+
+  try {
+    let url = `/movies/library/search?query=${encodeURIComponent(query)}`;
+    if (scope === "shelf" && state.currentView && state.currentView !== "library" && state.currentView !== "entries") {
+      url += `&status=${encodeURIComponent(state.currentView)}`;
+    }
+    const results = await fetchJSON(url);
+    if (requestNumber !== state.requestNumber) return;
+
+    const list = Array.isArray(results) ? results : (results.results || []);
+    state.unfilteredShelfMovies = list;
+    applyLibraryFilters();
+
+    const count = state.movies.length;
+    const scopeLabel = scope === "all" ? "all shelves" : shelfTitle;
+    const filterDetail = query ? ` matching "${query}"` : " matching filters";
+    const countText = `${count} ${count === 1 ? "movie" : "movies"}${filterDetail} (${scopeLabel})`;
+    elements.count.textContent = countText;
+    if (elements.shelfCount) elements.shelfCount.textContent = countText;
+  } catch (error) {
+    if (requestNumber !== state.requestNumber) return;
+    state.movies = [];
+    state.unfilteredShelfMovies = [];
+    renderMovies([]);
+    showNotice(error.message);
+  }
+}
+
+function setupLibraryFilters() {
+  if (!elements.libGenresCloud || !elements.libLanguagesCloud) return;
+
+  elements.libGenresCloud.replaceChildren();
+  GENRE_OPTIONS.forEach(([id, name]) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "filter-chip";
+    chip.dataset.genreId = String(id);
+    chip.dataset.genreName = name;
+    chip.textContent = name;
+    chip.addEventListener("click", () => {
+      if (state.libSelectedGenres.has(Number(id))) {
+        state.libSelectedGenres.delete(Number(id));
+        chip.classList.remove("is-active");
+      } else {
+        state.libSelectedGenres.add(Number(id));
+        chip.classList.add("is-active");
+      }
+      onLibraryFilterChange();
+    });
+    elements.libGenresCloud.append(chip);
+  });
+
+  elements.libLanguagesCloud.replaceChildren();
+  LANGUAGE_OPTIONS.forEach(([code, name]) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "filter-chip";
+    chip.dataset.langCode = code;
+    chip.textContent = name;
+    chip.addEventListener("click", () => {
+      if (state.libSelectedLanguages.has(code)) {
+        state.libSelectedLanguages.delete(code);
+        chip.classList.remove("is-active");
+      } else {
+        state.libSelectedLanguages.add(code);
+        chip.classList.add("is-active");
+      }
+      onLibraryFilterChange();
+    });
+    elements.libLanguagesCloud.append(chip);
+  });
+
+  // Sort chips — radio behaviour (one active at a time)
+  if (elements.libSortCloud) {
+    elements.libSortCloud.querySelectorAll(".filter-chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        elements.libSortCloud.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("is-active"));
+        chip.classList.add("is-active");
+        applyLibraryFilters(1);
+      });
+    });
+  }
+
+  if (elements.libraryFilterQuery) {
+    elements.libraryFilterQuery.addEventListener("input", () => {
+      clearTimeout(librarySearchDebounce);
+      librarySearchDebounce = setTimeout(searchPersonalLibrary, 250);
+    });
+  }
+
+  if (elements.scopeBtnAll && elements.scopeBtnShelf) {
+    elements.scopeBtnAll.addEventListener("click", () => {
+      if (state.librarySearchScope === "all") return;
+      state.librarySearchScope = "all";
+      elements.scopeBtnAll.classList.add("is-active");
+      elements.scopeBtnShelf.classList.remove("is-active");
+      if (hasActiveLibraryFilters()) {
+        searchPersonalLibrary();
+      }
+    });
+
+    elements.scopeBtnShelf.addEventListener("click", () => {
+      if (state.librarySearchScope === "shelf") return;
+      state.librarySearchScope = "shelf";
+      elements.scopeBtnShelf.classList.add("is-active");
+      elements.scopeBtnAll.classList.remove("is-active");
+      if (hasActiveLibraryFilters()) {
+        searchPersonalLibrary();
+      }
+    });
+  }
+
+  if (elements.libYearFrom) {
+    elements.libYearFrom.addEventListener("input", () => {
+      clearTimeout(librarySearchDebounce);
+      librarySearchDebounce = setTimeout(onLibraryFilterChange, 250);
+    });
+  }
+  if (elements.libYearTo) {
+    elements.libYearTo.addEventListener("input", () => {
+      clearTimeout(librarySearchDebounce);
+      librarySearchDebounce = setTimeout(onLibraryFilterChange, 250);
+    });
+  }
+  if (elements.resetLibraryFilters) {
+    elements.resetLibraryFilters.addEventListener("click", () => resetLibraryFilters());
+  }
+  refreshCompactClouds();
+}
+
 async function loadShelf(view, page = 1) {
+  hideFilmographyToolbar();
   if (view === "entries") {
     await loadEntries(page);
     return;
@@ -1637,51 +3133,33 @@ async function loadShelf(view, page = 1) {
   elements.pagination.classList.add("is-hidden");
   setSectionCopy(VIEW_COPY[view]);
   clearNotice();
+
+  if (hasActiveLibraryFilters()) {
+    await searchPersonalLibrary();
+    return;
+  }
+
   showLoadingCards();
   elements.count.textContent = "Loading…";
 
-  const url =
-    view === "favorites"
-      ? "/movies/favorites"
-      : `/movies/status/${encodeURIComponent(view)}`;
-
   try {
-    const basePage = (page - 1) * 3;
-    const [p1, p2, p3] = await Promise.all([
-      fetchJSON(`${url}?page=${basePage + 1}`),
-      fetchJSON(`${url}?page=${basePage + 2}`).catch(() => ({ results: [] })),
-      fetchJSON(`${url}?page=${basePage + 3}`).catch(() => ({ results: [] })),
-    ]);
-
+    // Backend collection query (legacy endpoints: /movies/status/, /movies/notes?page=)
+    const results = await fetchJSON(`/movies/library/search?status=${encodeURIComponent(view)}`);
     if (requestNumber !== state.requestNumber) {
       return;
     }
 
-    const combinedResults = [
-      ...(Array.isArray(p1.results) ? p1.results : []),
-      ...(Array.isArray(p2.results) ? p2.results : []),
-      ...(Array.isArray(p3.results) ? p3.results : []),
-    ];
-
-    state.movies = combinedResults;
-    state.searchPage = Number(page);
-    const backendTotalPages = Number(p1.total_pages || 1);
-    state.searchTotalPages = Math.max(1, Math.ceil(backendTotalPages / 3));
-    state.totalResults = Number(p1.total_results || combinedResults.length);
-    state.pageLoader = (target) => loadShelf(view, target);
-    renderMovies(state.movies, "library", state.totalResults);
-    renderPagination(
-      elements.pagination,
-      state.searchPage,
-      state.searchTotalPages,
-      async (target) => { await loadShelf(view, target); scrollToResults(); },
-    );
+    const allFetched = Array.isArray(results) ? results : (results.results || []);
+    state.unfilteredShelfMovies = allFetched;
+    state.totalResults = allFetched.length;
+    applyLibraryFilters(page);
   } catch (error) {
     if (requestNumber !== state.requestNumber) {
       return;
     }
 
     state.movies = [];
+    state.unfilteredShelfMovies = [];
     renderMovies([]);
     showNotice(error.message);
   }
@@ -1697,7 +3175,8 @@ async function loadMovieNotes(page = 1) {
   if (elements.notesSearchContainer) {
     elements.notesSearchContainer.classList.remove("is-hidden");
   }
-  state.mode = "movie-notes";
+  hideFilmographyToolbar();
+  state.mode = "shelf";
   state.currentView = "movie-notes";
   setActiveView("movie-notes");
   setModeButton(null);
@@ -1706,41 +3185,28 @@ async function loadMovieNotes(page = 1) {
   elements.pagination.classList.add("is-hidden");
   setSectionCopy(VIEW_COPY["movie-notes"]);
   clearNotice();
+
+  if (hasActiveLibraryFilters()) {
+    await searchPersonalLibrary();
+    return;
+  }
+
   showLoadingCards();
   elements.count.textContent = "Loading…";
 
   try {
-    const basePage = (page - 1) * 3;
-    const [p1, p2, p3] = await Promise.all([
-      fetchJSON(`/movies/notes?page=${basePage + 1}`),
-      fetchJSON(`/movies/notes?page=${basePage + 2}`).catch(() => ({ results: [] })),
-      fetchJSON(`/movies/notes?page=${basePage + 3}`).catch(() => ({ results: [] })),
-    ]);
-
+    const results = await fetchJSON("/movies/library/search?status=movie-notes");
     if (requestNumber !== state.requestNumber) return;
 
-    const combinedResults = [
-      ...(Array.isArray(p1.results) ? p1.results : []),
-      ...(Array.isArray(p2.results) ? p2.results : []),
-      ...(Array.isArray(p3.results) ? p3.results : []),
-    ];
-
-    state.movies = combinedResults;
-    state.searchPage = Number(page);
-    const backendTotalPages = Number(p1.total_pages || 1);
-    state.searchTotalPages = Math.max(1, Math.ceil(backendTotalPages / 3));
-    state.totalResults = Number(p1.total_results || combinedResults.length);
-    state.pageLoader = (target) => loadMovieNotes(target);
-    renderMovies(state.movies, "library", state.totalResults);
-    renderPagination(
-      elements.pagination,
-      state.searchPage,
-      state.searchTotalPages,
-      async (target) => { await loadMovieNotes(target); scrollToResults(); },
-    );
+    const allFetched = Array.isArray(results) ? results : (results.results || []);
+    state.unfilteredShelfMovies = allFetched;
+    state.totalResults = allFetched.length;
+    applyLibraryFilters(page);
   } catch (error) {
     if (requestNumber !== state.requestNumber) return;
+
     state.movies = [];
+    state.unfilteredShelfMovies = [];
     renderMovies([]);
     showNotice(error.message);
   }
@@ -1789,6 +3255,7 @@ async function searchMovies(query, page = 1) {
   }
 
   const requestNumber = ++state.requestNumber;
+  hideFilmographyToolbar();
   setSearchOriginMovie();
   setEntriesVisible(false);
   if (elements.discoverWorkspace) {
@@ -1951,17 +3418,29 @@ async function prefetchDiscoveryPage(spec, page) {
       fetchOne(basePage + 3).catch(() => ({ results: [] })),
     ]);
 
-    const combined = [
+    const rawCombined = [
       ...(Array.isArray(p1.results) ? p1.results : []),
       ...(Array.isArray(p2.results) ? p2.results : []),
       ...(Array.isArray(p3.results) ? p3.results : []),
     ];
+    // Always round down to complete rows of 6 so the last row is never mostly empty!
+    let limit = 24;
+    if (rawCombined.length < 24 && rawCombined.length >= 18) {
+      limit = 18;
+    } else if (rawCombined.length < 18 && rawCombined.length >= 12) {
+      limit = 12;
+    } else if (rawCombined.length >= 24) {
+      limit = 24;
+    } else {
+      limit = rawCombined.length;
+    }
+    const combined = rawCombined.slice(0, limit);
 
     const response = {
       results: combined,
       page: page,
       tmdb_total_pages: Math.max(1, Math.ceil(Number(p1.tmdb_total_pages || 1) / 3)),
-      tmdb_total_results: Number(p1.tmdb_total_results || combined.length),
+      tmdb_total_results: Number(p1.tmdb_total_results || rawCombined.length),
       has_next_page: Boolean(p3.has_next_page || (basePage + 3 < Number(p1.tmdb_total_pages || 1))),
       pagination_exact: p1.pagination_exact !== false,
     };
@@ -1972,7 +3451,8 @@ async function prefetchDiscoveryPage(spec, page) {
   }
 }
 
-async function executeDiscoverySearch(spec, page = 1) {
+async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } = {}) {
+  hideFilmographyToolbar();
   const requestNumber = ++state.requestNumber;
   state.mode = "discovery";
   state.currentView = "discover";
@@ -2006,6 +3486,7 @@ async function executeDiscoverySearch(spec, page = 1) {
     : "/movies/discover/super-advanced";
   const body = {
     filters: spec.filters || {},
+    force_refresh: Boolean(forceRefresh),
     ...spec.personalFilters,
   };
 
@@ -2044,14 +3525,14 @@ async function executeDiscoverySearch(spec, page = 1) {
     }
   };
 
-  if (discoveryCache.has(cacheKey)) {
+  if (!forceRefresh && discoveryCache.has(cacheKey)) {
     applyResponse(discoveryCache.get(cacheKey));
     return;
   }
 
   elements.pagination.classList.add("is-hidden");
   showLoadingCards();
-  elements.count.textContent = "Searching…";
+  elements.count.textContent = forceRefresh ? "Refreshing from TMDB…" : "Searching…";
 
   const basePage = (page - 1) * 3;
   const fetchOne = (p) => fetchJSON(url, {
@@ -2070,23 +3551,39 @@ async function executeDiscoverySearch(spec, page = 1) {
       return;
     }
 
-    const combined = [
+    const rawCombined = [
       ...(Array.isArray(p1.results) ? p1.results : []),
       ...(Array.isArray(p2.results) ? p2.results : []),
       ...(Array.isArray(p3.results) ? p3.results : []),
     ];
 
+    // Always fill complete rows of 6 (24 for 4 full rows, or 18 for 3 full rows)
+    let limit = 24;
+    if (rawCombined.length < 24 && rawCombined.length >= 18) {
+      limit = 18;
+    } else if (rawCombined.length < 18 && rawCombined.length >= 12) {
+      limit = 12;
+    } else if (rawCombined.length >= 24) {
+      limit = 24;
+    } else {
+      limit = rawCombined.length;
+    }
+    const combined = rawCombined.slice(0, limit);
+
     const response = {
       results: combined,
       page: page,
       tmdb_total_pages: Math.max(1, Math.ceil(Number(p1.tmdb_total_pages || 1) / 3)),
-      tmdb_total_results: Number(p1.tmdb_total_results || combined.length),
+      tmdb_total_results: Number(p1.tmdb_total_results || rawCombined.length),
       has_next_page: Boolean(p3.has_next_page || (basePage + 3 < Number(p1.tmdb_total_pages || 1))),
       pagination_exact: p1.pagination_exact !== false,
     };
 
     discoveryCache.set(cacheKey, response);
     applyResponse(response);
+    if (forceRefresh) {
+      showNotice("Refreshed live results from TMDB.");
+    }
   } catch (error) {
     if (requestNumber !== state.requestNumber) {
       return;
@@ -2098,8 +3595,17 @@ async function executeDiscoverySearch(spec, page = 1) {
   }
 }
 
-async function runDiscoverySearch() {
-  await executeDiscoverySearch(buildSearchSpec(), 1);
+async function runDiscoverySearch({ forceRefresh = false } = {}) {
+  await executeDiscoverySearch(buildSearchSpec(), 1, { forceRefresh });
+}
+
+function syncRibbonActiveState() {
+  const activeId = elements.profileSelect?.value ? String(elements.profileSelect.value) : null;
+  const ribbon = document.querySelector("#profile-ribbon");
+  if (!ribbon) return;
+  ribbon.querySelectorAll(".ribbon-chip").forEach((chip) => {
+    chip.classList.toggle("is-active", Boolean(activeId && chip.dataset.profile === activeId));
+  });
 }
 
 function updateProfileButtons() {
@@ -2110,6 +3616,210 @@ function updateProfileButtons() {
   const hasPreference = Boolean(preference);
   elements.updateProfile.disabled = !hasPreference;
   elements.deleteProfile.disabled = !hasPreference;
+  if (elements.quickUpdateProfile) {
+    elements.quickUpdateProfile.classList.toggle("is-hidden", !hasPreference);
+    if (hasPreference) {
+      elements.quickUpdateProfile.title = `Update "${preference.name}" with current filters`;
+    }
+  }
+  syncRibbonActiveState();
+}
+
+const DEFAULT_RIBBON_PROFILES = [];
+
+function getRibbonProfiles() {
+  const customIds = (state.preferences || []).map((p) => Number(p.preference_id));
+  const saved = localStorage.getItem("nope_ribbon_profile_keys");
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed
+          .map((k) => {
+            if (typeof k === "string" && k.startsWith("custom_")) {
+              return Number(k.replace("custom_", ""));
+            }
+            return Number(k);
+          })
+          .filter((k) => !isNaN(k) && customIds.includes(k));
+        if (cleaned.length > 0) {
+          state.ribbonProfileKeys = cleaned.slice(0, 6);
+          return state.ribbonProfileKeys;
+        }
+      }
+    } catch {}
+  }
+  state.ribbonProfileKeys = customIds.slice(0, 6);
+  return state.ribbonProfileKeys;
+}
+
+function saveRibbonProfiles(keys) {
+  const cleaned = keys
+    .map((k) => {
+      if (typeof k === "string" && k.startsWith("custom_")) {
+        return Number(k.replace("custom_", ""));
+      }
+      return Number(k);
+    })
+    .filter((k) => !isNaN(k));
+  state.ribbonProfileKeys = cleaned.slice(0, 6);
+  localStorage.setItem("nope_ribbon_profile_keys", JSON.stringify(state.ribbonProfileKeys));
+  renderProfileRibbon();
+  renderProfileWorkshop();
+}
+
+function getAllProfilesList() {
+  return (state.preferences || []).map((p) => ({
+    id: p.preference_id,
+    name: p.name,
+    isPreset: false,
+    preference: p,
+  }));
+}
+
+function renderProfileRibbon() {
+  const ribbon = document.querySelector("#profile-ribbon");
+  if (!ribbon) return;
+
+  const ribbonKeys = getRibbonProfiles();
+  const allProfiles = getAllProfilesList();
+  const activeProfiles = ribbonKeys
+    .map((k) => allProfiles.find((p) => Number(p.id) === Number(k)))
+    .filter(Boolean);
+
+  ribbon.replaceChildren();
+  activeProfiles.forEach((prof) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "ribbon-chip";
+    chip.dataset.profile = String(prof.id);
+    chip.textContent = prof.name;
+    chip.addEventListener("click", () => {
+      elements.profileSelect.value = String(prof.id);
+      applySelectedProfile();
+      clearDiscoveryCache();
+      runDiscoverySearch();
+    });
+    ribbon.append(chip);
+  });
+  syncRibbonActiveState();
+}
+
+function renderProfileWorkshop() {
+  const ribbonCloud = document.querySelector("#ribbon-profiles-cloud");
+  const reserveCloud = document.querySelector("#reserve-profiles-cloud");
+  const countEl = document.querySelector("#ribbon-slots-count");
+  if (!ribbonCloud || !reserveCloud) return;
+
+  const ribbonKeys = new Set(getRibbonProfiles().map(Number));
+  const allProfiles = getAllProfilesList();
+
+  const ribbonList = [];
+  const reserveList = [];
+
+  allProfiles.forEach((p) => {
+    if (ribbonKeys.has(Number(p.id))) {
+      ribbonList.push(p);
+    } else {
+      reserveList.push(p);
+    }
+  });
+
+  if (countEl) {
+    countEl.textContent = `${ribbonList.length}/6`;
+  }
+
+  // Active Ribbon chips
+  ribbonCloud.replaceChildren();
+  ribbonList.forEach((prof) => {
+    const chip = document.createElement("div");
+    chip.className = "profile-workshop-chip is-pinned";
+
+    const pinBtn = document.createElement("button");
+    pinBtn.type = "button";
+    pinBtn.className = "chip-pin-btn";
+    pinBtn.textContent = "★";
+    pinBtn.title = "Demote to Reserve";
+    pinBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const updated = getRibbonProfiles().filter((k) => Number(k) !== Number(prof.id));
+      saveRibbonProfiles(updated);
+    });
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "chip-name";
+    nameSpan.textContent = prof.name;
+    nameSpan.addEventListener("click", () => {
+      elements.profileSelect.value = String(prof.id);
+      applySelectedProfile();
+      clearDiscoveryCache();
+      runDiscoverySearch();
+    });
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "chip-del-btn";
+    delBtn.textContent = "✕";
+    delBtn.title = "Delete profile";
+    delBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      elements.profileSelect.value = String(prof.id);
+      await deleteSelectedProfile();
+      const updated = getRibbonProfiles().filter((k) => Number(k) !== Number(prof.id));
+      saveRibbonProfiles(updated);
+    });
+
+    chip.append(pinBtn, nameSpan, delBtn);
+    ribbonCloud.append(chip);
+  });
+
+  // Reserve chips
+  reserveCloud.replaceChildren();
+  reserveList.forEach((prof) => {
+    const chip = document.createElement("div");
+    chip.className = "profile-workshop-chip";
+
+    const pinBtn = document.createElement("button");
+    pinBtn.type = "button";
+    pinBtn.className = "chip-pin-btn";
+    pinBtn.textContent = "☆";
+    pinBtn.title = "Promote to Ribbon";
+    pinBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const current = getRibbonProfiles();
+      if (current.length >= 6) {
+        showNotice("Ribbon is full (max 6). Unpin (★) a profile first.");
+        return;
+      }
+      saveRibbonProfiles([...current, Number(prof.id)]);
+    });
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "chip-name";
+    nameSpan.textContent = prof.name;
+    nameSpan.addEventListener("click", () => {
+      elements.profileSelect.value = String(prof.id);
+      applySelectedProfile();
+      clearDiscoveryCache();
+      runDiscoverySearch();
+    });
+
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "chip-del-btn";
+    delBtn.textContent = "✕";
+    delBtn.title = "Delete profile";
+    delBtn.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      elements.profileSelect.value = String(prof.id);
+      await deleteSelectedProfile();
+      const updated = getRibbonProfiles().filter((k) => Number(k) !== Number(prof.id));
+      saveRibbonProfiles(updated);
+    });
+
+    chip.append(pinBtn, nameSpan, delBtn);
+    reserveCloud.append(chip);
+  });
 }
 
 async function loadProfiles(selectedId = null) {
@@ -2132,6 +3842,8 @@ async function loadProfiles(selectedId = null) {
       elements.profileSelect.value = String(selectedId);
     }
     updateProfileButtons();
+    renderProfileRibbon();
+    renderProfileWorkshop();
   } catch (error) {
     showNotice(`Could not load search profiles: ${error.message}`);
   }
@@ -2318,7 +4030,20 @@ function renderMovieKeywords(tags) {
     elements.dialogKeywords.append(empty);
     return;
   }
-  tags.forEach((tag) => {
+
+  // Deduplicate keywords by name, prioritizing custom keywords
+  const seenNames = new Set();
+  const sortedTags = [...tags].sort((a, b) => (b.is_custom ? 1 : 0) - (a.is_custom ? 1 : 0));
+  const uniqueTags = [];
+  for (const tag of sortedTags) {
+    const norm = (tag.name || "").trim().toLowerCase();
+    if (norm && !seenNames.has(norm)) {
+      seenNames.add(norm);
+      uniqueTags.push(tag);
+    }
+  }
+
+  uniqueTags.forEach((tag) => {
     const chip = document.createElement("span");
     chip.className = `tag keyword-chip${tag.is_custom ? " is-custom" : ""}`;
     if (tag.is_custom) {
@@ -2376,21 +4101,223 @@ function renderPeople(container, people, entityKey) {
   });
 }
 
-async function explorePerson(person, entityKey) {
+function saveCurrentSearchSnapshot(originInfo = null) {
+  let title = "Discover";
+  if (state.currentView === "discover" || (!state.currentView && state.mode === "discovery")) {
+    title = "Discover";
+  } else if (state.currentView === "movie-notes") {
+    title = "Movie Notes";
+  } else if (state.currentView === "entries") {
+    title = "Notes";
+  } else if (state.currentView && STATUS_LABELS[state.currentView]) {
+    title = STATUS_LABELS[state.currentView];
+  } else if (elements.libraryTitle && !elements.sectionHeadingBlock?.classList.contains("is-hidden")) {
+    title = elements.libraryTitle.textContent || "Library";
+  } else {
+    title = "Discover";
+  }
+
+  state.savedSearchSnapshot = {
+    mode: state.mode,
+    currentView: state.currentView,
+    discoveryMode: state.discoveryMode,
+    filters: collectAdvancedFilters(),
+    personalFilters: collectPersonalFilters(),
+    selectedEntities: JSON.parse(JSON.stringify(state.selectedEntities)),
+    profileSelectValue: elements.profileSelect?.value || "",
+    activeRibbonProfile: document.querySelector(".ribbon-chip.is-active")?.dataset.profile || null,
+    movies: [...(state.movies || [])],
+    searchPage: state.searchPage,
+    searchTotalPages: state.searchTotalPages,
+    totalResults: state.totalResults,
+    originMovie: originInfo || state.searchOriginMovie || null,
+    title: title,
+    scrollPosition: window.scrollY || document.documentElement.scrollTop,
+  };
+}
+
+async function restoreSearchSnapshot() {
+  if (!state.savedSearchSnapshot) return;
+  const snap = state.savedSearchSnapshot;
+  state.savedSearchSnapshot = null;
+
+  hideFilmographyToolbar();
+
+  state.mode = snap.mode;
+  state.currentView = snap.currentView;
+  state.discoveryMode = snap.discoveryMode;
+  state.selectedEntities = snap.selectedEntities;
+  Object.keys(state.selectedEntities).forEach((key) => renderSelectedEntities(key));
+
+  await setAdvancedFilters(snap.filters);
+  setPersonalFilters(snap.personalFilters);
+
+  if (snap.profileSelectValue) {
+    elements.profileSelect.value = snap.profileSelectValue;
+  }
+  updateProfileButtons();
+
+  if (snap.activeRibbonProfile) {
+    document.querySelectorAll(".ribbon-chip").forEach((chip) => {
+      chip.classList.toggle("is-active", chip.dataset.profile === snap.activeRibbonProfile);
+    });
+  }
+
+  setActiveView(snap.currentView);
+  const discoverHeader = document.querySelector("#discover-canvas-header");
+  if (snap.currentView === "discover" || (!snap.currentView && snap.mode === "discovery")) {
+    if (elements.discoverWorkspace) elements.discoverWorkspace.classList.remove("is-hidden");
+    if (discoverHeader) discoverHeader.classList.remove("is-hidden");
+    elements.sectionHeadingBlock?.classList.add("is-hidden");
+  } else if (snap.currentView) {
+    if (elements.discoverWorkspace) elements.discoverWorkspace.classList.add("is-hidden");
+    if (discoverHeader) discoverHeader.classList.add("is-hidden");
+    elements.sectionHeadingBlock?.classList.remove("is-hidden");
+    if (elements.libraryTitle) elements.libraryTitle.textContent = snap.title;
+  }
+
+  state.movies = snap.movies;
+  state.searchPage = snap.searchPage;
+  state.searchTotalPages = snap.searchTotalPages;
+  state.totalResults = snap.totalResults;
+
+  renderMovies(state.movies, snap.currentView === "discover" ? "search" : "library", state.totalResults);
+  if (snap.searchTotalPages > 1) {
+    elements.pagination?.classList.remove("is-hidden");
+  } else {
+    elements.pagination?.classList.add("is-hidden");
+  }
+
+  window.scrollTo({ top: snap.scrollPosition || 0, behavior: "smooth" });
+}
+
+function hideFilmographyToolbar() {
+  if (elements.filmographyToolbar) {
+    elements.filmographyToolbar.classList.add("is-hidden");
+  }
+  if (elements.returnToOrigin) {
+    elements.returnToOrigin.classList.add("is-hidden");
+  }
+  state.activeFilmographyPerson = null;
+  state.activeFilmographyData = null;
+}
+
+async function loadPersonFilmography(person, entityKey = "directors", department = null) {
   const personId = Number(person.tmdb_person_id || person.id);
   if (!personId) return;
-  const originMovie = {
+
+  const originInfo = state.selectedMovie ? {
     id: state.selectedMovie.tmdb_id,
     title: state.selectedMovie.title || state.selectedMovie.original_title,
-  };
+    fromMovieDetails: true,
+  } : null;
+
+  if (state.mode !== "filmography") {
+    saveCurrentSearchSnapshot(originInfo);
+  }
+
   closeMovieDetails();
-  resetAdvancedFilters({ notify: false });
-  state.selectedEntities[entityKey] = [{ id: personId, name: person.name }];
-  renderSelectedEntities(entityKey);
-  await setDiscoveryMode("advanced", false);
-  setSearchOriginMovie(originMovie);
-  setWorkspaceCollapsed(false);
-  await runDiscoverySearch();
+
+  state.mode = "filmography";
+
+  // Sidebar must remain visible! Match the origin view pane:
+  const originView = state.savedSearchSnapshot?.currentView || state.currentView || "discover";
+  const isOriginDiscover = originView === "discover" || (!originView && state.savedSearchSnapshot?.mode === "discovery");
+  const isOriginLibrary = ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes"].includes(originView);
+  const isOriginNotes = originView === "entries";
+
+  if (elements.sidebarPaneDiscover) {
+    elements.sidebarPaneDiscover.classList.toggle("is-hidden", !isOriginDiscover);
+  }
+  if (elements.discoverWorkspace) {
+    elements.discoverWorkspace.classList.toggle("is-hidden", !isOriginDiscover);
+  }
+  if (elements.sidebarPaneLibrary) {
+    elements.sidebarPaneLibrary.classList.toggle("is-hidden", !isOriginLibrary);
+  }
+  if (elements.sidebarPaneNotes) {
+    elements.sidebarPaneNotes.classList.toggle("is-hidden", !isOriginNotes);
+  }
+
+  // Hide canvas headers so the filmography toolbar sits cleanly at the top of the canvas
+  const discoverHeader = document.querySelector("#discover-canvas-header");
+  if (discoverHeader) discoverHeader.classList.add("is-hidden");
+  if (elements.notesSearchContainer) elements.notesSearchContainer.classList.add("is-hidden");
+  const headingBlock = document.querySelector("#section-heading-block");
+  if (headingBlock) headingBlock.classList.add("is-hidden");
+
+  const previousTitle = state.savedSearchSnapshot?.title || "Discover";
+  if (elements.returnToOrigin) {
+    elements.returnToOrigin.textContent = `← Return to ${previousTitle}`;
+    elements.returnToOrigin.classList.remove("is-hidden");
+    elements.returnToOrigin.onclick = () => {
+      restoreSearchSnapshot();
+    };
+  }
+
+  showLoadingCards();
+  elements.pagination?.classList.add("is-hidden");
+
+  const deptParam = department ? `?department=${encodeURIComponent(department)}` : "?department=all";
+  try {
+    const data = await fetchJSON(`/people/${personId}/filmography${deptParam}`);
+    state.activeFilmographyPerson = data.person;
+    state.activeFilmographyData = data;
+
+    if (elements.filmographyToolbar) {
+      elements.filmographyToolbar.classList.remove("is-hidden");
+      if (elements.filmographyName) elements.filmographyName.textContent = data.person.name;
+      if (elements.filmographyKicker) {
+        const roleDesc = data.person.known_for_department ? `${data.person.known_for_department} • Complete Filmography` : "Complete Career Filmography";
+        elements.filmographyKicker.textContent = roleDesc;
+      }
+      if (elements.filmographyAvatar) {
+        if (data.person.profile_path) {
+          elements.filmographyAvatar.src = `${IMAGE_BASE_URL}${data.person.profile_path}`;
+          elements.filmographyAvatar.alt = data.person.name;
+          elements.filmographyAvatar.classList.remove("is-hidden");
+        } else {
+          elements.filmographyAvatar.classList.add("is-hidden");
+        }
+      }
+
+      const currentDept = data.department || "all";
+      if (elements.filmTabAll) {
+        elements.filmTabAll.textContent = `All (${data.total_count})`;
+        elements.filmTabAll.classList.toggle("is-active", currentDept === "all");
+        elements.filmTabAll.onclick = () => loadPersonFilmography(person, entityKey, "all");
+      }
+      if (elements.filmTabDirecting) {
+        elements.filmTabDirecting.textContent = `Directed (${data.directing_count})`;
+        elements.filmTabDirecting.classList.toggle("is-active", currentDept === "directing");
+        elements.filmTabDirecting.classList.toggle("is-hidden", data.directing_count === 0);
+        elements.filmTabDirecting.onclick = () => loadPersonFilmography(person, entityKey, "directing");
+      }
+      if (elements.filmTabActing) {
+        elements.filmTabActing.textContent = `Acted (${data.acting_count})`;
+        elements.filmTabActing.classList.toggle("is-active", currentDept === "acting");
+        elements.filmTabActing.classList.toggle("is-hidden", data.acting_count === 0);
+        elements.filmTabActing.onclick = () => loadPersonFilmography(person, entityKey, "acting");
+      }
+    }
+
+    state.movies = data.movies || [];
+    state.totalResults = state.movies.length;
+    renderMovies(state.movies, "search", state.movies.length);
+    if (headingBlock) headingBlock.classList.add("is-hidden");
+
+    if (elements.shelfCount) {
+      elements.shelfCount.textContent = `${state.movies.length} ${state.movies.length === 1 ? "movie" : "movies"}`;
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } catch (error) {
+    showNotice(`Could not load filmography for ${person.name}: ${error.message}`);
+  }
+}
+
+async function explorePerson(person, entityKey) {
+  await loadPersonFilmography(person, entityKey);
 }
 
 function renderVerdict(value) {
@@ -2490,8 +4417,21 @@ function renderLookingOutControl(movie) {
     : "Remember this unreleased movie";
 }
 
+function formatVoteCount(count) {
+  const num = Number(count);
+  if (!num || isNaN(num) || num <= 0) return "";
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1).replace(/\.0$/, "")}M votes`;
+  }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1).replace(/\.0$/, "")}k votes`;
+  }
+  return `${num} ${num === 1 ? "vote" : "votes"}`;
+}
+
 function renderMovieDetails(movie) {
   state.selectedMovie = movie;
+  updateGreyContext();
   elements.dialogPoster.replaceChildren(createPoster(movie));
   elements.dialogKicker.textContent = getStatus(movie)
     ? STATUS_LABELS[getStatus(movie)]
@@ -2505,7 +4445,8 @@ function renderMovieDetails(movie) {
   const rating = getMovieRating(movie);
 
   if (rating) {
-    appendMetaItem(`★ ${rating} TMDB`);
+    const voteCountStr = formatVoteCount(movie.vote_count);
+    appendMetaItem(voteCountStr ? `★ ${rating} TMDB (${voteCountStr})` : `★ ${rating} TMDB`);
   }
 
   elements.dialogOverview.textContent =
@@ -2522,6 +4463,7 @@ function renderMovieDetails(movie) {
   elements.showCustomKeyword.classList.remove("is-hidden");
   [elements.statusFeedback, elements.verdictFeedback, elements.notesFeedback,
     elements.keywordFeedback].forEach((item) => { item.textContent = ""; });
+  updateDetailNavStepper(movie.tmdb_id);
 }
 
 function renderDetailTrail() {
@@ -2572,23 +4514,29 @@ function createRelatedMovieCard(movie) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "related-card";
-  const poster = createPoster(movie);
-  const copy = document.createElement("span");
-  copy.className = "related-card-copy";
-  const title = document.createElement("strong");
-  title.textContent = movie.title || movie.original_title || "Untitled movie";
-  const meta = document.createElement("span");
-  meta.textContent = getMovieYear(movie);
-  copy.append(title, meta);
+  const title = movie.title || movie.original_title || "Untitled movie";
+  const yearText = getMovieYear(movie);
+  button.title = `${title}${yearText ? ` (${yearText})` : ""}`;
+  button.setAttribute("aria-label", `Open details for ${title}`);
+  button.append(createPoster(movie));
+
   const status = getStatus(movie);
   if (status) {
     const badge = document.createElement("span");
     badge.className = "status-badge";
     badge.dataset.status = status;
     badge.textContent = STATUS_LABELS[status];
-    copy.append(badge);
+    button.append(badge);
   }
-  button.append(poster, copy);
+
+  const rating = getMovieRating(movie);
+  if (rating) {
+    const ratingElement = document.createElement("span");
+    ratingElement.className = "card-rating";
+    ratingElement.textContent = rating;
+    button.append(ratingElement);
+  }
+
   button.addEventListener("click", () => {
     openMovieDetails(movieId, { trailMode: "push" });
   });
@@ -2600,12 +4548,13 @@ async function loadRelatedMovies(movieId) {
   elements.relatedFamiliarToggle.classList.add("is-hidden");
   try {
     const parameters = new URLSearchParams({
-      limit: "6",
+      limit: "12",
       include_previously_watched: String(state.showRelatedFamiliar),
     });
     const response = await fetchJSON(`/movies/${movieId}/related?${parameters}`);
     if (state.selectedMovie?.tmdb_id !== movieId) return;
     const movies = Array.isArray(response.results) ? response.results : [];
+    state.detailRelatedMovies = movies;
     const familiarCount = Number(response.hidden_familiar_count || 0);
     if (familiarCount > 0) {
       elements.relatedFamiliarToggle.textContent = state.showRelatedFamiliar
@@ -2636,12 +4585,27 @@ async function openMovieDetails(
 ) {
   const enteringDetails = elements.detailPage.classList.contains("is-hidden");
   if (enteringDetails) {
-    state.previousScrollPosition = window.scrollY;
+    state.previousScrollPosition = (elements.shell && elements.shell.scrollTop)
+      ? elements.shell.scrollTop
+      : window.scrollY;
     state.detailReturnLabel = state.mode === "shelf"
       ? "Back to movies"
-      : (state.mode === "looking-out" ? "Back to Looking Out For" : "Back to results");
+      : (state.mode === "filmography"
+        ? (state.activeFilmographyPerson ? `Back to ${state.activeFilmographyPerson.name}` : "Back to filmography")
+        : (state.mode === "looking-out" ? "Back to Looking Out For" : "Back to results"));
+
+    let activeList = [];
+    if (state.currentView === "discover" || state.mode === "search" || state.mode === "discover") {
+      activeList = Array.isArray(state.movies) ? state.movies : [];
+    } else if (state.mode === "shelf" && Array.isArray(state.allFilteredMovies) && state.allFilteredMovies.length > 0) {
+      activeList = state.allFilteredMovies;
+    } else {
+      activeList = Array.isArray(state.movies) && state.movies.length > 0 ? state.movies : (state.allFilteredMovies || []);
+    }
+    state.detailNavQueue = [...activeList];
   }
   state.selectedMovie = null;
+  state.detailRelatedMovies = [];
   state.showRelatedFamiliar = false;
   elements.shell.classList.add("is-hidden");
   elements.detailPage.classList.remove("is-hidden");
@@ -2649,6 +4613,9 @@ async function openMovieDetails(
   elements.dialogLoading.classList.remove("is-hidden");
   elements.dialogLoading.textContent = "Loading movie details…";
   window.scrollTo({ top: 0, behavior: "auto" });
+  if (elements.detailPage) {
+    elements.detailPage.scrollTop = 0;
+  }
 
   try {
     const movie = await fetchJSON(`/movies/${movieId}`);
@@ -2680,13 +4647,94 @@ async function openMovieDetails(
 function closeMovieDetails() {
   elements.detailPage.classList.add("is-hidden");
   elements.shell.classList.remove("is-hidden");
+  if (elements.shell && state.previousScrollPosition) {
+    elements.shell.scrollTop = state.previousScrollPosition;
+  }
   window.scrollTo({
     top: state.previousScrollPosition,
     behavior: "auto",
   });
   state.selectedMovie = null;
+  state.detailRelatedMovies = [];
   state.detailTrail = [];
+  state.detailNavQueue = [];
+  if (elements.detailNavStepper) elements.detailNavStepper.classList.add("is-hidden");
   elements.detailTrail.replaceChildren();
+  updateGreyContext();
+}
+
+function getMovieNavId(movie) {
+  if (!movie) return null;
+  return Number(movie.tmdb_id || movie.id);
+}
+
+function updateDetailNavStepper(currentMovieId) {
+  if (!elements.detailPrevBtn || !elements.detailNextBtn) return;
+  let queue = state.detailNavQueue || [];
+  const numId = Number(currentMovieId);
+  let idx = queue.findIndex((m) => getMovieNavId(m) === numId);
+
+  if (idx === -1 && Array.isArray(state.movies)) {
+    const moviesIdx = state.movies.findIndex((m) => getMovieNavId(m) === numId);
+    if (moviesIdx !== -1) {
+      state.detailNavQueue = [...state.movies];
+      queue = state.detailNavQueue;
+      idx = moviesIdx;
+    }
+  }
+
+  if (!queue.length) {
+    if (elements.detailNavStepper) elements.detailNavStepper.classList.add("is-hidden");
+    return;
+  }
+  if (elements.detailNavStepper) elements.detailNavStepper.classList.remove("is-hidden");
+
+  if (idx === -1) {
+    elements.detailPrevBtn.disabled = true;
+    elements.detailNextBtn.disabled = true;
+    return;
+  }
+
+  elements.detailPrevBtn.disabled = idx <= 0;
+  elements.detailNextBtn.disabled = idx >= queue.length - 1;
+}
+
+function navigatePrevMovie() {
+  let queue = state.detailNavQueue || [];
+  if (!queue.length || !state.selectedMovie) return;
+  const currentId = Number(state.selectedMovie.tmdb_id);
+  let idx = queue.findIndex((m) => getMovieNavId(m) === currentId);
+  if (idx === -1 && Array.isArray(state.movies)) {
+    const moviesIdx = state.movies.findIndex((m) => getMovieNavId(m) === currentId);
+    if (moviesIdx !== -1) {
+      state.detailNavQueue = [...state.movies];
+      queue = state.detailNavQueue;
+      idx = moviesIdx;
+    }
+  }
+  if (idx > 0) {
+    const prev = queue[idx - 1];
+    openMovieDetails(getMovieNavId(prev), { trailMode: "nav" });
+  }
+}
+
+function navigateNextMovie() {
+  let queue = state.detailNavQueue || [];
+  if (!queue.length || !state.selectedMovie) return;
+  const currentId = Number(state.selectedMovie.tmdb_id);
+  let idx = queue.findIndex((m) => getMovieNavId(m) === currentId);
+  if (idx === -1 && Array.isArray(state.movies)) {
+    const moviesIdx = state.movies.findIndex((m) => getMovieNavId(m) === currentId);
+    if (moviesIdx !== -1) {
+      state.detailNavQueue = [...state.movies];
+      queue = state.detailNavQueue;
+      idx = moviesIdx;
+    }
+  }
+  if (idx !== -1 && idx < queue.length - 1) {
+    const next = queue[idx + 1];
+    openMovieDetails(getMovieNavId(next), { trailMode: "nav" });
+  }
 }
 
 function navigateBackFromMovie() {
@@ -2718,6 +4766,7 @@ function updateVisibleMovie(userData) {
   }
 
   state.selectedMovie.user_data = userData;
+  updateMovieCardDOM(movieId, userData);
 }
 
 async function saveSelectedStatus() {
@@ -2920,20 +4969,27 @@ async function removeSelectedKeyword(tag) {
 
 function formatRichText(text) {
   if (!text) return "";
-  const escaped = String(text)
+  let formatted = String(text)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
   // Markdown links: [Title](https://...)
-  const withMarkdown = escaped.replace(
+  formatted = formatted.replace(
     /\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g,
     '<a href="$2" target="_blank" rel="noreferrer noopener" class="note-link">$1</a>',
   );
 
+  // Bold: **text**
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+
+  // Italics: *text* or _text_
+  formatted = formatted.replace(/(^|[^*])\*([^*]+)\*([^*]|$)/g, '$1<em>$2</em>$3');
+  formatted = formatted.replace(/(^|[^_])_([^_]+)_([^_]|$)/g, '$1<em>$2</em>$3');
+
   // Autolink bare URLs: https://...
-  return withMarkdown.replace(
+  return formatted.replace(
     /(^|[\s(])(https?:\/\/[^\s<)]+)/g,
     '$1<a href="$2" target="_blank" rel="noreferrer noopener" class="note-link">$2</a>',
   );
@@ -2941,25 +4997,210 @@ function formatRichText(text) {
 
 function appendEntryBody(container, body) {
   const lines = String(body || "").split(/\r?\n/);
-  let list = null;
-  lines.forEach((line) => {
-    const match = line.match(/^\s*[-*]\s+(.+)/);
-    if (match) {
-      if (!list) {
-        list = document.createElement("ul");
-        container.append(list);
+  let ulList = null;
+  let olList = null;
+  let blockquote = null;
+  let activeDetails = null;
+  let activeToggleContent = null;
+  let activeDetailsIsTag = false;
+  let consecutiveEmptyLines = 0;
+
+  function closeToggle() {
+    activeDetails = null;
+    activeToggleContent = null;
+    activeDetailsIsTag = false;
+    consecutiveEmptyLines = 0;
+    ulList = null;
+    olList = null;
+    blockquote = null;
+  }
+
+  function getTarget() {
+    return activeToggleContent || container;
+  }
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // 1. Explicit HTML </details> closing tag
+    if (trimmed.toLowerCase() === "</details>") {
+      closeToggle();
+      continue;
+    }
+
+    // 2. Explicit HTML <details> opening tag (e.g. <details>, <details open>, or <details><summary>...</summary>)
+    if (/^<details\b/i.test(trimmed)) {
+      closeToggle();
+      activeDetails = document.createElement("details");
+      activeDetails.className = "note-toggle";
+      if (/\bopen\b/i.test(trimmed)) {
+        activeDetails.open = true;
+      }
+      activeDetailsIsTag = true;
+      consecutiveEmptyLines = 0;
+
+      const sameLineSummary = trimmed.match(/<summary\b[^>]*>(.*?)<\/summary>/i);
+      let summaryText = "";
+      if (sameLineSummary) {
+        summaryText = sameLineSummary[1];
+      }
+
+      const summaryEl = document.createElement("summary");
+      summaryEl.className = "note-toggle-summary";
+      if (summaryText) {
+        summaryEl.innerHTML = formatRichText(summaryText);
+      }
+      activeDetails.append(summaryEl);
+
+      activeToggleContent = document.createElement("div");
+      activeToggleContent.className = "note-toggle-content";
+      activeDetails.append(activeToggleContent);
+
+      container.append(activeDetails);
+
+      if (/<\/details>/i.test(trimmed)) {
+        const afterSummary = trimmed.replace(/<details\b[^>]*>/i, "").replace(/<summary\b[^>]*>.*?<\/summary>/i, "").replace(/<\/details>/i, "").trim();
+        if (afterSummary) {
+          const p = document.createElement("p");
+          p.innerHTML = formatRichText(afterSummary);
+          activeToggleContent.append(p);
+        }
+        closeToggle();
+      }
+      continue;
+    }
+
+    // 3. Explicit HTML <summary> tag on its own line
+    if (activeDetails && activeDetailsIsTag && /^<summary\b/i.test(trimmed)) {
+      const summaryMatch = trimmed.match(/^<summary\b[^>]*>(.*?)<\/summary>$/i) || trimmed.match(/^<summary\b[^>]*>(.*)$/i);
+      const summaryText = summaryMatch ? summaryMatch[1].replace(/<\/summary>$/i, "").trim() : "";
+      const existingSummary = activeDetails.querySelector(".note-toggle-summary");
+      if (existingSummary) {
+        existingSummary.innerHTML = formatRichText(summaryText);
+      }
+      continue;
+    }
+
+    // 4. Notion-style toggle prefix (e.g. >> Title, -> Title, ▸ Title, or ▶ Title)
+    const toggleMatch = line.match(/^\s*(?:[▸▶]|>>|->)\s*(.+)/);
+    if (toggleMatch) {
+      closeToggle();
+      activeDetails = document.createElement("details");
+      activeDetails.className = "note-toggle";
+      activeDetailsIsTag = false;
+      consecutiveEmptyLines = 0;
+
+      const summaryEl = document.createElement("summary");
+      summaryEl.className = "note-toggle-summary";
+      summaryEl.innerHTML = formatRichText(toggleMatch[1]);
+      activeDetails.append(summaryEl);
+
+      activeToggleContent = document.createElement("div");
+      activeToggleContent.className = "note-toggle-content";
+      activeDetails.append(activeToggleContent);
+
+      container.append(activeDetails);
+      continue;
+    }
+
+    // 5. Two blank lines inside a >> toggle exit back to the main note
+    if (activeDetails && !activeDetailsIsTag && consecutiveEmptyLines >= 2) {
+      const isIndented = /^\s{2,}/.test(line);
+      if (!isIndented) {
+        closeToggle();
+      }
+    }
+    consecutiveEmptyLines = 0;
+
+    // If an active toggle is open and we hit an unindented top-level heading, close it
+    if (activeDetails && !activeDetailsIsTag) {
+      if (/^\s*#{1,6}\s+/.test(line)) {
+        closeToggle();
+      }
+    }
+
+    // Heading 3: ### Heading
+    const h3Match = line.match(/^\s*###\s+(.+)/);
+    if (h3Match) {
+      ulList = null; olList = null; blockquote = null;
+      const h3 = document.createElement("h3");
+      h3.innerHTML = formatRichText(h3Match[1]);
+      getTarget().append(h3);
+      continue;
+    }
+
+    // Heading 2: ## Heading
+    const h2Match = line.match(/^\s*##\s+(.+)/);
+    if (h2Match) {
+      ulList = null; olList = null; blockquote = null;
+      const h2 = document.createElement("h2");
+      h2.innerHTML = formatRichText(h2Match[1]);
+      getTarget().append(h2);
+      continue;
+    }
+
+    // Blockquote: > text
+    const quoteMatch = line.match(/^\s*>\s*(.+)/);
+    if (quoteMatch) {
+      ulList = null; olList = null;
+      const target = getTarget();
+      if (!blockquote || blockquote.parentElement !== target) {
+        blockquote = document.createElement("blockquote");
+        target.append(blockquote);
+      }
+      const p = document.createElement("p");
+      p.innerHTML = formatRichText(quoteMatch[1]);
+      blockquote.append(p);
+      continue;
+    }
+    blockquote = null;
+
+    // Numbered list: 1. Item
+    const olMatch = line.match(/^\s*\d+\.\s+(.+)/);
+    if (olMatch) {
+      ulList = null;
+      const target = getTarget();
+      if (!olList || olList.parentElement !== target) {
+        olList = document.createElement("ol");
+        target.append(olList);
       }
       const item = document.createElement("li");
-      item.innerHTML = formatRichText(match[1]);
-      list.append(item);
-      return;
+      item.innerHTML = formatRichText(olMatch[1]);
+      olList.append(item);
+      continue;
     }
-    list = null;
-    if (!line.trim()) return;
+    olList = null;
+
+    // Bullet list: - Item or * Item
+    const ulMatch = line.match(/^\s*[-*]\s+(.+)/);
+    if (ulMatch) {
+      const target = getTarget();
+      if (!ulList || ulList.parentElement !== target) {
+        ulList = document.createElement("ul");
+        target.append(ulList);
+      }
+      const item = document.createElement("li");
+      item.innerHTML = formatRichText(ulMatch[1]);
+      ulList.append(item);
+      continue;
+    }
+    ulList = null;
+
+    if (!trimmed) {
+      ulList = null;
+      olList = null;
+      blockquote = null;
+      if (activeDetails && !activeDetailsIsTag) {
+        consecutiveEmptyLines += 1;
+      }
+      continue;
+    }
+
     const paragraph = document.createElement("p");
     paragraph.innerHTML = formatRichText(line);
-    container.append(paragraph);
-  });
+    getTarget().append(paragraph);
+  }
 }
 
 function getJournalNow() {
@@ -3015,12 +5256,14 @@ function populateJournalMonths(year = "", selectedMonth = "") {
 }
 
 function resetEntryFiltersToCurrent(entryType = "") {
-  const { year, month } = getJournalNow();
   elements.entryQuery.value = "";
   elements.entryTypeFilter.value = entryType;
   state.entryTagFilter = "";
-  elements.entryYearFilter.value = String(Math.max(year, JOURNAL_START_YEAR));
-  populateJournalMonths(elements.entryYearFilter.value, month);
+  state.notesTimelineFilter = null;
+  state.notesCurrentView = "all";
+  if (elements.entryYearFilter) elements.entryYearFilter.value = "";
+  if (elements.entryMonthFilter) elements.entryMonthFilter.value = "";
+  updateNotesNavActive();
 }
 
 function formatEntryDate(value) {
@@ -3049,9 +5292,14 @@ function entryWasEdited(entry) {
 }
 
 function applyEntryTagFilter(name) {
+  state.notesCurrentView = "all";
+  state.notesTimelineFilter = null;
   state.entryTagFilter = name;
   elements.entryTypeFilter.value = "";
+  if (elements.entryYearFilter) elements.entryYearFilter.value = "";
+  if (elements.entryMonthFilter) elements.entryMonthFilter.value = "";
   setAuxiliaryView("entries");
+  updateNotesNavActive();
   loadEntries(1);
 }
 
@@ -3083,10 +5331,12 @@ function renderActiveEntryTag() {
     elements.entryList.before(button);
     button.addEventListener("click", () => {
       state.entryTagFilter = "";
+      updateNotesNavActive();
       loadEntries(1);
     });
   }
-  button.textContent = `Tag: ${state.entryTagFilter} ×`;
+  const label = state.entryTagFilter === "__untagged__" ? "Untagged" : state.entryTagFilter;
+  button.textContent = `Tag: ${label} ×`;
 }
 
 function appendEntryLinks(container, value, onRemove = null) {
@@ -3132,74 +5382,391 @@ function appendEntryLinks(container, value, onRemove = null) {
   });
 }
 
+function createExcerptText(body, maxWords = 85) {
+  if (!body) return "";
+  const paragraphs = String(body)
+    .replace(/\r\n/g, "\n")
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  const firstPara = paragraphs[0] || "";
+  if (!firstPara) return "";
+
+  const text = firstPara
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/[#*_~>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const words = text.split(/\s+/);
+  if (words.length <= maxWords) {
+    return text;
+  }
+  return words.slice(0, maxWords).join(" ") + "…";
+}
+
+function updateNotesNavActive() {
+  if (elements.notesViewAll) {
+    elements.notesViewAll.classList.toggle(
+      "is-active",
+      state.notesCurrentView === "all" && !state.entryTagFilter && !state.notesTimelineFilter
+    );
+  }
+  if (elements.notesViewArchive) {
+    elements.notesViewArchive.classList.toggle(
+      "is-active",
+      state.notesCurrentView === "archive"
+    );
+  }
+  if (elements.notesViewDrafts) {
+    elements.notesViewDrafts.classList.toggle(
+      "is-active",
+      state.notesCurrentView === "drafts"
+    );
+  }
+  if (elements.notesTagList) {
+    elements.notesTagList.querySelectorAll(".notes-tag-link").forEach((btn) => {
+      const bTag = (btn.dataset.tag || "").toLowerCase();
+      btn.classList.toggle(
+        "is-active",
+        state.notesCurrentView === "all" && Boolean(state.entryTagFilter) && bTag === state.entryTagFilter.toLowerCase()
+      );
+    });
+  }
+  if (elements.notesTimelineList) {
+    elements.notesTimelineList.querySelectorAll(".notes-tag-link").forEach((btn) => {
+      if (!state.notesTimelineFilter) {
+        btn.classList.remove("is-active");
+      } else {
+        const btnYear = btn.dataset.year;
+        const btnMonth = btn.dataset.month;
+        const isActive =
+          String(state.notesTimelineFilter.year) === String(btnYear) &&
+          String(state.notesTimelineFilter.month).padStart(2, "0") === String(btnMonth).padStart(2, "0");
+        btn.classList.toggle("is-active", isActive);
+      }
+    });
+  }
+}
+
+async function renderNotesTags() {
+  if (!elements.notesTagList) return;
+  try {
+    const data = await fetchJSON("/entries/tags");
+    const totalEntries = data.total_entries || 0;
+    const archivedEntries = data.archived_entries || 0;
+    const draftEntries = data.draft_entries || 0;
+    const tags = data.tags || [];
+
+    if (elements.notesTotalCount) {
+      elements.notesTotalCount.textContent = String(totalEntries);
+    }
+    if (elements.notesDraftsCount) {
+      elements.notesDraftsCount.textContent = String(draftEntries);
+    }
+    if (elements.notesArchiveCount) {
+      elements.notesArchiveCount.textContent = String(archivedEntries);
+    }
+
+    updateNotesNavActive();
+
+    elements.notesTagList.replaceChildren();
+
+    const untaggedEntries = data.untagged_entries || 0;
+
+    tags.forEach((t) => {
+      const tagBtn = document.createElement("button");
+      tagBtn.type = "button";
+      const isTagActive =
+        state.notesCurrentView === "all" &&
+        Boolean(state.entryTagFilter) &&
+        state.entryTagFilter.toLowerCase() === t.name.toLowerCase();
+      tagBtn.className = `notes-tag-link ${isTagActive ? "is-active" : ""}`;
+      tagBtn.dataset.tag = t.name;
+
+      const tagLabel = document.createElement("span");
+      tagLabel.textContent = t.name;
+      const tagCount = document.createElement("span");
+      tagCount.className = "notes-tag-count";
+      tagCount.textContent = String(t.count);
+      tagBtn.append(tagLabel, tagCount);
+
+      tagBtn.addEventListener("click", () => {
+        state.notesCurrentView = "all";
+        state.notesTimelineFilter = null;
+        if (state.entryTagFilter.toLowerCase() === t.name.toLowerCase()) {
+          state.entryTagFilter = "";
+        } else {
+          state.entryTagFilter = t.name;
+        }
+        updateNotesNavActive();
+        loadEntries(1);
+      });
+      elements.notesTagList.append(tagBtn);
+    });
+
+    if (untaggedEntries > 0 || state.entryTagFilter === "__untagged__") {
+      const untaggedBtn = document.createElement("button");
+      untaggedBtn.type = "button";
+      const isUntaggedActive =
+        state.notesCurrentView === "all" &&
+        state.entryTagFilter === "__untagged__";
+      untaggedBtn.className = `notes-tag-link notes-tag-untagged ${isUntaggedActive ? "is-active" : ""}`;
+      untaggedBtn.dataset.tag = "__untagged__";
+
+      const untaggedLabel = document.createElement("span");
+      untaggedLabel.textContent = "Untagged";
+      const untaggedCount = document.createElement("span");
+      untaggedCount.className = "notes-tag-count";
+      untaggedCount.textContent = String(untaggedEntries);
+      untaggedBtn.append(untaggedLabel, untaggedCount);
+
+      untaggedBtn.addEventListener("click", () => {
+        state.notesCurrentView = "all";
+        state.notesTimelineFilter = null;
+        if (state.entryTagFilter === "__untagged__") {
+          state.entryTagFilter = "";
+        } else {
+          state.entryTagFilter = "__untagged__";
+        }
+        updateNotesNavActive();
+        loadEntries(1);
+      });
+      elements.notesTagList.append(untaggedBtn);
+    }
+  } catch {
+    // ignore fetch error
+  }
+}
+
+async function renderNotesTimeline() {
+  if (!elements.notesTimelineList) return;
+  try {
+    const items = await fetchJSON("/entries/timeline");
+    if (!Array.isArray(items) || items.length === 0) {
+      if (elements.notesTimelineSection) {
+        elements.notesTimelineSection.classList.add("is-hidden");
+      }
+      elements.notesTimelineList.replaceChildren();
+      return;
+    }
+
+    if (elements.notesTimelineSection) {
+      elements.notesTimelineSection.classList.remove("is-hidden");
+    }
+    elements.notesTimelineList.replaceChildren();
+
+    const monthNames = [
+      "", "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+
+    items.forEach((item) => {
+      const year = item.year;
+      const monthNum = parseInt(item.month, 10);
+      const monthName = monthNames[monthNum] || `Month ${item.month}`;
+      const count = item.count;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "notes-tag-link";
+      btn.dataset.year = String(year);
+      btn.dataset.month = String(item.month);
+
+      const isActive =
+        state.notesTimelineFilter &&
+        String(state.notesTimelineFilter.year) === String(year) &&
+        String(state.notesTimelineFilter.month).padStart(2, "0") === String(item.month).padStart(2, "0");
+      if (isActive) btn.classList.add("is-active");
+
+      const label = document.createElement("span");
+      label.textContent = `${monthName} ${year}`;
+      const countBadge = document.createElement("span");
+      countBadge.className = "notes-tag-count";
+      countBadge.textContent = String(count);
+
+      btn.append(label, countBadge);
+      btn.addEventListener("click", () => {
+        state.notesCurrentView = "all";
+        state.entryTagFilter = "";
+        if (
+          state.notesTimelineFilter &&
+          String(state.notesTimelineFilter.year) === String(year) &&
+          String(state.notesTimelineFilter.month).padStart(2, "0") === String(item.month).padStart(2, "0")
+        ) {
+          state.notesTimelineFilter = null;
+        } else {
+          state.notesTimelineFilter = { year: Number(year), month: monthNum };
+        }
+        updateNotesNavActive();
+        loadEntries(1);
+      });
+      elements.notesTimelineList.append(btn);
+    });
+  } catch {
+    // ignore timeline fetch error
+  }
+}
+
+async function toggleEntryPin(entryId) {
+  try {
+    await fetchJSON(`/entries/${entryId}/pin`, { method: "PUT" });
+    await loadEntries(state.entryPage);
+  } catch (error) {
+    showNotice(error.message);
+  }
+}
+
+async function toggleEntryArchive(entryId, title = "", isCurrentlyArchived = false) {
+  try {
+    await fetchJSON(`/entries/${entryId}/archive`, { method: "PUT" });
+    const actionWord = isCurrentlyArchived ? "restored to active notes" : "moved to archive";
+    showNotice(`"${title || "Note"}" ${actionWord}.`);
+    await loadEntries(state.entryPage);
+    await Promise.all([renderNotesTags(), renderNotesTimeline()]);
+  } catch (error) {
+    showNotice(error.message);
+  }
+}
+
 function renderEntries(entries) {
   elements.entryList.replaceChildren();
   renderActiveEntryTag();
   if (!entries.length) {
     const empty = document.createElement("div");
     empty.className = "entry-empty";
-    empty.textContent = "No notes or links match this view.";
+    empty.textContent = state.notesCurrentView === "archive"
+      ? "No archived notes."
+      : state.notesCurrentView === "drafts"
+      ? "No drafts in your notebook. Start writing or ask Grey to draft one for you!"
+      : "No notes or links match this view.";
     elements.entryList.append(empty);
     return;
   }
   entries.forEach((entry, index) => {
     const article = document.createElement("article");
-    article.className = "entry-card";
+    article.className = `entry-card ${entry.is_pinned ? "is-pinned" : ""}`;
+    article.dataset.entryId = entry.entry_id;
+
     const header = document.createElement("header");
-    const type = document.createElement("span");
-    const title = document.createElement("h3");
+    const metaRow = document.createElement("div");
+    metaRow.className = "entry-card-meta";
+
+    if (entry.status === "draft") {
+      const draftBadge = document.createElement("span");
+      draftBadge.className = "entry-draft-badge";
+      draftBadge.textContent = "📝 Draft";
+      metaRow.append(draftBadge);
+    }
+
     const date = document.createElement("time");
-    type.className = "entry-type";
-    type.textContent = entry.entry_type;
-    title.textContent = entry.title;
+    date.className = "entry-card-time";
     date.textContent = entryWasEdited(entry)
       ? `Updated ${formatEntryDate(entry.updated_at)}`
       : formatEntryDate(entry.created_at);
-    header.append(type, title, date);
 
-    const tags = document.createElement("div");
-    tags.className = "entry-card-tags";
-    (entry.tags || []).slice(0, 3).forEach((tag) => {
-      tags.append(createEntryTag(tag));
+    const actions = document.createElement("div");
+    actions.className = "entry-card-actions";
+
+    const pinBtn = document.createElement("button");
+    pinBtn.type = "button";
+    pinBtn.className = `card-action-btn ${entry.is_pinned ? "is-active" : ""}`;
+    pinBtn.title = entry.is_pinned ? "Unpin note" : "Pin note to top";
+    pinBtn.innerHTML = "📌";
+    pinBtn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await toggleEntryPin(entry.entry_id);
     });
+
+    const archiveBtn = document.createElement("button");
+    archiveBtn.type = "button";
+    archiveBtn.className = `card-action-btn ${entry.is_archived ? "is-active" : ""}`;
+    archiveBtn.title = entry.is_archived ? "Restore to active notes" : "Archive note";
+    archiveBtn.innerHTML = entry.is_archived ? "📤" : "📥";
+    archiveBtn.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await toggleEntryArchive(entry.entry_id, entry.title, entry.is_archived);
+    });
+
+    actions.append(pinBtn, archiveBtn);
+    metaRow.append(date, actions);
+
+    const title = document.createElement("h3");
+    title.textContent = entry.title;
+    header.append(metaRow, title);
+
+    let tagsRow = null;
+    const entryTags = entry.tags || [];
+    if (entryTags.length) {
+      tagsRow = document.createElement("div");
+      tagsRow.className = "entry-card-tags";
+      entryTags.slice(0, 3).forEach((tag) => {
+        const pill = createEntryTag(tag);
+        pill.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+        tagsRow.append(pill);
+      });
+    }
 
     const content = document.createElement("div");
     content.className = "entry-card-content";
-    const body = document.createElement("div");
-    body.className = "entry-body";
-    appendEntryBody(body, entry.body);
-    content.append(body);
-    if (entry.url) {
-      const links = document.createElement("div");
-      links.className = "entry-links";
-      appendEntryLinks(links, entry.url);
-      content.append(links);
+
+    const excerpt = document.createElement("p");
+    excerpt.className = "entry-card-excerpt";
+    excerpt.textContent = createExcerptText(entry.body, 85);
+    content.append(excerpt);
+
+    article.addEventListener("click", (event) => {
+      if (!event.target.closest("button, a")) {
+        openEntryReader(entry, index);
+      }
+    });
+
+    if (entry.image_url) {
+      const bannerThumb = document.createElement("div");
+      bannerThumb.className = "entry-card-banner";
+      const bannerImg = document.createElement("img");
+      bannerImg.src = entry.image_url;
+      bannerImg.alt = entry.title || "Note banner";
+      bannerImg.loading = "lazy";
+      bannerThumb.append(bannerImg);
+      article.append(bannerThumb);
     }
 
-    const read = document.createElement("button");
-    read.type = "button";
-    read.className = "entry-preview-action";
-    read.textContent = entry.entry_type === "note" ? "Read note →" : "Open link entry →";
-    read.addEventListener("click", (event) => {
-      event.stopPropagation();
-      openEntryReader(entry, index);
-    });
-    article.addEventListener("click", (event) => {
-      if (!event.target.closest("button, a")) openEntryReader(entry, index);
-    });
-    article.append(header, tags, content, read);
+    article.append(header);
+    if (tagsRow) article.append(tagsRow);
+    article.append(content);
+
     elements.entryList.append(article);
   });
 }
 
 function buildEntryParameters(page) {
   const parameters = new URLSearchParams({ page: String(page) });
-  const query = elements.entryQuery.value.trim();
+  const query = elements.entryQuery ? elements.entryQuery.value.trim() : "";
   if (query) parameters.set("query", query);
-  if (elements.entryTypeFilter.value) parameters.set("entry_type", elements.entryTypeFilter.value);
+  if (elements.entryTypeFilter && elements.entryTypeFilter.value) {
+    parameters.set("entry_type", elements.entryTypeFilter.value);
+  }
   if (state.entryTagFilter) parameters.set("tag", state.entryTagFilter);
-  if (elements.entryYearFilter.value) parameters.set("year", elements.entryYearFilter.value);
-  if (elements.entryMonthFilter.value) parameters.set("month", elements.entryMonthFilter.value);
+  if (state.notesCurrentView === "archive") {
+    parameters.set("archived", "true");
+  } else if (state.notesCurrentView === "drafts") {
+    parameters.set("status", "draft");
+  } else {
+    parameters.set("status", "published");
+  }
+  if (state.notesTimelineFilter) {
+    if (state.notesTimelineFilter.year) parameters.set("year", String(state.notesTimelineFilter.year));
+    if (state.notesTimelineFilter.month) parameters.set("month", String(state.notesTimelineFilter.month));
+  } else {
+    if (elements.entryYearFilter && elements.entryYearFilter.value) parameters.set("year", elements.entryYearFilter.value);
+    if (elements.entryMonthFilter && elements.entryMonthFilter.value) parameters.set("month", elements.entryMonthFilter.value);
+  }
   return parameters;
 }
 
@@ -3222,7 +5789,13 @@ async function loadEntries(page = 1) {
     state.entryResults = response.results || [];
     state.entryPage = Number(response.page || page);
     state.entryTotalPages = Number(response.total_pages || 1);
+    if (page > 1 && state.entryResults.length === 0 && state.entryTotalPages < page) {
+      await loadEntries(Math.max(1, state.entryTotalPages));
+      return;
+    }
     renderEntries(state.entryResults);
+    renderNotesTags().catch(() => {});
+    renderNotesTimeline().catch(() => {});
     renderPagination(
       elements.entryPagination,
       Number(response.page || page),
@@ -3237,15 +5810,26 @@ async function loadEntries(page = 1) {
 
 function openEntryReader(entry, index = null, { preserveScroll = false } = {}) {
   if (!preserveScroll) state.entryReturnScroll = window.scrollY;
+  state.readerEditing = false;
+  elements.entryReader.classList.remove("is-editing");
   state.entryReaderEntry = entry;
   state.entryReaderIndex = index ?? state.entryResults.findIndex(
     (item) => item.entry_id === entry.entry_id,
   );
+  try {
+    sessionStorage.setItem("nope_open_entry_id", String(entry.entry_id));
+  } catch (_) {}
   setAuxiliaryView("entry-reader");
   elements.entryReaderBack.textContent = entry.entry_type === "link"
     ? "← Links"
     : "← Notes";
-  elements.entryReaderType.textContent = entry.entry_type;
+  const isDraft = entry.status === "draft";
+  elements.entryReaderType.textContent = isDraft
+    ? `Draft ${entry.entry_type === "link" ? "Link" : "Note"}`
+    : entry.entry_type;
+  if (elements.entryReaderPublish) {
+    elements.entryReaderPublish.classList.toggle("is-hidden", !isDraft);
+  }
   elements.entryReaderTitle.textContent = entry.title;
   elements.entryReaderDate.textContent = entryWasEdited(entry)
     ? `Updated ${formatEntryDateTime(entry.updated_at)}`
@@ -3254,6 +5838,19 @@ function openEntryReader(entry, index = null, { preserveScroll = false } = {}) {
   (entry.tags || []).forEach((tag) => {
     elements.entryReaderTags.append(createEntryTag(tag));
   });
+
+  // 16:9 Banner Image (matched to reading text width)
+  if (entry.image_url) {
+    elements.entryBannerImg.src = entry.image_url;
+    elements.entryBannerImg.alt = entry.title || "Note banner";
+    elements.entryBannerView.classList.remove("is-hidden");
+    elements.entryBannerWrapper?.classList.add("has-banner");
+  } else {
+    elements.entryBannerView.classList.add("is-hidden");
+    elements.entryBannerImg.src = "";
+    elements.entryBannerWrapper?.classList.remove("has-banner");
+  }
+
   elements.entryReaderBody.replaceChildren();
   appendEntryBody(elements.entryReaderBody, entry.body);
   appendEntryLinks(elements.entryReaderLinks, entry.url, async (removedUrl) => {
@@ -3270,6 +5867,7 @@ function openEntryReader(entry, index = null, { preserveScroll = false } = {}) {
           body: entry.body || null,
           url: newUrlValue,
           tags: (entry.tags || []).map((t) => t.name),
+          image_url: entry.image_url || null,
         }),
       });
       const updated = response.entry;
@@ -3293,12 +5891,18 @@ function openEntryReader(entry, index = null, { preserveScroll = false } = {}) {
     && state.entryReaderIndex >= state.entryResults.length - 1
   );
   window.scrollTo({ top: 0, behavior: "auto" });
+  updateGreyContext();
 }
 
 function closeEntryReader() {
+  state.entryReaderEntry = null;
+  try {
+    sessionStorage.removeItem("nope_open_entry_id");
+  } catch (_) {}
   setAuxiliaryView("entries");
   renderEntries(state.entryResults);
   window.scrollTo({ top: state.entryReturnScroll, behavior: "auto" });
+  updateGreyContext();
 }
 
 async function navigateEntryReader(direction) {
@@ -3499,80 +6103,258 @@ async function loadStorage() {
   }
 }
 
-function updateBlogStats() {
-  const bodyText = elements.entryBody?.value || "";
+function updateReaderBlogStats() {
+  const bodyText = elements.readerBodyInput?.value || "";
   const words = bodyText.trim().split(/\s+/).filter(Boolean).length;
-  const wordCountEl = document.querySelector("#blog-word-count");
-  const readTimeEl = document.querySelector("#blog-read-time");
-  if (wordCountEl) {
-    wordCountEl.textContent = `${words} ${words === 1 ? "word" : "words"}`;
+  if (elements.readerWordCount) {
+    elements.readerWordCount.textContent = `${words} ${words === 1 ? "word" : "words"}`;
   }
-  if (readTimeEl) {
+  if (elements.readerReadTime) {
     const minutes = Math.max(1, Math.ceil(words / 200));
-    readTimeEl.textContent = `${minutes} min read`;
+    elements.readerReadTime.textContent = `${minutes} min read`;
   }
 }
 
-function openEntryDialog(entry = null) {
-  state.editingEntryId = entry?.entry_id || null;
-  elements.entryForm.reset();
-  elements.entryType.value = entry?.entry_type || "note";
-  elements.entryTitle.value = entry?.title || "";
-  elements.entryBody.value = entry?.body || "";
-  elements.entryUrl.value = entry?.url || "";
-  elements.entryTags.value = (entry?.tags || []).map((tag) => tag.name).join(", ");
-  elements.entryDialogTitle.textContent = entry ? "Edit note" : "New note";
-  updateEntryUrlField();
-  updateBlogStats();
-  elements.entryDialog.showModal();
-  elements.entryTitle.focus();
+function renderReaderTagChips() {
+  if (!elements.readerTagsChips) return;
+  elements.readerTagsChips.replaceChildren();
+  state.readerTags.forEach((tagName, idx) => {
+    const chip = document.createElement("span");
+    chip.className = "reader-tag-chip";
+    const text = document.createElement("span");
+    text.textContent = tagName;
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "reader-tag-chip-remove";
+    removeBtn.setAttribute("aria-label", `Remove tag ${tagName}`);
+    removeBtn.textContent = "×";
+    removeBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      state.readerTags.splice(idx, 1);
+      renderReaderTagChips();
+    });
+    chip.append(text, removeBtn);
+    elements.readerTagsChips.append(chip);
+  });
 }
 
-function updateEntryUrlField() {
-  if (elements.entryUrlField) {
-    elements.entryUrlField.classList.remove("is-hidden");
+function addReaderTagFromInput() {
+  if (!elements.readerTagInput) return;
+  const raw = elements.readerTagInput.value.replace(/,/g, " ").trim();
+  if (raw) {
+    const parts = raw.split(/\s+/).filter(Boolean);
+    parts.forEach((tag) => {
+      if (!state.readerTags.some((t) => t.toLowerCase() === tag.toLowerCase())) {
+        state.readerTags.push(tag);
+      }
+    });
+    elements.readerTagInput.value = "";
+    renderReaderTagChips();
   }
 }
 
-async function saveEntry(event) {
-  event.preventDefault();
-  const editing = Boolean(state.editingEntryId);
-  elements.saveEntry.disabled = true;
-  elements.saveEntry.textContent = "Saving…";
+function renderReaderBannerEditor() {
+  if (!elements.entryBannerPreviewBox) return;
+  const hasBanner = Boolean(state.readerBannerUrl);
+  elements.entryBannerWrapper?.classList.toggle("has-banner", hasBanner);
+  if (hasBanner) {
+    elements.entryBannerPreviewBox.classList.remove("is-hidden");
+    elements.entryBannerPreviewImg.src = state.readerBannerUrl;
+    elements.entryBannerPickerBar?.classList.add("is-hidden");
+    elements.readerAddBannerBtn?.classList.add("is-hidden");
+  } else {
+    elements.entryBannerPreviewBox.classList.add("is-hidden");
+    elements.entryBannerPreviewImg.src = "";
+    elements.entryBannerPickerBar?.classList.add("is-hidden");
+    elements.readerAddBannerBtn?.classList.remove("is-hidden");
+  }
+}
+
+let lastBodyInputLength = 0;
+function autoResizeReaderBody() {
+  const el = elements.readerBodyInput;
+  if (!el) return;
+
+  // Modern browsers (Chrome / Edge): native field-sizing without reflow or scroll jumps
+  if (window.CSS && CSS.supports && CSS.supports("field-sizing", "content")) {
+    el.style.height = "";
+    return;
+  }
+
+  const currentLength = el.value.length;
+  // When typing or pressing Enter, text is growing: expand directly without collapsing height
+  if (currentLength >= lastBodyInputLength) {
+    lastBodyInputLength = currentLength;
+    if (el.scrollHeight > el.clientHeight) {
+      el.style.height = `${Math.max(360, el.scrollHeight)}px`;
+    }
+    return;
+  }
+
+  // Text was deleted: adjust height while preserving exact scroll position
+  lastBodyInputLength = currentLength;
+  const prevScrollY = window.scrollY || document.documentElement.scrollTop;
+  el.style.height = "auto";
+  const newHeight = Math.max(360, el.scrollHeight);
+  el.style.height = `${newHeight}px`;
+  window.scrollTo({ top: prevScrollY, behavior: "instant" });
+}
+
+async function uploadBannerFile(file) {
+  if (!file) return;
   try {
-    const rawUrl = elements.entryUrl.value.trim();
-    const rawBody = elements.entryBody.value.trim();
-    const entryType = rawUrl && !rawBody ? "link" : "note";
+    showNotice("Uploading 16:9 banner…");
+    const response = await fetch("/entries/upload-banner", {
+      method: "POST",
+      headers: {
+        "Content-Type": file.type || "application/octet-stream",
+        "X-Filename": encodeURIComponent(file.name || "banner.jpg"),
+      },
+      body: file,
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Upload failed." }));
+      throw new Error(err.detail || "Upload failed.");
+    }
+    const data = await response.json();
+    state.readerBannerUrl = data.url;
+    renderReaderBannerEditor();
+    showNotice("Banner image uploaded.");
+  } catch (err) {
+    showNotice(err.message);
+  }
+}
+
+function openEntryReaderForNew() {
+  state.entryReaderEntry = null;
+  state.entryReaderIndex = -1;
+  setAuxiliaryView("entry-reader");
+  setReaderEditMode(true, true);
+  window.scrollTo({ top: 0, behavior: "auto" });
+  updateGreyContext();
+}
+
+function setReaderEditMode(isEditing, isNew = false) {
+  state.readerEditing = isEditing;
+  const savedScroll = window.scrollY;
+  elements.entryReader.classList.toggle("is-editing", isEditing);
+
+  if (isEditing) {
+    state.editingEntryId = isNew ? null : (state.entryReaderEntry?.entry_id || null);
+    state.editingEntryStatus = isNew ? "draft" : (state.entryReaderEntry?.status || "published");
+    state.readerBannerUrl = isNew ? null : (state.entryReaderEntry?.image_url || null);
+    elements.readerTitleInput.value = isNew ? "" : (state.entryReaderEntry?.title || "");
+    elements.readerBodyInput.value = isNew ? "" : (state.entryReaderEntry?.body || "");
+    elements.readerEditDate.textContent = isNew
+      ? "New Draft"
+      : (state.entryReaderEntry?.status === "draft"
+        ? "Draft"
+        : (entryWasEdited(state.entryReaderEntry)
+          ? `Updated ${formatEntryDateTime(state.entryReaderEntry.updated_at)}`
+          : formatEntryDateTime(state.entryReaderEntry.created_at)));
+
+    state.readerTags = (state.entryReaderEntry?.tags || []).map((t) => typeof t === "string" ? t : t.name);
+    renderReaderTagChips();
+    renderReaderBannerEditor();
+    updateReaderBlogStats();
+    autoResizeReaderBody();
+
+    if (elements.readerSaveDraft) {
+      elements.readerSaveDraft.textContent = (!isNew && state.editingEntryStatus === "published")
+        ? "Save as draft"
+        : "Save draft";
+    }
+    if (elements.readerSavePublish) {
+      elements.readerSavePublish.textContent = (!isNew && state.editingEntryStatus === "published")
+        ? "Save changes"
+        : "Publish to Journal";
+    }
+
+    if (isNew) {
+      setTimeout(() => {
+        autoResizeReaderBody();
+        if (!elements.readerTitleInput.value) {
+          elements.readerTitleInput.focus({ preventScroll: true });
+        } else {
+          elements.readerBodyInput.focus({ preventScroll: true });
+        }
+      }, 60);
+    } else {
+      setTimeout(() => {
+        autoResizeReaderBody();
+        elements.readerBodyInput.focus({ preventScroll: true });
+        window.scrollTo({ top: savedScroll, behavior: "instant" });
+      }, 60);
+    }
+  } else {
+    if (state.entryReaderEntry) {
+      openEntryReader(state.entryReaderEntry, state.entryReaderIndex, { preserveScroll: true });
+      window.scrollTo({ top: savedScroll, behavior: "instant" });
+    } else {
+      closeEntryReader();
+    }
+  }
+  updateGreyContext();
+}
+
+async function saveReaderEntry(targetStatus = "published") {
+  const title = elements.readerTitleInput.value.trim();
+  if (!title) {
+    showNotice("Please enter a title for your note.");
+    elements.readerTitleInput.focus();
+    return;
+  }
+  const body = elements.readerBodyInput.value.trim();
+  const editing = Boolean(state.editingEntryId);
+  const isSavingDraft = targetStatus === "draft";
+  const activeBtn = isSavingDraft ? elements.readerSaveDraft : elements.readerSavePublish;
+  const originalText = activeBtn ? activeBtn.textContent : "";
+  if (activeBtn) {
+    activeBtn.disabled = true;
+    activeBtn.textContent = isSavingDraft ? "Saving draft…" : "Publishing…";
+  }
+  try {
+    const existingUrl = state.editingEntryId && state.entryReaderEntry ? (state.entryReaderEntry.url || null) : null;
+    const entryType = existingUrl && !body ? "link" : "note";
+    const payload = {
+      entry_type: entryType,
+      title: title,
+      body: body || null,
+      url: existingUrl,
+      tags: state.readerTags,
+      status: targetStatus,
+      image_url: state.readerBannerUrl || null,
+    };
     const response = await fetchJSON(
       editing ? `/entries/${state.editingEntryId}` : "/entries",
       {
         method: editing ? "PUT" : "POST",
-        body: JSON.stringify({
-          entry_type: entryType,
-          title: elements.entryTitle.value,
-          body: elements.entryBody.value || null,
-          url: rawUrl || null,
-          tags: elements.entryTags.value.split(",").map((tag) => tag.trim()).filter(Boolean),
-        }),
+        body: JSON.stringify(payload),
       },
     );
-    elements.entryDialog.close();
-    showNotice(editing ? "Note updated." : "Note saved.");
-    if (editing && state.entryReaderEntry) {
-      const updated = response.entry;
-      const index = state.entryResults.findIndex(
-        (entry) => entry.entry_id === updated.entry_id,
-      );
-      if (index >= 0) state.entryResults[index] = updated;
-      openEntryReader(updated, index, { preserveScroll: true });
+    const updated = response.entry;
+    state.entryReaderEntry = updated;
+    state.editingEntryId = updated.entry_id;
+    state.editingEntryStatus = updated.status;
+    state.readerBannerUrl = updated.image_url || null;
+    showNotice(isSavingDraft ? "Draft saved." : (editing ? "Note updated." : "Note published to Journal."));
+    renderNotesTags().catch(() => {});
+    renderNotesTimeline().catch(() => {});
+    if (editing) {
+      const idx = state.entryResults.findIndex((e) => e.entry_id === updated.entry_id);
+      if (idx >= 0) state.entryResults[idx] = updated;
     } else {
       await loadEntries(1);
     }
+    setReaderEditMode(false);
+    updateGreyContext();
   } catch (error) {
     showNotice(error.message);
   } finally {
-    elements.saveEntry.disabled = false;
-    elements.saveEntry.textContent = "Save note";
+    if (activeBtn) {
+      activeBtn.disabled = false;
+      activeBtn.textContent = originalText;
+    }
   }
 }
 
@@ -3587,10 +6369,35 @@ elements.form.addEventListener("submit", (event) => {
   searchMovies(elements.query.value);
 });
 
-elements.viewModeButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    setViewMode(button.dataset.layout);
+if (elements.nopeModeToggle) {
+  elements.nopeModeToggle.addEventListener("click", () => toggleNopeMode());
+}
+
+if (elements.nopeUndoCounter) {
+  elements.nopeUndoCounter.addEventListener("click", (event) => {
+    event.stopPropagation();
+    handleNopeUndo();
   });
+}
+
+window.addEventListener("keydown", (event) => {
+  const activeTag = document.activeElement?.tagName?.toLowerCase();
+  const isInput = activeTag === "input" || activeTag === "textarea" || activeTag === "select" || document.activeElement?.isContentEditable;
+  const isModalOpen = Boolean(elements.profileDialog?.open || !elements.detailPage?.classList.contains("is-hidden") || state.readerEditing);
+
+  if (!isInput && !isModalOpen && (event.key === "n" || event.key === "N") && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    if (state.currentView === "discover") {
+      event.preventDefault();
+      toggleNopeMode();
+    }
+    return;
+  }
+
+  if (state.nopeMode && state.currentView === "discover" && !isInput && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+    event.preventDefault();
+    handleNopeUndo();
+    return;
+  }
 });
 
 if (elements.notesSearchInput) {
@@ -3615,7 +6422,7 @@ if (elements.clearNotesSearch) {
 if (elements.refreshFeed) {
   elements.refreshFeed.addEventListener("click", () => {
     clearDiscoveryCache();
-    runDiscoverySearch();
+    runDiscoverySearch({ forceRefresh: true });
   });
 }
 
@@ -3625,6 +6432,24 @@ elements.navLinks.forEach((button) => {
       resetEntryFiltersToCurrent();
     }
     loadShelf(button.dataset.view);
+  });
+});
+
+elements.masterTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    const tabType = tab.dataset.masterTab;
+    if (tabType === "discover") {
+      loadShelf("discover");
+    } else if (tabType === "library") {
+      let target = "new_discovery";
+      try {
+        target = localStorage.getItem("nope_last_library_shelf") || "new_discovery";
+      } catch {}
+      loadShelf(target);
+    } else if (tabType === "notes") {
+      resetEntryFiltersToCurrent();
+      loadShelf("entries");
+    }
   });
 });
 
@@ -3647,13 +6472,12 @@ elements.modeButtons.forEach((button) => {
 
 elements.refreshDiscovery.addEventListener("click", () => {
   clearDiscoveryCache();
-  runDiscoverySearch();
+  runDiscoverySearch({ forceRefresh: true });
 });
 
 elements.advancedForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  clearDiscoveryCache();
-  runDiscoverySearch();
+  runDiscoverySearch({ forceRefresh: false });
 });
 
 elements.resetFilters.addEventListener("click", () => {
@@ -3698,6 +6522,12 @@ elements.updateProfile.addEventListener("click", () => {
   openProfileDialog("edit");
 });
 
+if (elements.quickUpdateProfile) {
+  elements.quickUpdateProfile.addEventListener("click", () => {
+    openProfileDialog("edit");
+  });
+}
+
 elements.deleteProfile.addEventListener("click", () => {
   deleteSelectedProfile().catch((error) => showNotice(error.message));
 });
@@ -3711,7 +6541,19 @@ elements.dialogClose.addEventListener("click", () => {
   navigateBackFromMovie();
 });
 
+elements.detailPrevBtn?.addEventListener("click", () => {
+  navigatePrevMovie();
+});
+
+elements.detailNextBtn?.addEventListener("click", () => {
+  navigateNextMovie();
+});
+
 elements.returnToOrigin.addEventListener("click", () => {
+  if (state.savedSearchSnapshot) {
+    restoreSearchSnapshot();
+    return;
+  }
   if (!state.searchOriginMovie) return;
   const originMovieId = state.searchOriginMovie.id;
   setSearchOriginMovie();
@@ -3750,34 +6592,150 @@ elements.notesPanel.addEventListener("toggle", () => {
   label.textContent = elements.notesPanel.open ? "Minimize" : "Open";
 });
 
-elements.newEntry.addEventListener("click", () => openEntryDialog());
-elements.cancelEntry.addEventListener("click", () => elements.entryDialog.close());
-elements.entryType.addEventListener("change", updateEntryUrlField);
-elements.entryForm.addEventListener("submit", saveEntry);
-elements.entryBody.addEventListener("input", updateBlogStats);
-elements.entryForm.addEventListener("keydown", (event) => {
-  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-    event.preventDefault();
-    elements.entryForm.requestSubmit();
+elements.newEntry.addEventListener("click", () => openEntryReaderForNew());
+elements.entryReaderBack.addEventListener("click", () => closeEntryReader());
+elements.readerCancel.addEventListener("click", () => {
+  if (!state.editingEntryId) {
+    closeEntryReader();
+  } else {
+    setReaderEditMode(false);
   }
+});
+elements.readerSaveDraft.addEventListener("click", () => saveReaderEntry("draft"));
+elements.readerSavePublish.addEventListener("click", () => saveReaderEntry("published"));
+elements.readerBodyInput.addEventListener("input", () => {
+  autoResizeReaderBody();
+  updateReaderBlogStats();
+});
+window.addEventListener("resize", autoResizeReaderBody);
+
+elements.readerTagInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === ",") {
+    event.preventDefault();
+    addReaderTagFromInput();
+  }
+});
+elements.readerTagInput.addEventListener("blur", addReaderTagFromInput);
+
+elements.readerAddBannerBtn?.addEventListener("click", () => {
+  elements.entryBannerPickerBar?.classList.toggle("is-hidden");
+});
+elements.readerCloseBannerPickerBtn?.addEventListener("click", () => {
+  elements.entryBannerPickerBar?.classList.add("is-hidden");
+});
+
+elements.readerUploadBannerBtn?.addEventListener("click", () => {
+  elements.readerBannerFileInput?.click();
+});
+elements.readerBannerFileInput?.addEventListener("change", (e) => {
+  if (e.target.files && e.target.files[0]) {
+    uploadBannerFile(e.target.files[0]);
+  }
+});
+elements.readerUrlBannerBtn?.addEventListener("click", () => {
+  const current = state.readerBannerUrl || "";
+  const input = window.prompt("Enter 16:9 banner image URL:", current);
+  if (input !== null) {
+    const trimmed = input.trim();
+    state.readerBannerUrl = trimmed || null;
+    renderReaderBannerEditor();
+  }
+});
+elements.readerChangeBannerBtn?.addEventListener("click", () => {
+  elements.readerBannerFileInput?.click();
+});
+elements.readerRemoveBannerBtn?.addEventListener("click", () => {
+  state.readerBannerUrl = null;
+  renderReaderBannerEditor();
+});
+
+[elements.readerTitleInput, elements.readerBodyInput].forEach((el) => {
+  el?.addEventListener("keydown", (event) => {
+    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      event.preventDefault();
+      saveReaderEntry("published");
+    }
+  });
 });
 elements.entryFilters.addEventListener("submit", (event) => {
   event.preventDefault();
   loadEntries(1);
 });
+if (elements.entryQuery) {
+  let entrySearchTimer = null;
+  elements.entryQuery.addEventListener("input", () => {
+    clearTimeout(entrySearchTimer);
+    entrySearchTimer = setTimeout(() => loadEntries(1), 220);
+  });
+}
 elements.entryYearFilter.addEventListener("change", () => {
   populateJournalMonths(elements.entryYearFilter.value);
 });
 elements.clearEntryFilters.addEventListener("click", () => {
   elements.entryFilters.reset();
   state.entryTagFilter = "";
+  state.notesTimelineFilter = null;
+  state.notesCurrentView = "all";
+  updateNotesNavActive();
   populateJournalMonths();
   loadEntries(1);
 });
 
+if (elements.notesViewAll) {
+  elements.notesViewAll.addEventListener("click", () => {
+    state.notesCurrentView = "all";
+    state.entryTagFilter = "";
+    state.notesTimelineFilter = null;
+    updateNotesNavActive();
+    loadEntries(1);
+  });
+}
+
+if (elements.notesViewDrafts) {
+  elements.notesViewDrafts.addEventListener("click", () => {
+    state.notesCurrentView = "drafts";
+    state.entryTagFilter = "";
+    state.notesTimelineFilter = null;
+    updateNotesNavActive();
+    loadEntries(1);
+  });
+}
+
+if (elements.notesViewArchive) {
+  elements.notesViewArchive.addEventListener("click", () => {
+    state.notesCurrentView = "archive";
+    state.entryTagFilter = "";
+    state.notesTimelineFilter = null;
+    updateNotesNavActive();
+    loadEntries(1);
+  });
+}
+
 elements.entryReaderBack.addEventListener("click", closeEntryReader);
+if (elements.entryReaderPublish) {
+  elements.entryReaderPublish.addEventListener("click", async () => {
+    if (!state.entryReaderEntry || state.entryReaderEntry.status !== "draft") return;
+    try {
+      elements.entryReaderPublish.disabled = true;
+      elements.entryReaderPublish.textContent = "Publishing…";
+      const response = await fetchJSON(`/entries/${state.entryReaderEntry.entry_id}/publish`, {
+        method: "PUT",
+      });
+      const published = response.entry;
+      state.entryReaderEntry = published;
+      showNotice("Published note to Journal!");
+      renderNotesTags().catch(() => {});
+      openEntryReader(published, state.entryReaderIndex, { preserveScroll: true });
+    } catch (err) {
+      showNotice(err.message);
+    } finally {
+      elements.entryReaderPublish.disabled = false;
+      elements.entryReaderPublish.textContent = "Publish to Journal";
+    }
+  });
+}
 elements.entryReaderEdit.addEventListener("click", () => {
-  if (state.entryReaderEntry) openEntryDialog(state.entryReaderEntry);
+  if (state.entryReaderEntry) setReaderEditMode(true);
 });
 elements.entryReaderPrevious.addEventListener("click", () => {
   navigateEntryReader(-1).catch((error) => showNotice(error.message));
@@ -3850,26 +6808,860 @@ elements.footerViews.forEach((button) => {
   });
 });
 
+// ============================================================================
+// Grey: In-App Cinema Companion
+// ============================================================================
+
+function updateGreyContext() {
+  if (!elements.greyContextView || !elements.greyContextDetail) return;
+
+  if (state.readerEditing && !elements.entryReader?.classList.contains("is-hidden")) {
+    const isDraft = state.editingEntryStatus === "draft";
+    elements.greyContextView.textContent = isDraft ? "Draft" : "Journal";
+    const title = elements.readerTitleInput?.value?.trim() || "Untitled Note";
+    elements.greyContextDetail.textContent = title;
+    if (elements.greyStatusText) elements.greyStatusText.textContent = isDraft ? "Writing draft note" : "Writing journal note";
+    return;
+  }
+
+  if (state.entryReaderEntry && !elements.entryReader?.classList.contains("is-hidden")) {
+    const isDraft = state.entryReaderEntry.status === "draft";
+    elements.greyContextView.textContent = isDraft ? "Draft" : "Journal";
+    elements.greyContextDetail.textContent = state.entryReaderEntry.title || "Untitled";
+    if (elements.greyStatusText) elements.greyStatusText.textContent = isDraft ? "Reading draft note" : "Reading journal entry";
+    return;
+  }
+
+  if (state.selectedMovie) {
+    elements.greyContextView.textContent = "Movie";
+    const year = state.selectedMovie.release_date ? ` (${state.selectedMovie.release_date.slice(0, 4)})` : "";
+    elements.greyContextDetail.textContent = `${state.selectedMovie.title || state.selectedMovie.original_title || "Selected"}${year}`;
+    if (elements.greyStatusText) elements.greyStatusText.textContent = "Inspecting movie details";
+    return;
+  }
+
+  const view = state.currentView || "discover";
+  if (view === "discover") {
+    elements.greyContextView.textContent = "Discover";
+    elements.greyContextDetail.textContent = "Browsing new titles";
+    if (elements.greyStatusText) elements.greyStatusText.textContent = "Perched in Discovery";
+  } else if (view === "entries" || view === "movie-notes") {
+    elements.greyContextView.textContent = "Notes";
+    elements.greyContextDetail.textContent = state.entryTagFilter ? `Tag: ${state.entryTagFilter}` : "Personal observations";
+    if (elements.greyStatusText) elements.greyStatusText.textContent = "Reading your notes";
+  } else {
+    elements.greyContextView.textContent = "Library";
+    const shelfName = view.replace(/_/g, " ");
+    elements.greyContextDetail.textContent = `Shelf: ${shelfName}`;
+    if (elements.greyStatusText) elements.greyStatusText.textContent = `Browsing ${shelfName}`;
+  }
+}
+
+function toggleGreyDrawer(forceOpen) {
+  if (!elements.greyDrawer) return;
+  const isCurrentlyCollapsed = elements.greyDrawer.classList.contains("is-collapsed");
+  const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : isCurrentlyCollapsed;
+
+  if (shouldOpen) {
+    document.documentElement.classList.add("grey-docked-open");
+    document.body.classList.add("grey-docked-open");
+    elements.greyDrawer.classList.remove("is-collapsed");
+    elements.greyDrawer.setAttribute("aria-hidden", "false");
+    elements.greyToggle?.setAttribute("aria-expanded", "true");
+    updateGreyContext();
+    elements.greyInput?.focus();
+    if (elements.greyMessages) {
+      elements.greyMessages.scrollTop = elements.greyMessages.scrollHeight;
+    }
+  } else {
+    document.documentElement.classList.remove("grey-docked-open");
+    document.body.classList.remove("grey-docked-open");
+    elements.greyDrawer.classList.add("is-collapsed");
+    elements.greyDrawer.setAttribute("aria-hidden", "true");
+    elements.greyToggle?.setAttribute("aria-expanded", "false");
+  }
+}
+
+let greyChatHistory = [];
+
+function getTodaySessionDate() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: JOURNAL_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function saveGreyDailySession() {
+  try {
+    const sessionData = {
+      date: getTodaySessionDate(),
+      history: greyChatHistory,
+      messages: [],
+    };
+    if (elements.greyMessages) {
+      elements.greyMessages.querySelectorAll(".grey-msg").forEach((msgEl) => {
+        const isBot = msgEl.classList.contains("grey-msg-bot");
+        const p = msgEl.querySelector(".grey-bubble > p");
+        const sub = msgEl.querySelector(".grey-subtext");
+        if (p) {
+          sessionData.messages.push({
+            role: isBot ? "bot" : "user",
+            text: p.textContent,
+            subtext: sub ? sub.textContent : null,
+          });
+        }
+      });
+    }
+    localStorage.setItem("nope_grey_daily_session", JSON.stringify(sessionData));
+  } catch (_) {}
+}
+
+function loadGreyDailySession() {
+  try {
+    const raw = localStorage.getItem("nope_grey_daily_session");
+    if (!raw) return false;
+    const sessionData = JSON.parse(raw);
+    const today = getTodaySessionDate();
+    if (sessionData.date !== today || !Array.isArray(sessionData.messages) || sessionData.messages.length <= 1) {
+      localStorage.removeItem("nope_grey_daily_session");
+      return false;
+    }
+    greyChatHistory = Array.isArray(sessionData.history) ? sessionData.history : [];
+    if (elements.greyMessages && sessionData.messages.length > 0) {
+      elements.greyMessages.replaceChildren();
+      sessionData.messages.forEach((m) => {
+        appendGreyMessage(m.role, m.text, m.subtext, null, { skipSave: true });
+      });
+      return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+function appendGreyMessage(role, text, subtext, pills, { skipSave = false, skillTag = null } = {}) {
+  if (!elements.greyMessages) return;
+  const msgEl = document.createElement("div");
+  msgEl.className = `grey-msg grey-msg-${role}`;
+
+  const bubble = document.createElement("div");
+  bubble.className = "grey-bubble";
+
+  if (skillTag) {
+    const badge = document.createElement("span");
+    badge.className = "grey-skill-badge";
+    badge.textContent = skillTag;
+    bubble.append(badge);
+  }
+
+  const rawText = String(text || "").trim();
+  const paragraphs = rawText.split(/\n\s*\n+/);
+  if (paragraphs.length === 0 || !rawText) {
+    const p = document.createElement("p");
+    p.textContent = rawText;
+    bubble.append(p);
+  } else {
+    paragraphs.forEach((para) => {
+      const trimmedPara = para.trim();
+      if (!trimmedPara) return;
+      const p = document.createElement("p");
+      const formattedLines = trimmedPara.split(/\r?\n/).map((line) => {
+        let formatted = formatRichText(line);
+        formatted = formatted.replace(/\bVerdict:\s*<strong>NOPE<\/strong>/gi, 'Verdict: <strong class="grey-verdict-nope">NOPE</strong>');
+        formatted = formatted.replace(/\bVerdict:\s*<strong>YES<\/strong>/gi, 'Verdict: <strong class="grey-verdict-yes">YES</strong>');
+        return formatted;
+      });
+      p.innerHTML = formattedLines.join("<br>");
+      bubble.append(p);
+    });
+  }
+
+  if (subtext) {
+    const sub = document.createElement("p");
+    sub.className = "grey-subtext";
+    sub.textContent = subtext;
+    bubble.append(sub);
+  }
+
+  msgEl.append(bubble);
+
+  if (Array.isArray(pills) && pills.length > 0) {
+    const pillsWrap = document.createElement("div");
+    pillsWrap.className = "grey-quick-prompts";
+    pills.forEach((pill) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "grey-quick-btn";
+      btn.textContent = pill.label;
+      btn.addEventListener("click", () => {
+        if (pill.action === "prompt" && pill.payload?.prompt) {
+          sendGreyMessage(pill.payload.prompt);
+        } else if (pill.action === "open_movie" && pill.payload?.tmdb_id) {
+          openMovieDetails(pill.payload.tmdb_id);
+        } else if (pill.action === "save_shelf" && pill.payload?.name) {
+          handleGreySaveShelf(pill.payload.name);
+        } else if (pill.action === "open_entry" && pill.payload?.entry_id) {
+          fetchJSON(`/entries/${pill.payload.entry_id}`).then((res) => {
+            if (res && res.entry) {
+              openEntryReader(res.entry);
+            }
+          }).catch((err) => showNotice(err.message));
+        } else if (pill.payload?.prompt) {
+          sendGreyMessage(pill.payload.prompt);
+        }
+      });
+      pillsWrap.append(btn);
+    });
+    msgEl.append(pillsWrap);
+  }
+
+  elements.greyMessages.append(msgEl);
+  elements.greyMessages.scrollTop = elements.greyMessages.scrollHeight;
+
+  if (!skipSave) {
+    saveGreyDailySession();
+  }
+}
+
+function handleGreyFilterAction(params) {
+  if (!params) return;
+
+  // 1. Genres
+  if (Array.isArray(params.genres) && params.genres.length > 0) {
+    const matchedGenreIds = GENRE_OPTIONS
+      .filter(([id, name]) => params.genres.some((g) => g.toLowerCase() === name.toLowerCase()))
+      .map(([id]) => Number(id));
+
+    if (matchedGenreIds.length > 0) {
+      state.libSelectedGenres = new Set(matchedGenreIds);
+      if (elements.libGenresCloud) {
+        elements.libGenresCloud.querySelectorAll(".filter-chip").forEach((chip) => {
+          const gId = Number(chip.dataset.genreId);
+          chip.classList.toggle("is-active", state.libSelectedGenres.has(gId));
+        });
+      }
+    }
+  }
+
+  // 2. Languages
+  if (Array.isArray(params.languages) && params.languages.length > 0) {
+    const langs = params.languages.map((l) => l.toLowerCase());
+    state.libSelectedLanguages = new Set(langs);
+    if (elements.libLanguagesCloud) {
+      elements.libLanguagesCloud.querySelectorAll(".filter-chip").forEach((chip) => {
+        const langCode = (chip.dataset.languageCode || chip.textContent || "").toLowerCase();
+        chip.classList.toggle("is-active", state.libSelectedLanguages.has(langCode));
+      });
+    }
+  }
+
+  // 3. Years
+  if (params.min_year && elements.libYearFrom) {
+    elements.libYearFrom.value = String(params.min_year);
+  }
+  if (params.max_year && elements.libYearTo) {
+    elements.libYearTo.value = String(params.max_year);
+  }
+
+  // 4. Trigger library filtering
+  applyLibraryFilters(1);
+}
+
+async function handleGreySaveShelf(shelfName) {
+  try {
+    const genreIds = [...state.libSelectedGenres];
+    const languages = [...state.libSelectedLanguages];
+    const payload = {
+      name: shelfName || "Grey Curated Shelf",
+      is_default: false,
+      filters: {
+        include_genre_ids: genreIds,
+        include_original_languages: languages,
+        release_year_from: elements.libYearFrom?.value ? parseInt(elements.libYearFrom.value, 10) : null,
+        release_year_to: elements.libYearTo?.value ? parseInt(elements.libYearTo.value, 10) : null,
+      },
+    };
+
+    await fetchJSON("/search-preferences", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    showNotice(`Shelf "${shelfName}" saved to your ribbon!`);
+    await loadProfiles();
+  } catch (err) {
+    showNotice(`Could not save shelf: ${err.message}`);
+  }
+}
+
+function updateGreyModelUI(activeModelUsed) {
+  if (!elements.greyModelName) return;
+  if (activeModelUsed && state.greyModelMode === "auto") {
+    elements.greyModelName.textContent = activeModelUsed;
+    return;
+  }
+  if (state.greyModelMode === "flash") {
+    elements.greyModelName.textContent = "Flash";
+    elements.greyModelTag?.setAttribute("title", "Active Model: Gemini 3.8 Flash. Click to switch to Pro.");
+  } else if (state.greyModelMode === "pro") {
+    elements.greyModelName.textContent = "Pro";
+    elements.greyModelTag?.setAttribute("title", "Active Model: Gemini Pro (Deep Research). Click to switch to Auto.");
+  } else {
+    elements.greyModelName.textContent = "Auto";
+    elements.greyModelTag?.setAttribute("title", "Model Mode: Auto (Flash for speed, Pro for research). Click to switch to Flash.");
+  }
+}
+
+async function sendGreyMessage(query) {
+  if (!query) return;
+
+  appendGreyMessage("user", query);
+  if (elements.greyInput) elements.greyInput.value = "";
+
+  const lowerQ = query.toLowerCase();
+  let loadingText = "Grey is thinking…";
+  if (lowerQ.includes("imdb") || lowerQ.includes("imbd") || lowerQ.includes("link") || lowerQ.includes("url")) {
+    loadingText = "Grey is researching links & formatting…";
+  } else if (lowerQ.includes("draft") || lowerQ.includes("save this") || lowerQ.includes("summarize") || lowerQ.includes("essay") || lowerQ.includes("compare")) {
+    loadingText = "Grey is preparing your note…";
+  } else if (lowerQ.includes("rating") || lowerQ.includes("rotten tomatoes") || lowerQ.includes("score") || lowerQ.includes("box office") || lowerQ.includes("trivia")) {
+    loadingText = "Grey is researching film data…";
+  } else if (lowerQ.includes("recommend") || lowerQ.includes("watch") || lowerQ.includes("suggest") || lowerQ.includes("find me") || lowerQ.includes("what should")) {
+    loadingText = "Grey is consulting your library…";
+  } else if (state.entryReaderEntry || state.readerEditing) {
+    loadingText = "Grey is reading your note…";
+  }
+
+  const thinkingEl = document.createElement("div");
+  thinkingEl.className = "grey-msg grey-msg-bot";
+  thinkingEl.innerHTML = `<div class="grey-bubble" style="color: #9c9aa5; font-style: italic;"><p>${loadingText}</p></div>`;
+  elements.greyMessages.append(thinkingEl);
+  elements.greyMessages.scrollTop = elements.greyMessages.scrollHeight;
+
+  try {
+    let inspectedNote = null;
+    if (state.readerEditing && !elements.entryReader?.classList.contains("is-hidden")) {
+      inspectedNote = {
+        id: state.editingEntryId || null,
+        title: elements.readerTitleInput?.value?.trim() || "Untitled Note",
+        body: elements.readerBodyInput?.value || "",
+        tags: state.readerTags || [],
+        status: state.editingEntryStatus || "draft",
+      };
+    } else if (state.entryReaderEntry && !elements.entryReader?.classList.contains("is-hidden")) {
+      inspectedNote = {
+        id: state.entryReaderEntry.entry_id,
+        title: state.entryReaderEntry.title || "",
+        body: state.entryReaderEntry.body || "",
+        tags: (state.entryReaderEntry.tags || []).map((t) => typeof t === "string" ? t : t.name),
+        status: state.entryReaderEntry.status || "published",
+      };
+    }
+
+    const payload = {
+      message: query,
+      current_view: state.currentView || "library",
+      inspected_movie_id: state.selectedMovie?.tmdb_id || null,
+      inspected_note: inspectedNote,
+      related_movies: state.selectedMovie ? (state.detailRelatedMovies || []).map((m) => ({
+        id: m.tmdb_id,
+        title: m.title || m.original_title,
+        year: (m.release_date || "").slice(0, 4),
+        rating: m.vote_average,
+        status: m.user_data?.status || "unseen",
+        verdict: m.user_data?.verdict || null,
+      })) : null,
+      history: greyChatHistory.slice(-6),
+      model_mode: state.greyModelMode || "auto",
+    };
+
+    const res = await fetchJSON("/grey/chat", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    thinkingEl.remove();
+
+    if (res.model_used) {
+      updateGreyModelUI(res.model_used);
+    }
+
+    const skillBadge = res.active_skill ? `⚡ /${res.active_skill}` : null;
+    appendGreyMessage("bot", res.text, null, res.pills, { skillTag: skillBadge });
+
+    greyChatHistory.push({ role: "user", text: query });
+    greyChatHistory.push({ role: "model", text: res.text });
+
+    if (res.action && res.action.type === "set_movie_status") {
+      const { tmdb_id, status } = res.action.params || {};
+      if (tmdb_id) {
+        if (state.selectedMovie && state.selectedMovie.tmdb_id === tmdb_id) {
+          if (status && elements.statusSelect) {
+            elements.statusSelect.value = status;
+            if (!state.selectedMovie.user_data) state.selectedMovie.user_data = {};
+            state.selectedMovie.user_data.status = status;
+            elements.dialogKicker.textContent = STATUS_LABELS[status] || status;
+            feedback(elements.statusFeedback, `${STATUS_LABELS[status] || status} saved.`, "success");
+          }
+          renderPersonalControls(state.selectedMovie);
+        }
+        clearDiscoveryCache();
+        updateGreyContext();
+      }
+    } else if (res.action && res.action.type === "batch_set_movie_status") {
+      const { status, movies } = res.action.params || {};
+      const movieList = Array.isArray(movies) ? movies : [];
+      movieList.forEach((m) => {
+        const mId = typeof m === "object" ? (m.tmdb_id || m.id) : m;
+        if (mId && state.selectedMovie && state.selectedMovie.tmdb_id === Number(mId)) {
+          if (status && elements.statusSelect) {
+            elements.statusSelect.value = status;
+            if (!state.selectedMovie.user_data) state.selectedMovie.user_data = {};
+            state.selectedMovie.user_data.status = status;
+            elements.dialogKicker.textContent = STATUS_LABELS[status] || status;
+          }
+          renderPersonalControls(state.selectedMovie);
+        }
+        if (mId && state.detailRelatedMovies && Array.isArray(state.detailRelatedMovies)) {
+          const relMatch = state.detailRelatedMovies.find((rm) => (rm.tmdb_id || rm.id) === Number(mId));
+          if (relMatch) {
+            if (!relMatch.user_data) relMatch.user_data = {};
+            relMatch.user_data.status = status;
+          }
+        }
+      });
+      if (state.selectedMovie && elements.relatedMovies && Array.isArray(state.detailRelatedMovies)) {
+        elements.relatedMovies.replaceChildren();
+        state.detailRelatedMovies.forEach((rm) => {
+          elements.relatedMovies.append(createRelatedMovieCard(rm));
+        });
+      }
+      clearDiscoveryCache();
+      updateGreyContext();
+      if (status && movieList.length > 0) {
+        const label = STATUS_LABELS[status] || status;
+        showNotice(`Batch added ${movieList.length} movies to ${label}.`);
+      }
+    } else if (res.action && res.action.type === "apply_filter") {
+      handleGreyFilterAction(res.action.params);
+    } else if (res.action && res.action.type === "open_movie" && res.action.params?.tmdb_id) {
+      openMovieDetails(res.action.params.tmdb_id);
+    } else if (res.action && res.action.type === "create_draft") {
+      renderNotesTags().catch(() => {});
+    } else if (res.action && res.action.type === "update_entry") {
+      const updatedId = res.action.params?.entry_id;
+      if (updatedId) {
+        if (state.entryReaderEntry && state.entryReaderEntry.entry_id === updatedId) {
+          fetchJSON(`/entries/${updatedId}`).then((r) => {
+            if (r && r.entry) {
+              openEntryReader(r.entry, null, { preserveScroll: true });
+            }
+          }).catch(() => {});
+        }
+        if (state.readerEditing && state.editingEntryId === updatedId) {
+          fetchJSON(`/entries/${updatedId}`).then((r) => {
+            if (r && r.entry) {
+              elements.readerTitleInput.value = r.entry.title || "";
+              elements.readerBodyInput.value = r.entry.body || "";
+              state.readerTags = (r.entry.tags || []).map((t) => typeof t === "string" ? t : t.name);
+              state.readerBannerUrl = r.entry.image_url || null;
+              renderReaderTagChips();
+              renderReaderBannerEditor();
+              updateReaderBlogStats();
+            }
+          }).catch(() => {});
+        }
+      }
+      renderNotesTags().catch(() => {});
+    }
+  } catch (err) {
+    thinkingEl.remove();
+    appendGreyMessage("bot", `Connection error: ${err.message}`, "Please ensure the local NOPE backend is running.");
+  }
+}
+
+function initGreyCompanion() {
+  if (!elements.greyToggle) return;
+
+  loadGreyDailySession();
+
+  try {
+    state.greyModelMode = localStorage.getItem("nope_grey_model_mode") || "auto";
+  } catch (_) {
+    state.greyModelMode = "auto";
+  }
+  updateGreyModelUI();
+
+  elements.greyModelTag?.addEventListener("click", () => {
+    const modes = ["auto", "flash", "pro"];
+    const nextIdx = (modes.indexOf(state.greyModelMode) + 1) % modes.length;
+    state.greyModelMode = modes[nextIdx];
+    try {
+      localStorage.setItem("nope_grey_model_mode", state.greyModelMode);
+    } catch (_) {}
+    updateGreyModelUI();
+  });
+
+  elements.greyToggle.addEventListener("click", () => toggleGreyDrawer());
+  elements.greyCloseBtn?.addEventListener("click", () => toggleGreyDrawer(false));
+
+  elements.greyClearBtn?.addEventListener("click", () => {
+    if (!elements.greyMessages) return;
+    elements.greyMessages.replaceChildren();
+    greyChatHistory = [];
+    try {
+      localStorage.removeItem("nope_grey_daily_session");
+    } catch (_) {}
+    appendGreyMessage("bot", "I'm Grey. Conversation cleared and listening to your library.", "Ask me for sharp watchlist picks, instant mood shelves, or film breakdowns.");
+  });
+
+  elements.greyDrawer?.addEventListener("click", (e) => {
+    const quickBtn = e.target.closest(".grey-quick-btn");
+    if (quickBtn && quickBtn.dataset.prompt) {
+      sendGreyMessage(quickBtn.dataset.prompt);
+    }
+  });
+
+  // Slash Commands Autocomplete Menu and Quick Skills Chips
+  function hideSlashMenu() {
+    if (elements.greySlashMenu) {
+      elements.greySlashMenu.classList.add("is-hidden");
+      elements.greySlashMenu.querySelectorAll(".grey-slash-item").forEach((it) => it.classList.remove("is-selected"));
+    }
+  }
+
+  function handleSlashSelection(cmd) {
+    if (!cmd) return;
+    hideSlashMenu();
+    if (cmd === "/related") {
+      sendGreyMessage("/related");
+    } else if (cmd === "/tonight") {
+      sendGreyMessage("/tonight");
+    } else {
+      if (elements.greyInput) {
+        elements.greyInput.value = `${cmd} `;
+        elements.greyInput.focus();
+        elements.greyInput.selectionStart = elements.greyInput.selectionEnd = elements.greyInput.value.length;
+      }
+    }
+  }
+
+  elements.greySkillsBar?.addEventListener("click", (e) => {
+    const chip = e.target.closest(".grey-skill-chip");
+    if (chip && chip.dataset.cmd) {
+      handleSlashSelection(chip.dataset.cmd);
+    }
+  });
+
+  elements.greySlashMenu?.addEventListener("click", (e) => {
+    const item = e.target.closest(".grey-slash-item");
+    if (item && item.dataset.cmd) {
+      handleSlashSelection(item.dataset.cmd);
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#grey-slash-menu") && !e.target.closest("#grey-input")) {
+      hideSlashMenu();
+    }
+  });
+
+  elements.greyInput?.addEventListener("input", () => {
+    const val = elements.greyInput.value;
+    if (val.startsWith("/")) {
+      const query = val.toLowerCase().trim();
+      const items = elements.greySlashMenu?.querySelectorAll(".grey-slash-item") || [];
+      let visibleCount = 0;
+      items.forEach((item) => {
+        const cmd = (item.dataset.cmd || "").toLowerCase();
+        const matches = cmd.startsWith(query) || query === "/";
+        item.classList.toggle("is-hidden", !matches);
+        if (matches) visibleCount += 1;
+      });
+      if (visibleCount > 0 && elements.greySlashMenu) {
+        elements.greySlashMenu.classList.remove("is-hidden");
+      } else {
+        hideSlashMenu();
+      }
+    } else {
+      hideSlashMenu();
+    }
+  });
+
+  // Keyboard navigation: Enter to submit, Shift+Enter for newline, Esc to unfocus
+  elements.greyInput?.addEventListener("keydown", (e) => {
+    if (elements.greySlashMenu && !elements.greySlashMenu.classList.contains("is-hidden")) {
+      const visibleItems = [...elements.greySlashMenu.querySelectorAll(".grey-slash-item:not(.is-hidden)")];
+      if (visibleItems.length > 0) {
+        let selectedIdx = visibleItems.findIndex((it) => it.classList.contains("is-selected"));
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          if (selectedIdx >= 0) visibleItems[selectedIdx].classList.remove("is-selected");
+          const nextIdx = (selectedIdx + 1) % visibleItems.length;
+          visibleItems[nextIdx].classList.add("is-selected");
+          visibleItems[nextIdx].scrollIntoView({ block: "nearest" });
+          return;
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          if (selectedIdx >= 0) visibleItems[selectedIdx].classList.remove("is-selected");
+          const prevIdx = (selectedIdx - 1 + visibleItems.length) % visibleItems.length;
+          visibleItems[prevIdx].classList.add("is-selected");
+          visibleItems[prevIdx].scrollIntoView({ block: "nearest" });
+          return;
+        } else if (e.key === "Enter" || e.key === "Tab") {
+          if (selectedIdx >= 0 && visibleItems[selectedIdx]) {
+            e.preventDefault();
+            handleSlashSelection(visibleItems[selectedIdx].dataset.cmd);
+            return;
+          }
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          hideSlashMenu();
+          return;
+        }
+      }
+    }
+
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      hideSlashMenu();
+      elements.greyForm?.dispatchEvent(new Event("submit", { cancelable: true }));
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      hideSlashMenu();
+      elements.greyInput.blur();
+    }
+  });
+
+  window.addEventListener("keydown", (e) => {
+    const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
+    const isInputFocused = activeTag === "input" || activeTag === "textarea" || activeTag === "select" || document.activeElement?.isContentEditable;
+
+    // Left / Right Arrow keys for Prev / Next movie when details page is open
+    if (elements.detailPage && !elements.detailPage.classList.contains("is-hidden")) {
+      if (!isInputFocused) {
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          navigatePrevMovie();
+          return;
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          navigateNextMovie();
+          return;
+        }
+      }
+    }
+
+    // Press 'G' to jump directly into Grey chat input (when not typing in another input)
+    if ((e.key === "g" || e.key === "G") && !isInputFocused && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      toggleGreyDrawer(true);
+      elements.greyInput?.focus();
+      return;
+    }
+
+    if (e.key === "Escape") {
+      if (document.activeElement === elements.greyInput) {
+        e.preventDefault();
+        elements.greyInput.blur();
+        return;
+      }
+    } else if ((e.ctrlKey || e.metaKey) && e.code === "Space") {
+      e.preventDefault();
+      toggleGreyDrawer();
+    }
+  });
+
+  elements.greyForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const query = elements.greyInput?.value?.trim();
+    if (!query) return;
+    sendGreyMessage(query);
+  });
+}
+
 async function initializeApp() {
-  setViewMode(getSavedViewMode());
+  initGreyCompanion();
+  if (elements.grid) {
+    elements.grid.classList.add("is-compact");
+  }
+
+  let hashView = (window.location.hash || "").replace(/^#/, "").trim();
+  let openEntryIdFromHash = null;
+  if (hashView.startsWith("entry-reader")) {
+    const parts = hashView.split(":");
+    if (parts.length > 1 && parts[1]) {
+      openEntryIdFromHash = parts[1];
+    }
+    try {
+      if (!openEntryIdFromHash) openEntryIdFromHash = sessionStorage.getItem("nope_open_entry_id");
+    } catch (_) {}
+    hashView = "entry-reader";
+  } else if (hashView === "library") {
+    try {
+      hashView = localStorage.getItem("nope_last_library_shelf") || "new_discovery";
+    } catch {
+      hashView = "new_discovery";
+    }
+  } else if (hashView === "notes") {
+    hashView = "entries";
+  }
+
+  let initialView = hashView;
+  if (!initialView) {
+    try {
+      initialView = localStorage.getItem("nope_current_view") || "discover";
+    } catch {
+      initialView = "discover";
+    }
+  }
+
+  const validLibraryViews = ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes"];
+  const validNotesViews = ["entries", "entry-reader"];
+  const validAuxViews = ["looking-out", "storage"];
+
+  // Immediately apply view state to DOM BEFORE any async operations so discovery NEVER flashes
+  if (validLibraryViews.includes(initialView)) {
+    setActiveView(initialView);
+    if (elements.discoverWorkspace) elements.discoverWorkspace.classList.add("is-hidden");
+    if (elements.notesSearchContainer) elements.notesSearchContainer.classList.add("is-hidden");
+    setEntriesVisible(false);
+  } else if (validNotesViews.includes(initialView)) {
+    setActiveView("entries");
+    if (elements.discoverWorkspace) {
+      elements.discoverWorkspace.classList.add("is-hidden");
+      elements.discoverWorkspace.classList.add("force-hidden");
+    }
+    if (elements.pagination) {
+      elements.pagination.classList.add("is-hidden");
+      elements.pagination.classList.add("force-hidden");
+    }
+    const discoverHeader = document.querySelector("#discover-canvas-header");
+    if (discoverHeader) {
+      discoverHeader.classList.add("is-hidden");
+      discoverHeader.classList.add("force-hidden");
+    }
+    if (initialView === "entry-reader") {
+      setAuxiliaryView("entry-reader");
+    } else {
+      setEntriesVisible(true);
+    }
+  } else if (validAuxViews.includes(initialView)) {
+    setActiveView(null);
+    if (elements.discoverWorkspace) elements.discoverWorkspace.classList.add("is-hidden");
+    setEntriesVisible(false);
+  } else {
+    setActiveView("discover");
+    if (elements.discoverWorkspace) elements.discoverWorkspace.classList.remove("is-hidden");
+    if (elements.notesSearchContainer) elements.notesSearchContainer.classList.add("is-hidden");
+    setEntriesVisible(false);
+  }
+
   initializePickers();
+  initializeSortChips();
   initializeEntityPickers();
   initializeCollapsibleFilters();
+  initializeNotesCollapsibleSections();
+  setupSidebarMasterToggle();
   setupFilterPills();
+  setupLibraryFilters();
+  setupGenreModeToggle();
   initializeOutsideClosing();
   populateJournalYears();
   resetEntryFiltersToCurrent();
-  await loadProfiles();
-  const restoredMode = await restoreSearchState();
-  if (elements.discoverWorkspace) {
-    elements.discoverWorkspace.classList.remove("is-hidden");
+
+  if (validLibraryViews.includes(initialView)) {
+    await Promise.all([
+      loadProfiles().catch(() => {}),
+      restoreSearchState().catch(() => {}),
+      loadShelf(initialView),
+    ]);
+  } else if (validNotesViews.includes(initialView)) {
+    resetEntryFiltersToCurrent();
+    await Promise.all([
+      loadProfiles().catch(() => {}),
+      restoreSearchState().catch(() => {}),
+      loadShelf("entries"),
+    ]);
+    if (initialView === "entry-reader" && openEntryIdFromHash) {
+      let entry = (state.entryResults || []).find((e) => String(e.entry_id) === String(openEntryIdFromHash));
+      if (!entry) {
+        try {
+          const fetched = await fetchJSON(`/entries/${openEntryIdFromHash}`);
+          if (fetched && fetched.entry) {
+            entry = fetched.entry;
+          }
+        } catch (_) {}
+      }
+      if (entry) {
+        openEntryReader(entry);
+      }
+    }
+  } else if (validAuxViews.includes(initialView)) {
+    const auxTask = initialView === "looking-out" ? loadLookingOutFor(1) : loadStorage();
+    await Promise.all([
+      loadProfiles().catch(() => {}),
+      restoreSearchState().catch(() => {}),
+      auxTask,
+    ]);
+  } else {
+    await loadProfiles();
+    const restoredMode = await restoreSearchState();
+    if (elements.discoverWorkspace) {
+      elements.discoverWorkspace.classList.remove("is-hidden");
+    }
+    if (elements.notesSearchContainer) {
+      elements.notesSearchContainer.classList.add("is-hidden");
+    }
+    setActiveView("discover");
+    await setDiscoveryMode(restoredMode || "super", true);
   }
-  if (elements.notesSearchContainer) {
-    elements.notesSearchContainer.classList.add("is-hidden");
-  }
-  setActiveView("discover");
-  await setDiscoveryMode(restoredMode || "super", true);
   await refreshReleaseAlertBadge();
 }
+
+window.addEventListener("hashchange", () => {
+  let hashView = (window.location.hash || "").replace(/^#/, "").trim();
+  if (hashView.startsWith("entry-reader")) {
+    const parts = hashView.split(":");
+    const noteId = parts[1] || "";
+    if (noteId && (!state.entryReaderEntry || String(state.entryReaderEntry.entry_id) !== String(noteId))) {
+      fetchJSON(`/entries/${noteId}`).then((res) => {
+        if (res && res.entry) openEntryReader(res.entry);
+      }).catch(() => {});
+    }
+    return;
+  }
+  if (hashView === "library") {
+    try {
+      hashView = localStorage.getItem("nope_last_library_shelf") || "new_discovery";
+    } catch {
+      hashView = "new_discovery";
+    }
+  } else if (hashView === "notes") {
+    hashView = "entries";
+  }
+
+  if (!hashView || hashView === "discover") {
+    if (state.currentView !== "discover") {
+      activateDiscoverView();
+    }
+  } else if (["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "entries", "movie-notes"].includes(hashView)) {
+    if (state.currentView !== hashView || state.entryReaderEntry) {
+      if (hashView === "entries") {
+        resetEntryFiltersToCurrent();
+      }
+      loadShelf(hashView);
+    }
+  } else if (hashView === "looking-out") {
+    if (state.currentView !== "looking-out") {
+      loadLookingOutFor(1);
+    }
+  } else if (hashView === "storage") {
+    if (state.currentView !== "storage") {
+      loadStorage();
+    }
+  }
+});
 
 initializeApp().catch((error) => showNotice(error.message));

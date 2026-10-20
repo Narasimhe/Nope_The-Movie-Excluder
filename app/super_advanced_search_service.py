@@ -36,6 +36,7 @@ class SuperAdvancedSearchService(AdvancedSearchService):
         notes_query: str | None = None,
         favorite_only: bool = False,
         filters: AdvancedMovieFilters | dict | None = None,
+        force_refresh: bool = False,
     ) -> dict:
         if page < 1:
             raise ValueError(
@@ -61,7 +62,7 @@ class SuperAdvancedSearchService(AdvancedSearchService):
         (
             directed_movie_ids,
             director_credit_lookups,
-        ) = self._get_directed_movie_ids(filters)
+        ) = self._get_directed_movie_ids(filters, force_refresh=force_refresh)
         (
             tmdb_response,
             candidates,
@@ -71,6 +72,7 @@ class SuperAdvancedSearchService(AdvancedSearchService):
             filters,
             page,
             post_filtering=True,
+            force_refresh=force_refresh,
         )
         director_matches = [
             movie

@@ -91,6 +91,78 @@ class TMDBClient:
         except Exception:
             pass
 
+    def _get_cached_discover_response(self, cache_key: str) -> dict | None:
+        try:
+            with get_connection() as connection:
+                row = connection.execute(
+                    """
+                    SELECT response_json
+                    FROM tmdb_discover_cache
+                    WHERE cache_key = ?
+                    """,
+                    (cache_key,),
+                ).fetchone()
+                if row and row["response_json"]:
+                    return json.loads(row["response_json"])
+        except Exception:
+            pass
+        return None
+
+    def _save_cached_discover_response(self, cache_key: str, response: dict) -> None:
+        try:
+            with get_connection() as connection:
+                connection.execute(
+                    """
+                    INSERT INTO tmdb_discover_cache (cache_key, response_json, updated_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(cache_key) DO UPDATE SET
+                        response_json = excluded.response_json,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    (
+                        cache_key,
+                        json.dumps(response),
+                    ),
+                )
+        except Exception:
+            pass
+
+    def _get_cached_person_credits(self, person_id: int) -> dict | None:
+        try:
+            with get_connection() as connection:
+                row = connection.execute(
+                    """
+                    SELECT response_json
+                    FROM tmdb_person_credits_cache
+                    WHERE person_id = ?
+                    """,
+                    (person_id,),
+                ).fetchone()
+                if row and row["response_json"]:
+                    return json.loads(row["response_json"])
+        except Exception:
+            pass
+        return None
+
+    def _save_cached_person_credits(self, person_id: int, response: dict) -> None:
+        try:
+            with get_connection() as connection:
+                connection.execute(
+                    """
+                    INSERT INTO tmdb_person_credits_cache (person_id, response_json, updated_at)
+                    VALUES (?, ?, CURRENT_TIMESTAMP)
+                    ON CONFLICT(person_id) DO UPDATE SET
+                        response_json = excluded.response_json,
+                        updated_at = CURRENT_TIMESTAMP
+                    """,
+                    (
+                        person_id,
+                        json.dumps(response),
+                    ),
+                )
+        except Exception:
+            pass
+
     def get_movie(self, movie_id: int) -> dict:
         for attempt in range(3):
             try:
@@ -262,13 +334,20 @@ class TMDBClient:
 
     def get_person(self, person_id: int) -> dict:
         self._validate_positive_id(person_id, "TMDB person ID")
-        response = self.session.get(
-            f"{BASE_URL}/person/{person_id}",
-            headers=self.headers,
-            timeout=10,
-        )
-        response.raise_for_status()
-        return response.json()
+        for attempt in range(3):
+            try:
+                response = self.session.get(
+                    f"{BASE_URL}/person/{person_id}",
+                    headers=self.headers,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                return response.json()
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, OSError):
+                if attempt == 2:
+                    raise
+                self._cycle_session()
+                time.sleep(0.25 * (attempt + 1))
 
     def get_company(self, company_id: int) -> dict:
         self._validate_positive_id(company_id, "TMDB company ID")
@@ -290,25 +369,50 @@ class TMDBClient:
         response.raise_for_status()
         return response.json()
 
-    def get_person_movie_credits(self, person_id: int) -> dict:
+    def get_person_movie_credits(
+        self,
+        person_id: int,
+        force_refresh: bool = False,
+    ) -> dict:
         self._validate_positive_id(person_id, "TMDB person ID")
-        response = self.session.get(
-            f"{BASE_URL}/person/{person_id}/movie_credits",
-            headers=self.headers,
-            timeout=10,
-        )
-        response.raise_for_status()
-        return response.json()
+        if not force_refresh:
+            cached = self._get_cached_person_credits(person_id)
+            if cached is not None:
+                return cached
+
+        for attempt in range(3):
+            try:
+                response = self.session.get(
+                    f"{BASE_URL}/person/{person_id}/movie_credits",
+                    headers=self.headers,
+                    timeout=10,
+                )
+                response.raise_for_status()
+                data = response.json()
+                self._save_cached_person_credits(person_id, data)
+                return data
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, OSError):
+                if attempt == 2:
+                    raise
+                self._cycle_session()
+                time.sleep(0.25 * (attempt + 1))
 
     def discover_movies(
         self,
         filters: AdvancedMovieFilters,
         page: int = 1,
+        force_refresh: bool = False,
     ) -> dict:
         self._validate_page(page)
 
         params = filters.to_tmdb_params()
         params["page"] = page
+
+        cache_key = json.dumps(params, sort_keys=True)
+        if not force_refresh:
+            cached = self._get_cached_discover_response(cache_key)
+            if cached is not None:
+                return cached
 
         for attempt in range(3):
             try:
@@ -319,7 +423,9 @@ class TMDBClient:
                     timeout=10,
                 )
                 response.raise_for_status()
-                return response.json()
+                data = response.json()
+                self._save_cached_discover_response(cache_key, data)
+                return data
             except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, OSError):
                 if attempt == 2:
                     raise

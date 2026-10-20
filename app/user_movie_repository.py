@@ -54,6 +54,13 @@ class UserMovieRepository:
 
         return result
 
+    def remove_status(self, tmdb_id: int) -> None:
+        with get_connection() as connection:
+            connection.execute(
+                "DELETE FROM user_movie_data WHERE tmdb_id = ?",
+                (tmdb_id,),
+            )
+
     def set_verdict(self, tmdb_id: int, verdict: float | None) -> None:
         self._ensure_record(tmdb_id)
 

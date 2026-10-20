@@ -2,9 +2,20 @@ from typing import Any
 
 from app.database import get_connection
 
+_UNSET = object()
+
 
 class GeneralEntryRepository:
     PAGE_SIZE = 20
+
+    @staticmethod
+    def _clean_image_url(image_url: Any) -> str | None:
+        if image_url is None:
+            return None
+        if not isinstance(image_url, str):
+            raise ValueError("Entry image URL must be text or null.")
+        cleaned = image_url.strip()
+        return cleaned if cleaned else None
 
     def create_entry(
         self,
@@ -13,9 +24,13 @@ class GeneralEntryRepository:
         body: str | None = None,
         url: str | None = None,
         tags: list[str] | None = None,
+        status: str = "published",
+        image_url: str | None = None,
     ) -> dict[str, Any]:
         values = self._clean_values(entry_type, title, body, url)
         cleaned_tags = self._clean_tags(tags)
+        cleaned_status = "draft" if str(status).strip().lower() == "draft" else "published"
+        cleaned_image_url = self._clean_image_url(image_url)
         with get_connection() as connection:
             cursor = connection.execute(
                 """
@@ -23,11 +38,13 @@ class GeneralEntryRepository:
                     entry_type,
                     title,
                     body,
-                    url
+                    url,
+                    status,
+                    image_url
                 )
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                values,
+                (*values, cleaned_status, cleaned_image_url),
             )
             entry_id = cursor.lastrowid
             self._replace_tags(connection, entry_id, cleaned_tags)
@@ -60,18 +77,29 @@ class GeneralEntryRepository:
         body: str | None = None,
         url: str | None = None,
         tags: list[str] | None = None,
+        status: str | None = None,
+        image_url: Any = _UNSET,
     ) -> dict[str, Any] | None:
         self._validate_entry_id(entry_id)
         values = self._clean_values(entry_type, title, body, url)
         cleaned_tags = self._clean_tags(tags)
+        status_sql = ""
+        extra_params: list[Any] = []
+        if status in ("published", "draft"):
+            status_sql += ", status = ?"
+            extra_params.append(status)
+        if image_url is not _UNSET:
+            status_sql += ", image_url = ?"
+            extra_params.append(self._clean_image_url(image_url))
+
         with get_connection() as connection:
             cursor = connection.execute(
-                """
+                f"""
                 UPDATE general_entries
                 SET entry_type = ?,
                     title = ?,
                     body = ?,
-                    url = ?,
+                    url = ?{status_sql},
                     updated_at = STRFTIME(
                         '%Y-%m-%d %H:%M:%f',
                         'now'
@@ -79,13 +107,37 @@ class GeneralEntryRepository:
                 WHERE entry_id = ?
                   AND is_deleted = 0
                 """,
-                (*values, entry_id),
+                (*values, *extra_params, entry_id),
             )
             if cursor.rowcount:
                 self._replace_tags(connection, entry_id, cleaned_tags)
         if cursor.rowcount == 0:
             return None
         return self.get_entry(entry_id)
+
+    def publish_entry(self, entry_id: int) -> dict[str, Any] | None:
+        self._validate_entry_id(entry_id)
+        with get_connection() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE general_entries
+                SET status = 'published',
+                    updated_at = STRFTIME('%Y-%m-%d %H:%M:%f', 'now')
+                WHERE entry_id = ?
+                  AND is_deleted = 0
+                """,
+                (entry_id,),
+            )
+        if cursor.rowcount == 0:
+            return None
+        return self.get_entry(entry_id)
+
+    def count_drafts(self) -> int:
+        with get_connection() as connection:
+            row = connection.execute(
+                "SELECT COUNT(*) FROM general_entries WHERE is_deleted = 0 AND status = 'draft'"
+            ).fetchone()
+            return row[0] if row else 0
 
     def delete_entry(self, entry_id: int) -> bool:
         self._validate_entry_id(entry_id)
@@ -103,21 +155,77 @@ class GeneralEntryRepository:
                 """,
                 (entry_id,),
             )
+            if cursor.rowcount > 0:
+                connection.execute(
+                    "DELETE FROM general_entry_tag_links WHERE entry_id = ?",
+                    (entry_id,),
+                )
+                connection.execute(
+                    """
+                    DELETE FROM general_entry_tags
+                    WHERE NOT EXISTS (
+                        SELECT 1 FROM general_entry_tag_links links
+                        WHERE links.tag_id = general_entry_tags.tag_id
+                    )
+                    """
+                )
         return cursor.rowcount > 0
+
+    def toggle_pin(self, entry_id: int) -> dict[str, Any] | None:
+        self._validate_entry_id(entry_id)
+        with get_connection() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE general_entries
+                SET is_pinned = CASE WHEN is_pinned = 1 THEN 0 ELSE 1 END,
+                    updated_at = STRFTIME('%Y-%m-%d %H:%M:%f', 'now')
+                WHERE entry_id = ?
+                  AND is_deleted = 0
+                """,
+                (entry_id,),
+            )
+        if cursor.rowcount == 0:
+            return None
+        return self.get_entry(entry_id)
+
+    def toggle_archive(self, entry_id: int) -> dict[str, Any] | None:
+        self._validate_entry_id(entry_id)
+        with get_connection() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE general_entries
+                SET is_archived = CASE WHEN is_archived = 1 THEN 0 ELSE 1 END,
+                    updated_at = STRFTIME('%Y-%m-%d %H:%M:%f', 'now')
+                WHERE entry_id = ?
+                  AND is_deleted = 0
+                """,
+                (entry_id,),
+            )
+        if cursor.rowcount == 0:
+            return None
+        return self.get_entry(entry_id)
 
     def list_entries(
         self,
         *,
         page: int = 1,
+        per_page: int | None = None,
         query: str | None = None,
         entry_type: str | None = None,
         tag: str | None = None,
         year: int | None = None,
         month: int | None = None,
+        is_archived: bool = False,
+        status: str | None = "published",
     ) -> dict[str, Any]:
         self._validate_page(page)
-        clauses = ["is_deleted = 0"]
+        limit = per_page if per_page is not None and per_page > 0 else self.PAGE_SIZE
+        clauses = ["is_deleted = 0", f"is_archived = {1 if is_archived else 0}"]
         parameters: list[Any] = []
+
+        if status and status in ("published", "draft"):
+            clauses.append("status = ?")
+            parameters.append(status)
 
         if query is not None:
             cleaned_query = " ".join(query.split())
@@ -149,7 +257,14 @@ class GeneralEntryRepository:
 
         if tag is not None:
             cleaned_tag = " ".join(tag.split())
-            if cleaned_tag:
+            if cleaned_tag == "__untagged__":
+                clauses.append(
+                    "NOT EXISTS ("
+                    "SELECT 1 FROM general_entry_tag_links filter_links "
+                    "WHERE filter_links.entry_id = general_entries.entry_id"
+                    ")"
+                )
+            elif cleaned_tag:
                 clauses.append(
                     "EXISTS ("
                     "SELECT 1 FROM general_entry_tag_links filter_links "
@@ -185,7 +300,7 @@ class GeneralEntryRepository:
             parameters.append(f"{month:02d}")
 
         where_clause = " AND ".join(clauses)
-        offset = (page - 1) * self.PAGE_SIZE
+        offset = (page - 1) * limit
         with get_connection() as connection:
             total = connection.execute(
                 f"SELECT COUNT(*) FROM general_entries WHERE {where_clause}",
@@ -196,18 +311,18 @@ class GeneralEntryRepository:
                 SELECT *
                 FROM general_entries
                 WHERE {where_clause}
-                ORDER BY updated_at DESC, entry_id DESC
+                ORDER BY is_pinned DESC, updated_at DESC, entry_id DESC
                 LIMIT ? OFFSET ?
                 """,
-                [*parameters, self.PAGE_SIZE, offset],
+                [*parameters, limit, offset],
             ).fetchall()
 
         entries = self._attach_tags([dict(row) for row in rows])
         return {
             "page": page,
-            "page_size": self.PAGE_SIZE,
+            "page_size": limit,
             "total_results": total,
-            "total_pages": max(1, (total + self.PAGE_SIZE - 1) // self.PAGE_SIZE),
+            "total_pages": max(1, (total + limit - 1) // limit),
             "results": entries,
         }
 
@@ -360,3 +475,82 @@ class GeneralEntryRepository:
     def _validate_page(page: int) -> None:
         if isinstance(page, bool) or not isinstance(page, int) or page < 1:
             raise ValueError("Entry page must be at least 1.")
+
+    def get_tags_summary(self) -> dict[str, Any]:
+        with get_connection() as connection:
+            total_row = connection.execute(
+                "SELECT COUNT(*) AS total FROM general_entries WHERE is_deleted = 0 AND is_archived = 0 AND status = 'published'"
+            ).fetchone()
+            total_entries = total_row["total"] if total_row else 0
+
+            archive_row = connection.execute(
+                "SELECT COUNT(*) AS total FROM general_entries WHERE is_deleted = 0 AND is_archived = 1"
+            ).fetchone()
+            archived_entries = archive_row["total"] if archive_row else 0
+
+            draft_row = connection.execute(
+                "SELECT COUNT(*) AS total FROM general_entries WHERE is_deleted = 0 AND status = 'draft'"
+            ).fetchone()
+            draft_entries = draft_row["total"] if draft_row else 0
+
+            untagged_row = connection.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM general_entries entries
+                WHERE entries.is_deleted = 0
+                  AND entries.is_archived = 0
+                  AND entries.status = 'published'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM general_entry_tag_links links
+                      WHERE links.entry_id = entries.entry_id
+                  )
+                """
+            ).fetchone()
+            untagged_entries = untagged_row["total"] if untagged_row else 0
+
+            tag_rows = connection.execute(
+                """
+                SELECT tags.name, COUNT(links.entry_id) AS count
+                FROM general_entry_tags tags
+                JOIN general_entry_tag_links links ON tags.tag_id = links.tag_id
+                JOIN general_entries entries ON entries.entry_id = links.entry_id
+                WHERE entries.is_deleted = 0 AND entries.is_archived = 0 AND entries.status = 'published'
+                GROUP BY tags.tag_id, tags.name
+                ORDER BY count DESC, tags.name COLLATE NOCASE ASC
+                """
+            ).fetchall()
+
+            tags = [{"name": row["name"], "count": row["count"]} for row in tag_rows]
+            return {
+                "total_entries": total_entries,
+                "archived_entries": archived_entries,
+                "untagged_entries": untagged_entries,
+                "draft_entries": draft_entries,
+                "tags": tags,
+            }
+
+    def get_timeline_summary(self) -> list[dict[str, Any]]:
+        with get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT
+                    strftime('%Y', datetime(updated_at, '+5 hours', '+30 minutes')) AS year,
+                    strftime('%m', datetime(updated_at, '+5 hours', '+30 minutes')) AS month,
+                    COUNT(*) AS count
+                FROM general_entries
+                WHERE is_deleted = 0
+                  AND is_archived = 0
+                  AND status = 'published'
+                GROUP BY year, month
+                ORDER BY year DESC, month DESC
+                """
+            ).fetchall()
+        return [
+            {
+                "year": int(row["year"]),
+                "month": int(row["month"]),
+                "count": int(row["count"]),
+            }
+            for row in rows
+            if row["year"] and row["month"]
+        ]

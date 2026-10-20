@@ -609,6 +609,15 @@ class MovieService:
             validated_status,
         )
 
+    def remove_movie_status(self, tmdb_id: int) -> None:
+        if (
+            isinstance(tmdb_id, bool)
+            or not isinstance(tmdb_id, int)
+            or tmdb_id <= 0
+        ):
+            raise ValueError("TMDB movie ID must be a positive integer.")
+        self.user_repository.remove_status(tmdb_id)
+
     def _filter_discovery_results(self, movies: list[dict]) -> list[dict]:
         watched_ids = self.user_repository.get_watched_movie_ids()
         excluded_ids = self.user_repository.get_excluded_movie_ids()
@@ -706,10 +715,10 @@ class MovieService:
         return result
 
     @staticmethod
-    def _empty_page(page: int = 1) -> dict:
+    def _empty_page(page: int = 1, page_size: int = 20) -> dict:
         return {
             "page": page,
-            "page_size": 20,
+            "page_size": page_size,
             "total_results": 0,
             "total_pages": 1,
             "results": [],
@@ -726,6 +735,12 @@ class MovieService:
         genres_by_id = (
             self.metadata_repository.get_movie_genres_bulk(tmdb_ids)
         )
+        credits_by_id = (
+            self.metadata_repository.get_movie_credits_bulk(tmdb_ids)
+        )
+        keywords_by_id = (
+            self.metadata_repository.get_movie_keywords_bulk(tmdb_ids)
+        )
         user_data_by_id = (
             self.user_repository.get_user_movie_data_bulk(tmdb_ids)
         )
@@ -735,11 +750,47 @@ class MovieService:
         for movie in movies:
             result = dict(movie)
             tmdb_id = result["tmdb_id"]
-            result["genres"] = genres_by_id.get(tmdb_id, [])
+            movie_genres = genres_by_id.get(tmdb_id, [])
+            result["genres"] = [
+                {**g, "id": g.get("tmdb_genre_id", g.get("id"))}
+                for g in movie_genres
+            ]
+            movie_credits = credits_by_id.get(tmdb_id, {})
+            result["directors"] = movie_credits.get("directors", [])
+            result["actors"] = movie_credits.get("actors", [])
+            result["keywords"] = keywords_by_id.get(tmdb_id, [])
             result["user_data"] = user_data_by_id.get(tmdb_id)
             results.append(result)
 
         return results
+
+    def search_user_library(
+        self,
+        query: str = "",
+        status: str | None = None,
+    ) -> list[dict]:
+        movies = self.movie_repository.search_user_library(query, status)
+        return self._enrich_movie_list(movies)
+
+    def search_library_people(
+        self,
+        query: str,
+        credit_type: str | None = None,
+        status: str | None = None,
+    ) -> list[dict]:
+        return self.metadata_repository.search_library_people(
+            query=query,
+            credit_type=credit_type,
+            status=status,
+        )
+
+    def search_library_keywords(
+        self,
+        query: str,
+    ) -> list[dict]:
+        return self.metadata_repository.search_library_keywords(
+            query=query,
+        )
 
     def search_movies_page(self, query: str, page: int = 1) -> dict:
         query = query.strip()

@@ -78,6 +78,49 @@ class MovieStatusListEndpointTests(unittest.TestCase):
 
         self.assertEqual(context.exception.status_code, 400)
 
+    def test_library_search_route_is_registered(self) -> None:
+        route_paths = {
+            route.path
+            for route in main.app.routes
+        }
+
+        self.assertIn("/movies/library/search", route_paths)
+
+    def test_library_search_endpoint(self) -> None:
+        with patch.object(main.movie_service, "search_user_library") as mock_search:
+            mock_search.return_value = [{"tmdb_id": 603, "title": "The Matrix"}]
+            result = main.search_personal_library(query="matrix", status="watched")
+            mock_search.assert_called_once_with("matrix", "watched")
+            self.assertEqual(len(result), 1)
+            self.assertEqual(result[0]["title"], "The Matrix")
+
+    def test_library_keywords_endpoint(self) -> None:
+        route_paths = {route.path for route in main.app.routes}
+        self.assertIn("/movies/library/keywords", route_paths)
+
+        with patch.object(main.movie_service, "search_library_keywords") as mock_search:
+            mock_search.return_value = [{"id": 1, "name": "cyberpunk"}]
+            result = main.search_library_keywords(query="cyber")
+            mock_search.assert_called_once_with(query="cyber")
+            self.assertEqual(result["results"], [{"id": 1, "name": "cyberpunk"}])
+
+    def test_get_general_entry_endpoint(self) -> None:
+        route_paths = {route.path for route in main.app.routes}
+        self.assertIn("/entries/{entry_id}", route_paths)
+
+        with patch.object(main.general_entry_repository, "get_entry") as mock_get:
+            mock_get.return_value = {"entry_id": 42, "title": "Great film"}
+            result = main.get_general_entry(42)
+            mock_get.assert_called_once_with(42)
+            self.assertEqual(result["entry"]["entry_id"], 42)
+
+        with patch.object(main.general_entry_repository, "get_entry") as mock_get:
+            mock_get.return_value = None
+            with self.assertRaises(HTTPException) as ctx:
+                main.get_general_entry(999)
+            self.assertEqual(ctx.exception.status_code, 404)
+
 
 if __name__ == "__main__":
     unittest.main()
+

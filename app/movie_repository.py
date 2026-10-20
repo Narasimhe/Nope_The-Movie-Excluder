@@ -20,11 +20,12 @@ class MovieRepository:
                     poster_path,
                     backdrop_path,
                     vote_average,
+                    vote_count,
                     original_language,
                     fetched_at,
                     last_accessed_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ON CONFLICT(tmdb_id) DO UPDATE SET
                     title = excluded.title,
                     original_title = excluded.original_title,
@@ -33,6 +34,7 @@ class MovieRepository:
                     poster_path = excluded.poster_path,
                     backdrop_path = excluded.backdrop_path,
                     vote_average = excluded.vote_average,
+                    vote_count = excluded.vote_count,
                     original_language = excluded.original_language,
                     fetched_at = CURRENT_TIMESTAMP,
                     last_accessed_at = CURRENT_TIMESTAMP
@@ -46,6 +48,7 @@ class MovieRepository:
                     movie.get("poster_path"),
                     movie.get("backdrop_path"),
                     movie.get("vote_average"),
+                    movie.get("vote_count") or 0,
                     movie.get("original_language"),
                 ),
             )
@@ -122,6 +125,72 @@ class MovieRepository:
             ).fetchall()
 
         return [dict(row) for row in rows]
+
+    def search_user_library(
+        self,
+        query: str = "",
+        status: str | None = None,
+    ) -> list[dict]:
+        cleaned_query = " ".join((query or "").split())
+        where_parts: list[str] = []
+        params: list[Any] = []
+
+        if cleaned_query:
+            escaped_query = (
+                cleaned_query.replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_")
+            )
+            like_pattern = f"%{escaped_query}%"
+            where_parts.append(
+                """(
+                    m.title LIKE ? ESCAPE '!' COLLATE NOCASE
+                    OR m.original_title LIKE ? ESCAPE '!' COLLATE NOCASE
+                    OR m.overview LIKE ? ESCAPE '!' COLLATE NOCASE
+                    OR (u.notes IS NOT NULL AND u.notes LIKE ? ESCAPE '!' COLLATE NOCASE)
+                    OR EXISTS (
+                        SELECT 1 FROM movie_keywords mk
+                        JOIN keywords k ON mk.keyword_id = k.keyword_id
+                        WHERE mk.tmdb_id = m.tmdb_id
+                          AND k.name LIKE ? ESCAPE '!' COLLATE NOCASE
+                    )
+                )"""
+            )
+            params.extend([like_pattern, like_pattern, like_pattern, like_pattern, like_pattern])
+
+        if status:
+            if status == "favorites":
+                where_parts.append("u.is_favorite = 1 AND u.status IN ('watched', 'rewatch')")
+            elif status == "movie-notes":
+                where_parts.append("u.notes IS NOT NULL AND TRIM(u.notes) <> ''")
+            elif status == "watched":
+                where_parts.append("u.status IN ('watched', 'rewatch')")
+            elif status == "new_discovery":
+                where_parts.append("u.status = 'new_discovery' AND NOT EXISTS (SELECT 1 FROM looking_out_for l WHERE l.tmdb_id = m.tmdb_id)")
+            else:
+                target_status = "excluded" if status == "nope" else status
+                validated_status = validate_movie_status(target_status)
+                where_parts.append("u.status = ?")
+                params.append(validated_status)
+        else:
+            where_parts.append("(u.status IS NOT NULL OR u.is_favorite = 1 OR (u.notes IS NOT NULL AND TRIM(u.notes) <> ''))")
+
+        where_clause = " AND ".join(where_parts)
+
+        with get_connection() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT m.*
+                FROM movies m
+                JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
+                WHERE {where_clause}
+                ORDER BY m.title COLLATE NOCASE
+                """,
+                tuple(params),
+            ).fetchall()
+
+        return [dict(row) for row in rows]
+
     def get_watched_movies(self) -> list[dict]:
         with get_connection() as connection:
             rows = connection.execute(
@@ -264,6 +333,7 @@ class MovieRepository:
         self,
         status: str | MovieStatus,
         page: int = 1,
+        page_size: int = PAGE_SIZE,
     ) -> dict:
         validated_status = validate_movie_status(status)
         where_clause = "u.status = ?"
@@ -277,27 +347,31 @@ class MovieRepository:
             where_clause,
             (validated_status,),
             page,
+            page_size=page_size,
         )
 
-    def get_watched_movies_page(self, page: int = 1) -> dict:
+    def get_watched_movies_page(self, page: int = 1, page_size: int = PAGE_SIZE) -> dict:
         return self._get_user_movie_page(
             "u.status IN (?, ?)",
             (MovieStatus.WATCHED.value, MovieStatus.REWATCH.value),
             page,
+            page_size=page_size,
         )
 
-    def get_favorite_movies_page(self, page: int = 1) -> dict:
+    def get_favorite_movies_page(self, page: int = 1, page_size: int = PAGE_SIZE) -> dict:
         return self._get_user_movie_page(
             "u.is_favorite = 1 AND u.status IN (?, ?)",
             (MovieStatus.WATCHED.value, MovieStatus.REWATCH.value),
             page,
+            page_size=page_size,
         )
 
-    def get_movies_with_notes_page(self, page: int = 1) -> dict:
+    def get_movies_with_notes_page(self, page: int = 1, page_size: int = PAGE_SIZE) -> dict:
         return self._get_user_movie_page(
             "u.notes IS NOT NULL AND TRIM(u.notes) <> ''",
             (),
             page,
+            page_size=page_size,
         )
 
     def _get_user_movie_page(
@@ -305,10 +379,13 @@ class MovieRepository:
         where_clause: str,
         parameters: tuple,
         page: int,
+        page_size: int = PAGE_SIZE,
     ) -> dict:
         if isinstance(page, bool) or not isinstance(page, int) or page < 1:
             raise ValueError("Movie page must be at least 1.")
-        offset = (page - 1) * self.PAGE_SIZE
+        if isinstance(page_size, bool) or not isinstance(page_size, int) or page_size < 1:
+            page_size = self.PAGE_SIZE
+        offset = (page - 1) * page_size
         with get_connection() as connection:
             total = connection.execute(
                 f"""
@@ -328,13 +405,13 @@ class MovieRepository:
                 ORDER BY m.title COLLATE NOCASE, m.tmdb_id
                 LIMIT ? OFFSET ?
                 """,
-                (*parameters, self.PAGE_SIZE, offset),
+                (*parameters, page_size, offset),
             ).fetchall()
         return {
             "page": page,
-            "page_size": self.PAGE_SIZE,
+            "page_size": page_size,
             "total_results": total,
-            "total_pages": max(1, (total + self.PAGE_SIZE - 1) // self.PAGE_SIZE),
+            "total_pages": max(1, (total + page_size - 1) // page_size),
             "results": [dict(row) for row in rows],
         }
 

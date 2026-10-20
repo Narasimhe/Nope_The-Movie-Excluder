@@ -70,9 +70,8 @@ class AdvancedMovieFiltersTests(unittest.TestCase):
         )
 
         params = filters.to_tmdb_params()
-
-        self.assertNotIn("with_original_language", params)
-        self.assertNotIn("with_origin_country", params)
+        self.assertEqual(params["with_original_language"], "en|fr")
+        self.assertEqual(params["with_origin_country"], "US|GB")
 
         matching_movie = {
             "original_language": "en",

@@ -32,3 +32,6 @@ A movie is protected from cache cleanup when it has any personal significance, i
 - Looking Out For tracking.
 
 Genres, official TMDB keywords, and cached credits attached only to a disposable movie are removed by SQLite cascade rules. Orphan metadata is cleaned afterward. Deleted general notebook entries remain recoverable until the separate permanent purge action is confirmed.
+
+For complete architectural details on automated pre-cleanup backups, SQLite vacuum compaction, dry-run previews, active shelf background refresh, and data export, see `docs/DATABASE_HEALTH_AND_SMART_CLEANUP.md`.
+

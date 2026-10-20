@@ -164,6 +164,41 @@ class GeneralEntryRepositoryTests(unittest.TestCase):
             0,
         )
 
+    def test_draft_workflow_creation_filtering_and_publishing(self) -> None:
+        published = self.repository.create_entry("note", "Published Note", status="published")
+        draft = self.repository.create_entry("note", "Draft Essay", status="draft")
+
+        self.assertEqual(published["status"], "published")
+        self.assertEqual(draft["status"], "draft")
+
+        # Default listing only returns published entries
+        pub_list = self.repository.list_entries()
+        self.assertEqual(pub_list["total_results"], 1)
+        self.assertEqual(pub_list["results"][0]["title"], "Published Note")
+
+        # Draft listing returns drafts
+        draft_list = self.repository.list_entries(status="draft")
+        self.assertEqual(draft_list["total_results"], 1)
+        self.assertEqual(draft_list["results"][0]["title"], "Draft Essay")
+
+        # Count drafts
+        self.assertEqual(self.repository.count_drafts(), 1)
+
+        # Tags summary includes draft count
+        summary = self.repository.get_tags_summary()
+        self.assertEqual(summary["draft_entries"], 1)
+        self.assertEqual(summary["total_entries"], 1)
+
+        # Publish the draft
+        promoted = self.repository.publish_entry(draft["entry_id"])
+        self.assertIsNotNone(promoted)
+        self.assertEqual(promoted["status"], "published")
+
+        # Now published count is 2 and draft count is 0
+        self.assertEqual(self.repository.count_drafts(), 0)
+        self.assertEqual(self.repository.list_entries()["total_results"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()
+

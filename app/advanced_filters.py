@@ -250,15 +250,14 @@ class AdvancedMovieFilters:
                 for value in self.exclude_company_ids
             )
 
-        # TMDB accepts one original-language or origin-country value
-        # directly. Multiple allowed values are handled locally.
-        if len(self.include_original_languages) == 1:
-            params["with_original_language"] = (
-                self.include_original_languages[0]
+        if self.include_original_languages:
+            params["with_original_language"] = "|".join(
+                self.include_original_languages
             )
-        if len(self.include_origin_countries) == 1:
-            params["with_origin_country"] = (
-                self.include_origin_countries[0]
+        if self.include_origin_countries:
+            params["with_origin_country"] = self._join_ids(
+                self.include_origin_countries,
+                self.country_logic,
             )
 
         if self.minimum_rating is not None:

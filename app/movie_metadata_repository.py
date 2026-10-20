@@ -709,6 +709,172 @@ class MovieMetadataRepository:
             result[key].append(credit)
         return result
 
+    def get_movie_credits_bulk(
+        self, tmdb_ids: list[int]
+    ) -> dict[int, dict[str, list[dict]]]:
+        if not tmdb_ids:
+            return {}
+        result: dict[int, dict[str, list[dict]]] = {
+            mid: {"directors": [], "actors": []} for mid in tmdb_ids
+        }
+        placeholders = ",".join("?" for _ in tmdb_ids)
+        with get_connection() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT tmdb_id, tmdb_person_id, name, credit_type,
+                       character_name, position
+                FROM movie_credits
+                WHERE tmdb_id IN ({placeholders})
+                ORDER BY credit_type DESC, position
+                """,
+                tuple(tmdb_ids),
+            ).fetchall()
+        for row in rows:
+            mid = row["tmdb_id"]
+            if mid not in result:
+                result[mid] = {"directors": [], "actors": []}
+            credit = {
+                "tmdb_person_id": row["tmdb_person_id"],
+                "name": row["name"],
+                "character": row["character_name"],
+                "position": row["position"],
+            }
+            key = "directors" if row["credit_type"] == "director" else "actors"
+            result[mid][key].append(credit)
+        return result
+
+    def get_movie_keywords_bulk(
+        self,
+        tmdb_ids: list[int],
+    ) -> dict[int, list[dict]]:
+        unique_ids = list(dict.fromkeys(tmdb_ids))
+        if not unique_ids:
+            return {}
+        for tmdb_id in unique_ids:
+            self._validate_movie_id(tmdb_id)
+        placeholders = ",".join("?" for _ in unique_ids)
+        result: dict[int, list[dict]] = {mid: [] for mid in unique_ids}
+        with get_connection() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT
+                    mk.tmdb_id,
+                    k.keyword_id,
+                    k.tmdb_keyword_id,
+                    k.name,
+                    k.is_custom,
+                    mk.position
+                FROM movie_keywords mk
+                JOIN keywords k ON mk.keyword_id = k.keyword_id
+                WHERE mk.tmdb_id IN ({placeholders})
+                ORDER BY mk.position, k.name COLLATE NOCASE
+                """,
+                tuple(unique_ids),
+            ).fetchall()
+        for row in rows:
+            result[row["tmdb_id"]].append(dict(row))
+        return result
+
+    def search_library_people(
+        self,
+        query: str,
+        credit_type: str | None = None,
+        status: str | None = None,
+    ) -> list[dict]:
+        cleaned = " ".join((query or "").split())
+        if not cleaned:
+            return []
+        escaped = (
+            cleaned.replace("!", "!!")
+            .replace("%", "!%")
+            .replace("_", "!_")
+        )
+        like_pattern = f"%{escaped}%"
+
+        where_parts = [
+            "c.name LIKE ? ESCAPE '!' COLLATE NOCASE"
+        ]
+        params: list[Any] = [like_pattern]
+
+        if credit_type in ("director", "actor"):
+            where_parts.append("c.credit_type = ?")
+            params.append(credit_type)
+
+        if status:
+            if status == "favorites":
+                where_parts.append("u.is_favorite = 1")
+            elif status == "movie-notes":
+                where_parts.append("u.notes IS NOT NULL AND TRIM(u.notes) <> ''")
+            else:
+                from app.movie_status import validate_movie_status
+                where_parts.append("u.status = ?")
+                params.append(validate_movie_status(status))
+        else:
+            where_parts.append(
+                "(u.status IS NOT NULL OR u.is_favorite = 1 OR (u.notes IS NOT NULL AND TRIM(u.notes) <> ''))"
+            )
+
+        where_clause = " AND ".join(where_parts)
+
+        with get_connection() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT DISTINCT c.tmdb_person_id, c.name, c.credit_type
+                FROM movie_credits c
+                JOIN user_movie_data u ON c.tmdb_id = u.tmdb_id
+                WHERE {where_clause}
+                ORDER BY c.name COLLATE NOCASE
+                LIMIT 20
+                """,
+                tuple(params),
+            ).fetchall()
+
+        return [
+            {
+                "id": row["tmdb_person_id"],
+                "name": row["name"],
+                "credit_type": row["credit_type"],
+            }
+            for row in rows
+        ]
+
+    def search_library_keywords(
+        self,
+        query: str,
+        limit: int = 15,
+    ) -> list[dict]:
+        cleaned = " ".join((query or "").split())
+        if not cleaned:
+            return []
+        escaped = (
+            cleaned.replace("!", "!!")
+            .replace("%", "!%")
+            .replace("_", "!_")
+        )
+        like_pattern = f"%{escaped}%"
+        with get_connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT DISTINCT k.keyword_id, k.tmdb_keyword_id, k.name, k.is_custom
+                FROM keywords k
+                JOIN movie_keywords mk ON k.keyword_id = mk.keyword_id
+                JOIN user_movie_data u ON mk.tmdb_id = u.tmdb_id
+                WHERE k.name LIKE ? ESCAPE '!' COLLATE NOCASE
+                ORDER BY k.is_custom DESC, k.name COLLATE NOCASE ASC
+                LIMIT ?
+                """,
+                (like_pattern, limit),
+            ).fetchall()
+        return [
+            {
+                "id": row["keyword_id"],
+                "name": f"🏷️ {row['name']}" if row["is_custom"] else row["name"],
+                "raw_name": row["name"],
+                "is_custom": bool(row["is_custom"]),
+            }
+            for row in rows
+        ]
+
     def search_movie_keyword_links(
         self,
         query: str,

@@ -37,6 +37,7 @@ class AdvancedSearchService:
         preference_id: int | None = None,
         page: int = 1,
         filters: AdvancedMovieFilters | dict | None = None,
+        force_refresh: bool = False,
     ) -> dict:
         if page < 1:
             raise ValueError("Advanced Search page must be at least 1.")
@@ -49,7 +50,7 @@ class AdvancedSearchService:
         (
             directed_movie_ids,
             director_credit_lookups,
-        ) = self._get_directed_movie_ids(filters)
+        ) = self._get_directed_movie_ids(filters, force_refresh=force_refresh)
         (
             tmdb_response,
             candidates,
@@ -59,6 +60,7 @@ class AdvancedSearchService:
             filters,
             page,
             post_filtering=self._requires_post_filtering(filters),
+            force_refresh=force_refresh,
         )
         results = []
         country_detail_lookups = 0
@@ -165,25 +167,57 @@ class AdvancedSearchService:
             "results": page_results,
         }
 
+    def _call_discover_movies(
+        self,
+        filters: AdvancedMovieFilters,
+        page: int,
+        force_refresh: bool,
+    ) -> dict:
+        try:
+            return self.tmdb_client.discover_movies(
+                filters, page=page, force_refresh=force_refresh
+            )
+        except TypeError:
+            return self.tmdb_client.discover_movies(filters, page=page)
+
+    def _call_get_person_movie_credits(
+        self,
+        person_id: int,
+        force_refresh: bool,
+    ) -> dict:
+        try:
+            return self.tmdb_client.get_person_movie_credits(
+                person_id, force_refresh=force_refresh
+            )
+        except TypeError:
+            return self.tmdb_client.get_person_movie_credits(person_id)
+
     def _discover_candidates(
         self,
         filters: AdvancedMovieFilters,
         page: int,
         *,
         post_filtering: bool,
+        force_refresh: bool = False,
     ) -> tuple[dict, list[dict], int, bool]:
         if not post_filtering:
-            response = self.tmdb_client.discover_movies(filters, page=page)
+            response = self._call_discover_movies(
+                filters, page=page, force_refresh=force_refresh
+            )
             return response, response.get("results") or [], 1, True
 
-        first_response = self.tmdb_client.discover_movies(filters, page=1)
+        first_response = self._call_discover_movies(
+            filters, page=1, force_refresh=force_refresh
+        )
         raw_total_pages = int(first_response.get("total_pages") or 1)
 
         if raw_total_pages > self.MAX_EXACT_SOURCE_PAGES:
             response = (
                 first_response
                 if page == 1
-                else self.tmdb_client.discover_movies(filters, page=page)
+                else self._call_discover_movies(
+                    filters, page=page, force_refresh=force_refresh
+                )
             )
             return response, response.get("results") or [], 1, False
 
@@ -199,9 +233,10 @@ class AdvancedSearchService:
         add_candidates(first_response)
         for source_page in range(2, total_pages + 1):
             add_candidates(
-                self.tmdb_client.discover_movies(
+                self._call_discover_movies(
                     filters,
                     page=source_page,
+                    force_refresh=force_refresh,
                 )
             )
 
@@ -227,6 +262,7 @@ class AdvancedSearchService:
     def _get_directed_movie_ids(
         self,
         filters: AdvancedMovieFilters,
+        force_refresh: bool = False,
     ) -> tuple[set[int] | None, int]:
         if not filters.include_director_ids:
             return None, 0
@@ -234,8 +270,9 @@ class AdvancedSearchService:
         movie_id_sets = []
 
         for person_id in filters.include_director_ids:
-            credits = self.tmdb_client.get_person_movie_credits(
-                person_id
+            credits = self._call_get_person_movie_credits(
+                person_id,
+                force_refresh=force_refresh,
             )
             directed_movie_ids = set()
 
