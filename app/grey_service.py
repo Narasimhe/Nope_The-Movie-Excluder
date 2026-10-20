@@ -862,77 +862,101 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
 
             elif action and action.get("type") == "update_entry":
                 try:
-                    # Strict guardrail: only allow note updates if a note is open or explicitly requested in message
-                    explicit_note_request = any(w in lower_msg for w in ["note", "draft", "journal", "essay", "blog", "write-up", "entry"])
+                    from app.general_entry_repository import GeneralEntryRepository
+                    repo = GeneralEntryRepository()
+                    params = action.get("params") or {}
+                    target_id = params.get("entry_id") or inspected_note_id
+                    target_title = params.get("title") or inspected_note_title
+                    mode = params.get("mode", "append")
+                    new_body = params.get("body", "")
+
+                    existing = None
+                    if target_id and str(target_id).isdigit():
+                        try:
+                            existing = repo.get_entry(int(target_id))
+                        except Exception:
+                            existing = None
+
+                    if not existing and target_title:
+                        with self._get_connection() as conn:
+                            row = conn.execute(
+                                "SELECT entry_id FROM general_entries WHERE is_deleted = 0 AND lower(title) = lower(?) ORDER BY updated_at DESC LIMIT 1",
+                                (str(target_title).strip(),)
+                            ).fetchone()
+                            if not row:
+                                row = conn.execute(
+                                    "SELECT entry_id FROM general_entries WHERE is_deleted = 0 AND lower(title) LIKE lower(?) ORDER BY updated_at DESC LIMIT 1",
+                                    (f"%{str(target_title).strip()}%",)
+                                ).fetchone()
+                            if row:
+                                existing = repo.get_entry(row["entry_id"])
+
+                    # If not explicitly named, scan if the user query mentioned any existing note title
+                    if not existing:
+                        with self._get_connection() as conn:
+                            all_titles = conn.execute("SELECT entry_id, title FROM general_entries WHERE is_deleted = 0").fetchall()
+                            for at in all_titles:
+                                if at["title"] and at["title"].strip().lower() in lower_msg:
+                                    existing = repo.get_entry(at["entry_id"])
+                                    break
+
+                    # The user must either have the note open on screen, OR explicitly request note modification in chat message
+                    explicit_note_request = (
+                        any(w in lower_msg for w in ["note", "draft", "journal", "essay", "blog", "write-up", "entry", "list"])
+                        or (bool(target_title) and str(target_title).strip().lower() in lower_msg)
+                        or (bool(existing) and existing["title"].strip().lower() in lower_msg)
+                    )
+
                     if not inspected_note_id and not explicit_note_request:
                         logger.warning("Rejected unprompted update_entry action: user did not request note modification.")
                         action = None
-                    else:
-                        from app.general_entry_repository import GeneralEntryRepository
-                        repo = GeneralEntryRepository()
-                        params = action.get("params") or {}
-                        target_id = params.get("entry_id") or inspected_note_id
-                        target_title = params.get("title") or inspected_note_title
-                        mode = params.get("mode", "replace")
-                        new_body = params.get("body", "")
+                    elif not existing:
+                        action = None
+                        data["text"] = f"I couldn't locate the note '{target_title or 'requested'}' in your notebook to update."
+                    elif existing:
+                        final_body = new_body
+                        if mode == "append" and existing.get("body"):
+                            final_body = f"{existing['body'].rstrip()}\n\n{new_body.lstrip()}"
 
-                        existing = None
-                        if target_id and str(target_id).isdigit():
-                            try:
-                                existing = repo.get_entry(int(target_id))
-                            except Exception:
-                                existing = None
+                        raw_tags = params.get("tags")
+                        if raw_tags is None:
+                            tags_to_save = [t["name"] for t in existing.get("tags", [])]
+                        elif isinstance(raw_tags, str):
+                            tags_to_save = [t.strip() for t in raw_tags.split(",") if t.strip()]
+                        elif isinstance(raw_tags, list):
+                            tags_to_save = [str(t).strip() for t in raw_tags if str(t).strip()]
+                        else:
+                            tags_to_save = []
 
-                        if not existing and target_title:
-                            with self._get_connection() as conn:
-                                row = conn.execute(
-                                    "SELECT entry_id FROM general_entries WHERE is_deleted = 0 AND lower(title) = lower(?) ORDER BY updated_at DESC LIMIT 1",
-                                    (str(target_title).strip(),)
-                                ).fetchone()
-                                if row:
-                                    existing = repo.get_entry(row["entry_id"])
+                        updated = repo.update_entry(
+                            entry_id=existing["entry_id"],
+                            entry_type=existing["entry_type"],
+                            title=params.get("title") or existing["title"],
+                            body=final_body,
+                            url=existing.get("url"),
+                            tags=tags_to_save,
+                            status=existing["status"],
+                        )
+                        if updated:
+                            if not isinstance(action.get("params"), dict):
+                                action["params"] = {}
+                            action["params"]["entry_id"] = updated["entry_id"]
+                            action["params"]["title"] = updated["title"]
 
-                        if existing:
-                            final_body = new_body
-                            if mode == "append" and existing.get("body"):
-                                final_body = f"{existing['body'].rstrip()}\n\n{new_body.lstrip()}"
-
-                            raw_tags = params.get("tags")
-                            if raw_tags is None:
-                                tags_to_save = [t["name"] for t in existing.get("tags", [])]
-                            elif isinstance(raw_tags, str):
-                                tags_to_save = [t.strip() for t in raw_tags.split(",") if t.strip()]
-                            elif isinstance(raw_tags, list):
-                                tags_to_save = [str(t).strip() for t in raw_tags if str(t).strip()]
-                            else:
-                                tags_to_save = []
-
-                            updated = repo.update_entry(
-                                entry_id=existing["entry_id"],
-                                entry_type=existing["entry_type"],
-                                title=params.get("title") or existing["title"],
-                                body=final_body,
-                                url=existing.get("url"),
-                                tags=tags_to_save,
-                                status=existing["status"],
-                            )
-                            if updated:
-                                if not isinstance(action.get("params"), dict):
-                                    action["params"] = {}
-                                action["params"]["entry_id"] = updated["entry_id"]
-                                open_pill_found = False
-                                for p in pills:
-                                    if p.get("action") == "open_entry":
-                                        p["payload"] = {"entry_id": updated["entry_id"]}
-                                        p["label"] = f"📖 View Updated: {updated['title'][:20]}"
-                                        open_pill_found = True
-                                        break
-                                if not open_pill_found:
-                                    pills.insert(0, {
-                                        "label": f"📖 View Updated: {updated['title'][:20]}",
-                                        "action": "open_entry",
-                                        "payload": {"entry_id": updated["entry_id"]},
-                                    })
+                            open_pill_found = False
+                            for p in pills:
+                                if p.get("action") in ("open_entry", "open_note") or "open" in (p.get("label") or "").lower():
+                                    p["action"] = "open_entry"
+                                    p["payload"] = {"entry_id": updated["entry_id"], "title": updated["title"]}
+                                    p["label"] = f"📖 Open {updated['title'][:24]}"
+                                    open_pill_found = True
+                                    break
+                            if not open_pill_found:
+                                pills.insert(0, {
+                                    "label": f"📖 Open {updated['title'][:24]}",
+                                    "action": "open_entry",
+                                    "payload": {"entry_id": updated["entry_id"], "title": updated["title"]},
+                                })
                 except Exception as update_err:
                     logger.error(f"Failed to update entry: {update_err}")
 

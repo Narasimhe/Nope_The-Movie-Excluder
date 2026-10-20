@@ -5104,21 +5104,13 @@ function appendEntryBody(container, body) {
       continue;
     }
 
-    // 5. Two blank lines inside a >> toggle exit back to the main note
-    if (activeDetails && !activeDetailsIsTag && consecutiveEmptyLines >= 2) {
-      const isIndented = /^\s{2,}/.test(line);
-      if (!isIndented) {
-        closeToggle();
-      }
-    }
-    consecutiveEmptyLines = 0;
-
-    // If an active toggle is open and we hit an unindented top-level heading, close it
+    // 5. If an active toggle is open and we hit an unindented top-level heading, close it
     if (activeDetails && !activeDetailsIsTag) {
       if (/^\s*#{1,6}\s+/.test(line)) {
         closeToggle();
       }
     }
+    consecutiveEmptyLines = 0;
 
     // Heading 3: ### Heading
     const h3Match = line.match(/^\s*###\s+(.+)/);
@@ -5193,6 +5185,9 @@ function appendEntryBody(container, body) {
       blockquote = null;
       if (activeDetails && !activeDetailsIsTag) {
         consecutiveEmptyLines += 1;
+        if (consecutiveEmptyLines >= 2) {
+          closeToggle();
+        }
       }
       continue;
     }
@@ -7001,12 +6996,31 @@ function appendGreyMessage(role, text, subtext, pills, { skipSave = false, skill
           openMovieDetails(pill.payload.tmdb_id);
         } else if (pill.action === "save_shelf" && pill.payload?.name) {
           handleGreySaveShelf(pill.payload.name);
-        } else if (pill.action === "open_entry" && pill.payload?.entry_id) {
-          fetchJSON(`/entries/${pill.payload.entry_id}`).then((res) => {
-            if (res && res.entry) {
-              openEntryReader(res.entry);
+        } else if ((pill.action === "open_entry" || pill.action === "open_note") || (pill.payload?.entry_id || pill.payload?.id)) {
+          if (elements.detailPage && !elements.detailPage.classList.contains("is-hidden")) {
+            closeMovieDetails();
+          }
+          const targetId = pill.payload?.entry_id || pill.payload?.id;
+          if (targetId) {
+            fetchJSON(`/entries/${targetId}`).then((res) => {
+              if (res && res.entry) {
+                openEntryReader(res.entry);
+              }
+            }).catch((err) => showNotice(err.message));
+          } else {
+            const rawTitle = pill.payload?.title || String(pill.label || "").replace(/^📖\s*(?:Open|View Updated|Draft:)?\s*/i, "").trim();
+            if (rawTitle) {
+              fetchJSON(`/entries?query=${encodeURIComponent(rawTitle)}`).then((res) => {
+                const list = res?.results || res?.entries || [];
+                const matched = list.find((e) => e.title.toLowerCase() === rawTitle.toLowerCase()) || list[0];
+                if (matched) {
+                  openEntryReader(matched);
+                } else {
+                  showNotice(`Note "${rawTitle}" not found.`);
+                }
+              }).catch((err) => showNotice(err.message));
             }
-          }).catch((err) => showNotice(err.message));
+          }
         } else if (pill.payload?.prompt) {
           sendGreyMessage(pill.payload.prompt);
         }
