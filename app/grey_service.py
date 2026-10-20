@@ -689,8 +689,10 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
             elif action and action.get("type") == "batch_set_movie_status":
                 try:
                     from app.movie_service import MovieService
+                    from app.user_movie_repository import UserMovieRepository
                     import re
                     movie_svc = MovieService()
+                    user_repo = UserMovieRepository()
                     params = action.get("params") or {}
                     raw_st = params.get("status")
                     target_status = status_map.get(str(raw_st).lower().strip(), raw_st) if raw_st else None
@@ -709,6 +711,7 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
                                 related_title_map[rtitle] = int(rid)
 
                     updated_movies = []
+                    preserved_movies = []
                     for item in raw_movies:
                         m_id = None
                         m_title = ""
@@ -752,6 +755,20 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
                                         m_title = row["title"]
 
                         if m_id and target_status:
+                            user_data = user_repo.get_user_movie_data(m_id)
+                            current_status = user_data.get("status") if user_data else None
+
+                            # Intelligent Protection: Only move to new_discovery if currently untracked!
+                            # Never silently override or un-banish movies that are already watched, excluded (NOPE),
+                            # rewatch, or watch_later without explicit instruction.
+                            if target_status == "new_discovery" and current_status is not None:
+                                preserved_movies.append({
+                                    "tmdb_id": m_id,
+                                    "title": m_title or f"Movie #{m_id}",
+                                    "status": current_status,
+                                })
+                                continue
+
                             movie_svc.set_movie_status(m_id, target_status)
                             if m_verdict is not None:
                                 try:
@@ -768,6 +785,17 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
                         action["params"] = {}
                     action["params"]["movies"] = updated_movies
                     action["params"]["status"] = target_status
+
+                    if preserved_movies:
+                        preserved_notes = []
+                        for pm in preserved_movies:
+                            readable_status = pm["status"].replace("_", " ").upper()
+                            preserved_notes.append(f"**{pm['title']}** (kept as {readable_status})")
+                        preserved_msg = f"Preserved prior judgments: {', '.join(preserved_notes)}."
+                        if data.get("text"):
+                            data["text"] = f"{data['text']}\n\n{preserved_msg}"
+                        else:
+                            data["text"] = preserved_msg
                 except Exception as batch_err:
                     logger.error(f"Failed to batch set movie status via Grey: {batch_err}")
 

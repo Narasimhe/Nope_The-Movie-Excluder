@@ -528,6 +528,82 @@ def test_grey_batch_set_movie_status_updates_all_titles():
                 assert m2["status"] == "new_discovery"
 
 
+def test_grey_batch_set_movie_status_protects_existing_judgments():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+        temp_db = Path(temp_dir) / "test.db"
+        with patch.object(database, "DATABASE_PATH", temp_db):
+            initialize_database()
+            from app.movie_repository import MovieRepository
+            from app.user_movie_repository import UserMovieRepository
+            movie_repo = MovieRepository()
+            user_repo = UserMovieRepository()
+
+            # Cape Fear was previously NOPE'd (excluded)
+            movie_repo.save_movie({
+                "id": 1391,
+                "title": "Cape Fear",
+                "release_date": "1991-11-15",
+                "overview": "A convicted rapist...",
+                "vote_average": 7.3,
+            })
+            user_repo.set_status(1391, "excluded")
+
+            # Carlito's Way is untracked
+            movie_repo.save_movie({
+                "id": 1392,
+                "title": "Carlito's Way",
+                "release_date": "1993-11-12",
+                "overview": "An ex-con tries to stay straight...",
+                "vote_average": 7.9,
+            })
+
+            service = GreyService(db_path=str(temp_db))
+            service.api_key = "test_key"
+
+            batch_reply = {
+                "text": "Added the YES films to New Discovery.",
+                "action": {
+                    "type": "batch_set_movie_status",
+                    "params": {
+                        "status": "new_discovery",
+                        "movies": [
+                            {"tmdb_id": 1391, "title": "Cape Fear"},
+                            {"tmdb_id": 1392, "title": "Carlito's Way"},
+                        ],
+                    },
+                },
+                "pills": [],
+            }
+
+            with patch("requests.post") as mock_post:
+                mock_resp = MagicMock()
+                mock_resp.status_code = 200
+                mock_resp.json.return_value = {
+                    "candidates": [{"content": {"parts": [{"text": json.dumps(batch_reply)}]}}]
+                }
+                mock_post.return_value = mock_resp
+
+                res = service.chat(
+                    "add the YES movies to new discovery",
+                    related_movies=[
+                        {"id": 1391, "title": "Cape Fear"},
+                        {"id": 1392, "title": "Carlito's Way"},
+                    ]
+                )
+
+                # Cape Fear MUST still be excluded (protected!)
+                m1 = user_repo.get_user_movie_data(1391)
+                assert m1["status"] == "excluded"
+
+                # Carlito's Way was untracked, so it safely became new_discovery
+                m2 = user_repo.get_user_movie_data(1392)
+                assert m2["status"] == "new_discovery"
+
+                # Grey reports preserved judgment in message
+                assert "Cape Fear" in res["text"]
+                assert "EXCLUDED" in res["text"]
+
+
 def test_grey_slash_command_skill_routing():
     service = GreyService()
     service.api_key = "test_key"
