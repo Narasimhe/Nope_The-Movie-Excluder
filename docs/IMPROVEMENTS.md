@@ -144,11 +144,12 @@ A central record of recent fixes, active improvements, and future backlog items 
   * **Graceful Single Movie Page Offline Fallback**: When viewing movies from a saved filter while offline, prevent crashes or failed loads when deep TMDB metadata is missing. Gracefully render the modal with the lightweight data already stored in the local filter cache (title, year, overview, rating) with a subtle "Offline Preview" indicator, allowing the user to read the premise and continue shelving titles (Watch Later, Watched, Nope) without internet.
   * **Local Poster / Image Caching Pipeline**: Automatically cache poster and backdrop images locally on disk when titles appear in saved filters or shelves. Serve images directly from local storage so that browsing saved filters offline displays rich cinematic posters instead of letter-initial fallback boxes.
 
-### Item 5: `/watchlist` Skill Overhaul (Eliminate Lazy 3-Movie Drafts & Enable Smart Appending)
-* **The Problem**: Currently, running `/watchlist` creates a barebones, lazy new draft containing only ~3 titles with minimal substance, and does not check for or append to existing watchlist notes/posts.
+### Item 5: `/watchlist` Skill Overhaul (Eliminate Lazy 3-Movie Drafts & Enable Smart Post Title Appending)
+* **The Problem**: Currently, running `/watchlist` creates a barebones, lazy new draft containing only ~3 titles with minimal substance, and does not check for or append to existing notes/posts. Furthermore, saying "add this to my [X] post" confuses Grey into doing a simple shelf move.
 * **Core Enhancements**:
-  * **Substantial Depth & Coverage**: Remove the lazy 3-movie cutoff. Enforce comprehensive drafting across the user's actual pending watchlist queue (e.g., 8-12 titles or full categorized tranches) using clean `>> Title (Year)` toggles.
-  * **Smart Note Appending vs. Draft Spamming**: When the user asks to "add this to my watchlist post/note", Grey should append a clean toggle entry to the existing watchlist journal note instead of spawning redundant, separate draft notes ("Curated Watchlist", "Curated Watchlist 2").
+  * **Exact Post Title Resolution & Smart Appending**: When the user says *"add this to my [Post Title] post"* (e.g., *"Watchlist 1"*, *"Watchlist 2"*, *"Spoof Movies"*, *"Documentary Movies"*), Grey must identify the targeted journal note/post by title and append the new movie toggle (`>> Title (Year)`) directly to that note's body, preserving all existing entries.
+  * **Substantial Depth & Coverage**: Remove the lazy 3-movie cutoff when compiling a watchlist note. Enforce comprehensive drafting across the user's actual pending watchlist queue (e.g., 8-12 titles or full categorized tranches) using clean `>> Title (Year)` toggles.
+  * **Zero Shelf/Note Confusion**: If the user prompt mentions *"post"*, *"note"*, *"journal"*, or *"entry"*, Grey is strictly forbidden from executing a `set_movie_status` shelf move. It must strictly route to the journal note appending/drafting system.
   * **Explicit Scope & Context**: Provide clear guidance in the skill prompt so it captures cast, hook, and why it's on the watchlist without cutting corners.
 
 ---
