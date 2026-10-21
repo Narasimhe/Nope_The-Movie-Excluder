@@ -138,6 +138,12 @@ A central record of recent fixes, active improvements, and future backlog items 
 ### Item 3: Keyword-Driven Discovery Filter Generator
 * Generate intelligent TMDB discovery filters based on selected journal articles, themes, or keyword clusters.
 
+### Item 4: Offline Mode Resilience & Local Cache Fallbacks
+* **The Goal**: Make the application fully usable and enjoyable when disconnected from the internet, especially for saved filters and library curation.
+* **Core Enhancements**:
+  * **Graceful Single Movie Page Offline Fallback**: When viewing movies from a saved filter while offline, prevent crashes or failed loads when deep TMDB metadata is missing. Gracefully render the modal with the lightweight data already stored in the local filter cache (title, year, overview, rating) with a subtle "Offline Preview" indicator, allowing the user to read the premise and continue shelving titles (Watch Later, Watched, Nope) without internet.
+  * **Local Poster / Image Caching Pipeline**: Automatically cache poster and backdrop images locally on disk when titles appear in saved filters or shelves. Serve images directly from local storage so that browsing saved filters offline displays rich cinematic posters instead of letter-initial fallback boxes.
+
 ---
 
 ## 3. Much Later (Future Backlog)
@@ -151,5 +157,5 @@ A central record of recent fixes, active improvements, and future backlog items 
 
 ---
 
-*Last Updated: October 17, 2026*
+*Last Updated: October 21, 2026*
 
