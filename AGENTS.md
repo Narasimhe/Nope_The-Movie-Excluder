@@ -17,8 +17,3 @@
    - Keep `docs/IMPROVEMENTS.md` updated with completed items and queued feature notes.
 4. **TEST SUITE VERIFICATION**:
    - Run verification via `python -m pytest` or `run.bat test` after making backend changes.
-5. **NOTION TOGGLE FORMATTING**:
-   - In notes, journal entries, and Grey drafts, always use Notion-style toggles `>> Title (Year)`. Never use raw HTML `<details>` or `<summary>`.
-6. **SHELF INTEGRITY & ZERO CONFUSION**:
-   - The 5 canonical shelves are: `new_discovery`, `watch_later`, `rewatch`, `watched`, and `excluded` (Nope).
-   - If the user mentions "post", "note", "journal", or "draft", it is strictly a Journal Note operation—never confuse it with a shelf status change.
