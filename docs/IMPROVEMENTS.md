@@ -152,6 +152,13 @@ A central record of recent fixes, active improvements, and future backlog items 
   * **Zero Shelf/Note Confusion**: If the user prompt mentions *"post"*, *"note"*, *"journal"*, or *"entry"*, Grey is strictly forbidden from executing a `set_movie_status` shelf move. It must strictly route to the journal note appending/drafting system.
   * **Explicit Scope & Context**: Provide clear guidance in the skill prompt so it captures cast, hook, and why it's on the watchlist without cutting corners.
 
+### Item 6: Prune Redundant Skill Chips (`/nope` and `/tonight`)
+* **The Goal**: Clean up UI real estate below Grey's message bubbles and eliminate useless or low-value chips.
+* **Pruning Decisions**:
+  * **Remove `🚫 /nope`**: Causes confusion (users expect an action to reject the current film, not an essay query) and consumes valuable chat space for an edge-case diagnostic question.
+  * **Remove `🎬 /tonight`**: Fails to deliver nuanced, meaningful recommendations—resorting to generic, obvious picks (*Fargo*, *12 Angry Men*) rather than sharp, contextual cinephile guidance.
+  * **Keep Skill Tray Lean**: Focus the quick-action pill tray strictly on high-leverage tools (like contextual `/related` film reality checks and targeted `/watchlist` note builder).
+
 ---
 
 ## 3. Much Later (Future Backlog)
