@@ -11,9 +11,9 @@
 ## Non-Negotiable Operational Rules
 1. **STRICTLY NO CODE IN CHAT RESPONSES**: Communicate exclusively in plain English. Never output raw code blocks, diffs, or code snippets in the chat conversation unless explicitly demanded by the user.
 2. **NO UNREQUESTED BROWSER SUBAGENTS**: Never launch the headless Chrome browser subagent or take verification screenshots unless the user explicitly asks for visual UI testing.
-3. **DOCUMENTATION & GIT INTEGRITY**:
+3. **GIT & DOCUMENTATION RULES**:
+   - Checkpoint working changes with local git commits. NEVER run `git push` unless explicitly instructed by the user.
    - Preserve all existing code comments, docstrings, and architectural patterns.
-   - Checkpoint working changes cleanly to git and push to `origin main`.
    - Keep `docs/IMPROVEMENTS.md` updated with completed items and queued feature notes.
 4. **TEST SUITE VERIFICATION**:
    - Run verification via `python -m pytest` or `run.bat test` after making backend changes.
