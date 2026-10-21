@@ -119,6 +119,25 @@ A central record of recent fixes, active improvements, and future backlog items 
 * **One-Click "Save to Draft" Action**: Every response bubble from Grey now features an ergonomic `📝 Save to Draft` action button. Clicking it immediately saves the response into your Journal Drafts as a draft note, updates sidebar draft counts, and marks the bubble as `✓ In Drafts`.
 * **Frugal Journal Taste Dossier**: Grey's taste dossier now includes a compact index of your published articles (titles and core themes/tags). When you ask about your essays (e.g. *"Based on my essay on Settlers, what should I watch?"*) or discuss a movie you've written an essay about, Grey dynamically pulls the relevant excerpt into context, ensuring Grey learns from your curated thoughts without prompt bloat.
 
+### V. Tiered Search Relevance Hierarchy & Multi-Word Tag Autocomplete (done — Oct 20)
+* **Tiered Search Relevance Hierarchy**: Replaced flat alphabetical search sorting with an intelligent relevance ranking hierarchy:
+  1. **Exact Title Match** (Tier 1, top priority)
+  2. **Title Starts With Query** (Tier 2)
+  3. **Title Contains Query** (Tier 3)
+  4. **Original Title Match** (Tier 4)
+  5. **Personal Memory Notes Match** (Tier 5)
+  6. **Overview / Plot Premise Match** (Tier 6)
+  Ensures that exact or direct title searches never get buried underneath dozens of movies that merely mention the word in their overview blurb.
+* **Multi-Word Tag Autocomplete**: Tag input now respects multi-word concepts (e.g. *"movie philosophy"*, *"site links"*), splitting strictly on commas rather than spaces, with an interactive suggestions dropdown and badge counts.
+
+### W. Notion Toggle Clean Breakouts & Note Navigation (done — Oct 20)
+* **Empty Line Toggle Exit**: Pressing Enter on an empty line within a Notion toggle block cleanly escapes the toggle and returns cursor to normal top-level body text.
+* **Modal Navigation Fixes**: Resolved note chip interactions from the single movie inspection modal so personal notes open reliably in the reader.
+
+### X. Single 1-Click Launcher (`run.bat`) & Grey Opinion Title Anchor (done — Oct 21)
+* **Consolidated Launcher**: Merged `run_app.bat` into `run.bat`. A single double-click launches the Uvicorn server and automatically opens the browser to `http://127.0.0.1:8000` while preserving CLI subcommands (`test`, `init`, `install`).
+* **Grey Opinion Header Anchor**: Injected Rule 0 into Grey's system prompt enforcing bold **Movie Title (Year)** on line 1 for any movie opinion, critique, or verdict.
+
 ---
 
 ## 2. Next (Active & Queued Features)
