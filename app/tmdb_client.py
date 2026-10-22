@@ -17,6 +17,19 @@ BASE_URL = "https://api.themoviedb.org/3"
 
 class TMDBClient:
     _filter_details_cache: dict[int, dict] = {}
+    _offline_until: float = 0.0
+
+    @classmethod
+    def is_offline(cls) -> bool:
+        return time.monotonic() < cls._offline_until
+
+    @classmethod
+    def mark_offline(cls, duration: float = 15.0) -> None:
+        cls._offline_until = time.monotonic() + duration
+
+    @classmethod
+    def mark_online(cls) -> None:
+        cls._offline_until = 0.0
 
     def __init__(self) -> None:
         if not TMDB_READ_ACCESS_TOKEN:
@@ -164,6 +177,9 @@ class TMDBClient:
             pass
 
     def get_movie(self, movie_id: int) -> dict:
+        if self.is_offline():
+            raise requests.exceptions.ConnectionError("Offline circuit breaker active")
+
         for attempt in range(3):
             try:
                 response = self.session.get(
@@ -173,9 +189,11 @@ class TMDBClient:
                     timeout=10,
                 )
                 response.raise_for_status()
+                self.mark_online()
                 return response.json()
             except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, OSError):
                 if attempt == 2:
+                    self.mark_offline(15.0)
                     raise
                 self._cycle_session()
                 time.sleep(0.25 * (attempt + 1))
@@ -198,6 +216,11 @@ class TMDBClient:
             self._filter_details_cache[movie_id] = cached
             return cached
 
+        if self.is_offline():
+            empty = {"origin_country": [], "production_countries": []}
+            self._filter_details_cache[movie_id] = empty
+            return empty
+
         for attempt in range(3):
             try:
                 response = self.session.get(
@@ -213,8 +236,10 @@ class TMDBClient:
                 }
                 self._filter_details_cache[movie_id] = filtered
                 self._save_cached_country_details(movie_id, filtered)
+                self.mark_online()
                 return filtered
             except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, OSError):
+                self.mark_offline(15.0)
                 self._cycle_session()
                 time.sleep(0.25 * (attempt + 1))
             except requests.exceptions.HTTPError:
@@ -380,6 +405,9 @@ class TMDBClient:
             if cached is not None:
                 return cached
 
+        if self.is_offline():
+            raise requests.exceptions.ConnectionError("Offline circuit breaker active")
+
         for attempt in range(3):
             try:
                 response = self.session.get(
@@ -390,9 +418,11 @@ class TMDBClient:
                 response.raise_for_status()
                 data = response.json()
                 self._save_cached_person_credits(person_id, data)
+                self.mark_online()
                 return data
             except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, OSError):
                 if attempt == 2:
+                    self.mark_offline(15.0)
                     raise
                 self._cycle_session()
                 time.sleep(0.25 * (attempt + 1))
@@ -414,6 +444,9 @@ class TMDBClient:
             if cached is not None:
                 return cached
 
+        if self.is_offline():
+            raise requests.exceptions.ConnectionError("Offline circuit breaker active")
+
         for attempt in range(3):
             try:
                 response = self.session.get(
@@ -425,9 +458,11 @@ class TMDBClient:
                 response.raise_for_status()
                 data = response.json()
                 self._save_cached_discover_response(cache_key, data)
+                self.mark_online()
                 return data
             except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, OSError):
                 if attempt == 2:
+                    self.mark_offline(15.0)
                     raise
                 self._cycle_session()
                 time.sleep(0.25 * (attempt + 1))

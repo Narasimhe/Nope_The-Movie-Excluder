@@ -135,6 +135,99 @@ class MovieNotesTests(unittest.TestCase):
         self.assertEqual(updated["notes"], "Keep this one.")
         self.assertIsNone(cleared["notes"])
 
+    def test_library_search_word_boundary_prevents_mid_word_false_positives(self) -> None:
+        self.movie_repository.save_movie(
+            {
+                "id": 401,
+                "title": "Layer Cake",
+                "original_title": "Layer Cake",
+                "release_date": "2004-10-01",
+                "overview": "When a seemingly straight-forward drug deal goes awry against all odds.",
+            }
+        )
+        self.user_repository.set_status(401, MovieStatus.WATCHED)
+
+        self.movie_repository.save_movie(
+            {
+                "id": 402,
+                "title": "A.I. Artificial Intelligence",
+                "original_title": "A.I. Artificial Intelligence",
+                "release_date": "2001-06-29",
+                "overview": "A robotic boy longs to become real.",
+            }
+        )
+        self.user_repository.set_status(402, MovieStatus.WATCHED)
+
+        self.movie_repository.save_movie(
+            {
+                "id": 403,
+                "title": "I Am Mother",
+                "original_title": "I Am Mother",
+                "release_date": "2019-06-07",
+                "overview": "A teenage girl is raised underground by a robot.",
+            }
+        )
+        self.user_repository.set_status(403, MovieStatus.WATCHED)
+        self.metadata_repository.add_custom_keyword(403, "artificial intelligence (a.i.)")
+
+        results = self.movie_repository.search_user_library("ai")
+        matched_ids = [m["tmdb_id"] for m in results]
+        self.assertEqual(matched_ids, [402, 403])
+        self.assertNotIn(401, matched_ids)
+
+    def test_library_search_five_tier_hierarchy_and_prefixes(self) -> None:
+        # Tier 5: keyword match
+        self.movie_repository.save_movie(
+            {"id": 505, "title": "Zeta Film", "overview": "A quiet drama."}
+        )
+        self.user_repository.set_status(505, MovieStatus.WATCHED)
+        self.metadata_repository.add_custom_keyword(505, "american dream")
+
+        # Tier 4: personal notes match
+        self.movie_repository.save_movie(
+            {"id": 504, "title": "Beta Film", "overview": "A coastal story."}
+        )
+        self.user_repository.set_status(504, MovieStatus.WATCHED)
+        self.user_repository.set_notes(504, "Classic american road trip vibe.")
+
+        # Tier 3: TMDB plot blurb match
+        self.movie_repository.save_movie(
+            {"id": 503, "title": "Alpha Film", "overview": "An american journalist travels abroad."}
+        )
+        self.user_repository.set_status(503, MovieStatus.WATCHED)
+
+        # Tier 2: Title contains word
+        self.movie_repository.save_movie(
+            {"id": 502, "title": "American Psycho", "overview": "Wall Street thriller."}
+        )
+        self.user_repository.set_status(502, MovieStatus.WATCHED)
+
+        # Tier 1: Exact title match
+        self.movie_repository.save_movie(
+            {"id": 501, "title": "American", "overview": "A standalone story."}
+        )
+        self.user_repository.set_status(501, MovieStatus.WATCHED)
+
+        all_results = self.movie_repository.search_user_library("american")
+        self.assertEqual([m["tmdb_id"] for m in all_results], [501, 502, 503, 504, 505])
+        self.assertEqual([m["search_tier"] for m in all_results], [1, 2, 3, 4, 5])
+
+        title_only = self.movie_repository.search_user_library("title: american")
+        self.assertEqual([m["tmdb_id"] for m in title_only], [501, 502])
+
+        plot_only = self.movie_repository.search_user_library("plot: american")
+        self.assertEqual([m["tmdb_id"] for m in plot_only], [503])
+
+        notes_only = self.movie_repository.search_user_library("notes: american")
+        self.assertEqual([m["tmdb_id"] for m in notes_only], [504])
+
+    def test_movie_notes_shelf_double_select_status_filter(self) -> None:
+        watched_notes = self.movie_repository.search_user_library("", status="movie-notes:watched")
+        self.assertEqual([m["tmdb_id"] for m in watched_notes], [202])
+
+        nope_notes = self.movie_repository.search_user_library("", status="movie-notes:excluded")
+        self.assertEqual([m["tmdb_id"] for m in nope_notes], [303])
+
 
 if __name__ == "__main__":
     unittest.main()

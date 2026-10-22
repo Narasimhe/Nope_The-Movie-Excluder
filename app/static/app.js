@@ -1,4 +1,22 @@
 const IMAGE_BASE_URL = "https://image.tmdb.org/t/p/w500";
+
+function getPosterUrl(posterPath) {
+  if (!posterPath) return "";
+  if (posterPath.startsWith("http://") || posterPath.startsWith("https://")) {
+    return posterPath;
+  }
+  const clean = posterPath.startsWith("/") ? posterPath.slice(1) : posterPath;
+  return `https://image.tmdb.org/t/p/w500/${clean}`;
+}
+
+function getLocalPosterUrl(posterPath) {
+  if (!posterPath) return "";
+  if (posterPath.startsWith("http://") || posterPath.startsWith("https://")) {
+    return posterPath;
+  }
+  const clean = posterPath.startsWith("/") ? posterPath.slice(1) : posterPath;
+  return `/images/posters/${clean}`;
+}
 const JOURNAL_TIME_ZONE = "Asia/Kolkata";
 const JOURNAL_START_YEAR = 2026;
 const JOURNAL_START_MONTH = 8;
@@ -341,6 +359,7 @@ const elements = {
   greyModelName: document.querySelector("#grey-model-name"),
   greySkillsBar: document.querySelector("#grey-skills-bar"),
   greySlashMenu: document.querySelector("#grey-slash-menu"),
+  posterNotePopover: document.querySelector("#poster-note-popover"),
 };
 
 const state = {
@@ -351,6 +370,8 @@ const state = {
   libSelectedLanguages: new Set(),
   librarySearchScope: "all",
   isSearchingLibrary: false,
+  movieNotesShelfFilter: null,
+  lastNormalShelf: "favorites",
   mode: "shelf",
   currentView: "new_discovery",
   selectedMovie: null,
@@ -392,7 +413,7 @@ const state = {
   notesCurrentView: "all",
   notesTimelineFilter: null,
   lookingOutPage: 1,
-  showRelatedFamiliar: false,
+  showRelatedTracked: true,
   detailRelatedMovies: [],
   profileDialogMode: "create",
   detailTrail: [],
@@ -442,12 +463,24 @@ function setSectionCopy({ kicker, title, description }) {
 
 function setActiveView(view) {
   state.currentView = view;
+  const normalLibraryShelves = ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery"];
+  if (view && normalLibraryShelves.includes(view)) {
+    state.lastNormalShelf = view;
+  }
   if (view && elements.filmographyToolbar) {
     elements.filmographyToolbar.classList.add("is-hidden");
     state.activeFilmographyPerson = null;
   }
   elements.navLinks.forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.view === view);
+    const btnView = button.dataset.view;
+    const isPrimary = btnView === view;
+    const isPairedShelf = Boolean(
+      view === "movie-notes" &&
+      state.movieNotesShelfFilter &&
+      btnView === state.movieNotesShelfFilter
+    );
+    button.classList.toggle("is-active", Boolean(isPrimary || isPairedShelf));
+    button.classList.toggle("is-notes-paired", isPairedShelf);
   });
 
   elements.masterTabs.forEach((tab) => {
@@ -510,6 +543,18 @@ function setActiveView(view) {
   if (view && history.replaceState) {
     history.replaceState(null, "", `#${view}`);
   }
+
+  if (elements.libraryFilterQuery) {
+    if (view === "movie-notes") {
+      elements.libraryFilterQuery.placeholder = "Search your movie notes…";
+      elements.libraryFilterQuery.title = "Search inside your movie notes, or use title:, plot: prefixes";
+    } else {
+      elements.libraryFilterQuery.placeholder = "Search library (or title:, plot:)…";
+      elements.libraryFilterQuery.title = "Search across your library, or use title:, plot: prefixes";
+    }
+  }
+
+  updateGreyContext();
 
   if (view && ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes", "entries", "discover"].includes(view)) {
     try {
@@ -2335,19 +2380,27 @@ function createPoster(movie, className = "") {
   const title = movie.title || movie.original_title || "Untitled movie";
 
   if (movie.poster_path) {
+    const isExplicitlyOffline = typeof navigator !== "undefined" && navigator.onLine === false;
+    const cdnUrl = getPosterUrl(movie.poster_path);
+    const localUrl = getLocalPosterUrl(movie.poster_path);
+
     const image = document.createElement("img");
-    image.src = `${IMAGE_BASE_URL}${movie.poster_path}`;
+    image.src = localUrl || cdnUrl;
     image.alt = `${title} poster`;
     image.loading = "lazy";
     image.decoding = "async";
     image.className = className;
-    image.addEventListener(
-      "error",
-      () => {
-        image.replaceWith(createPosterFallback(title));
-      },
-      { once: true },
-    );
+    image.addEventListener("error", () => {
+      if (!image.dataset.fallbackAttempted) {
+        image.dataset.fallbackAttempted = "1";
+        // If we tried local and failed, try CDN only if not explicitly offline
+        if (image.src.includes("/images/posters/") && cdnUrl && !isExplicitlyOffline) {
+          image.src = cdnUrl;
+          return;
+        }
+      }
+      image.replaceWith(createPosterFallback(title));
+    });
     return image;
   }
 
@@ -2362,6 +2415,83 @@ function createPosterFallback(title) {
   return fallback;
 }
 
+function escapeHTML(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+let posterNoteHoverTimer = null;
+
+function hidePosterNotePreview() {
+  if (posterNoteHoverTimer) {
+    clearTimeout(posterNoteHoverTimer);
+    posterNoteHoverTimer = null;
+  }
+  const pop = elements.posterNotePopover || document.querySelector("#poster-note-popover");
+  if (!pop) return;
+  pop.classList.remove("is-visible");
+  pop.classList.add("is-hidden");
+  pop.setAttribute("aria-hidden", "true");
+}
+
+function showPosterNotePreview(anchorEl, movie) {
+  const pop = elements.posterNotePopover || document.querySelector("#poster-note-popover");
+  const rawNotes = (movie?.user_data?.notes || "").trim();
+  if (!pop || !anchorEl || !rawNotes) return;
+
+  const title = movie.title || movie.original_title || "Untitled movie";
+  const yearText = getMovieYear(movie);
+
+  pop.innerHTML = `
+    <div class="poster-note-popover-header">
+      <span class="poster-note-popover-badge">📝 Note</span>
+      <span class="poster-note-popover-title">${escapeHTML(title)}${yearText ? ` <span class="poster-note-popover-year">(${escapeHTML(String(yearText))})</span>` : ""}</span>
+    </div>
+    <div class="poster-note-popover-body">${formatRichText(rawNotes)}</div>
+  `;
+
+  pop.classList.remove("is-hidden");
+  pop.setAttribute("aria-hidden", "false");
+
+  const rect = anchorEl.getBoundingClientRect();
+  const popWidth = 264;
+  const viewportW = window.innerWidth;
+  const viewportH = window.innerHeight;
+
+  let left = rect.left + rect.width / 2 - popWidth / 2;
+  left = Math.max(12, Math.min(left, viewportW - popWidth - 12));
+
+  pop.style.width = `${popWidth}px`;
+  pop.style.left = `${Math.round(left)}px`;
+
+  const popHeight = pop.offsetHeight || 110;
+  let top = rect.top - popHeight - 10;
+  if (top < 12) {
+    top = Math.min(viewportH - popHeight - 12, rect.bottom + 10);
+  }
+  pop.style.top = `${Math.round(Math.max(12, top))}px`;
+
+  requestAnimationFrame(() => {
+    pop.classList.add("is-visible");
+  });
+}
+
+function schedulePosterNotePreview(anchorEl, movie) {
+  if (posterNoteHoverTimer) {
+    clearTimeout(posterNoteHoverTimer);
+  }
+  posterNoteHoverTimer = setTimeout(() => {
+    showPosterNotePreview(anchorEl, movie);
+  }, 150);
+}
+
+window.addEventListener("scroll", hidePosterNotePreview, { passive: true });
+
 function createMovieCard(movie) {
   const movieId = getMovieId(movie);
   const title = movie.title || movie.original_title || "Untitled movie";
@@ -2375,15 +2505,15 @@ function createMovieCard(movie) {
   posterButton.className = "poster-button";
   posterButton.setAttribute("aria-label", `Open details for ${title}`);
   const yearText = getMovieYear(movie);
-  const isNotesView = state.mode === "movie-notes" || state.mode === "movie-notes-search";
-  const notesText = isNotesView ? movie.user_data?.notes : null;
-  posterButton.title = `${title}${yearText ? ` (${yearText})` : ""}${notesText ? `\n📝 ${notesText}` : ""}`;
+  const rawNotes = (movie.user_data?.notes || "").trim();
+  posterButton.title = `${title}${yearText ? ` (${yearText})` : ""}`;
   if (status === "excluded" && state.currentView === "discover") {
     article.classList.add("is-noped");
   }
 
   posterButton.append(createPoster(movie));
   posterButton.addEventListener("click", (event) => {
+    hidePosterNotePreview();
     if (state.nopeMode && state.currentView === "discover") {
       event.preventDefault();
       event.stopPropagation();
@@ -2393,6 +2523,19 @@ function createMovieCard(movie) {
     openMovieDetails(movieId);
   });
 
+  if (rawNotes) {
+    posterButton.addEventListener("mouseenter", () => {
+      if (state.nopeMode && state.currentView === "discover") return;
+      schedulePosterNotePreview(posterButton, movie);
+    });
+    posterButton.addEventListener("mouseleave", hidePosterNotePreview);
+    posterButton.addEventListener("focus", () => {
+      if (state.nopeMode && state.currentView === "discover") return;
+      schedulePosterNotePreview(posterButton, movie);
+    });
+    posterButton.addEventListener("blur", hidePosterNotePreview);
+  }
+
   if (movie.user_data?.is_favorite) {
     const favorite = document.createElement("span");
     favorite.className = "favorite-mark";
@@ -2401,7 +2544,7 @@ function createMovieCard(movie) {
     posterButton.append(favorite);
   }
 
-  if (notesText) {
+  if (rawNotes) {
     const noteMark = document.createElement("span");
     noteMark.className = "card-note-mark";
     noteMark.textContent = "📝";
@@ -2440,14 +2583,6 @@ function createMovieCard(movie) {
 
   copy.append(heading, meta);
 
-  if (isNotesView && movie.user_data?.notes) {
-    article.classList.add("has-notes");
-    const noteSnippet = document.createElement("p");
-    noteSnippet.className = "card-note-snippet";
-    noteSnippet.innerHTML = formatRichText(movie.user_data.notes);
-    copy.append(noteSnippet);
-  }
-
   article.append(posterButton, copy);
   return article;
 }
@@ -2463,6 +2598,7 @@ function hasActiveShelfFilters() {
   ];
   return Boolean(
     q ||
+    (state.currentView === "movie-notes" && state.movieNotesShelfFilter) ||
     state.libSelectedGenres?.size > 0 ||
     !isNaN(yearFrom) ||
     !isNaN(yearTo) ||
@@ -2473,14 +2609,16 @@ function hasActiveShelfFilters() {
 }
 
 function renderMovies(movies, emptyContext = "library", total = null) {
+  hidePosterNotePreview();
   clearNopeUndo();
   elements.grid.replaceChildren();
   const count = total ?? movies.length;
-  elements.count.textContent = `${count} ${
+  const formattedCount = typeof count === "number" ? count.toLocaleString() : count;
+  elements.count.textContent = `${formattedCount} ${
     count === 1 ? "movie" : "movies"
   }`;
   if (elements.shelfCount) {
-    elements.shelfCount.textContent = `${count} ${count === 1 ? "movie" : "movies"}`;
+    elements.shelfCount.textContent = `${formattedCount} ${count === 1 ? "movie" : "movies"}`;
   }
 
   if (movies.length === 0) {
@@ -2703,21 +2841,155 @@ function updateLibraryFilterBadges() {
   setBadge(elements.badgeLibLanguages, state.libSelectedLanguages.size);
 }
 
+function normalizeLibrarySearchText(text) {
+  if (!text) return "";
+  const collapsed = String(text).replace(/\b([a-zA-Z])(?:\.([a-zA-Z]))+\.?/g, (m) =>
+    m.replace(/\./g, "")
+  );
+  return collapsed.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function parseLibrarySearchQuery(rawQuery) {
+  const cleaned = String(rawQuery || "").trim().replace(/\s+/g, " ");
+  if (!cleaned) return { mode: "all", term: "" };
+  const match = cleaned.match(/^(title|plot|notes?)\s*:\s*(.*)$/i);
+  if (match) {
+    const prefix = match[1].toLowerCase();
+    const mode = prefix === "note" || prefix === "notes" ? "notes" : prefix;
+    const term = (match[2] || "").trim().replace(/\s+/g, " ");
+    return { mode, term };
+  }
+  return { mode: "all", term: cleaned };
+}
+
+function escapeRegExp(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildLibraryWordBoundaryRegex(normTerm) {
+  if (!normTerm) return null;
+  const tokens = normTerm.match(/[a-z0-9]+/gi);
+  if (tokens && tokens.length > 0) {
+    const joined = tokens.map(escapeRegExp).join("[\\s\\-_:,.;!?'\"/()+]+");
+    return new RegExp(`(?:^|[^a-z0-9])${joined}(?=$|[^a-z0-9])`, "i");
+  }
+  return new RegExp(escapeRegExp(normTerm), "i");
+}
+
+function computeMovieSearchRank(movie, mode, normTerm, regex) {
+  if (!normTerm || !regex) return null;
+  const normTitle = normalizeLibrarySearchText(movie.title);
+  const normOrig = normalizeLibrarySearchText(movie.original_title);
+  const normOverview = normalizeLibrarySearchText(movie.overview);
+  const normNotes = normalizeLibrarySearchText(movie.user_data?.notes);
+  const normKeywords = (movie.keywords || [])
+    .map((k) => normalizeLibrarySearchText(typeof k === "string" ? k : k.name))
+    .filter(Boolean);
+
+  if (mode === "title") {
+    if (normTitle === normTerm || (normOrig && normOrig === normTerm)) {
+      return { tier: 1, subtier: 0 };
+    }
+    if (regex.test(normTitle) || (normOrig && regex.test(normOrig))) {
+      return { tier: 2, subtier: normTitle.startsWith(normTerm) ? 0 : 1 };
+    }
+    return null;
+  }
+
+  if (mode === "plot") {
+    if (regex.test(normOverview)) return { tier: 3, subtier: 0 };
+    return null;
+  }
+
+  if (mode === "notes") {
+    if (regex.test(normNotes)) return { tier: 4, subtier: 0 };
+    return null;
+  }
+
+  if (normTitle === normTerm || (normOrig && normOrig === normTerm)) {
+    return { tier: 1, subtier: 0 };
+  }
+  if (regex.test(normTitle) || (normOrig && regex.test(normOrig))) {
+    return { tier: 2, subtier: normTitle.startsWith(normTerm) ? 0 : 1 };
+  }
+  if (regex.test(normOverview)) {
+    return { tier: 3, subtier: 0 };
+  }
+  if (regex.test(normNotes)) {
+    return { tier: 4, subtier: 0 };
+  }
+  if (normKeywords.some((kw) => kw === normTerm)) {
+    return { tier: 5, subtier: 0 };
+  }
+  if (normKeywords.some((kw) => regex.test(kw))) {
+    return { tier: 5, subtier: 1 };
+  }
+  return null;
+}
+
+function matchesLibraryShelfStatus(movie, shelfStatus) {
+  if (!shelfStatus) return true;
+  const status = movie.user_data?.status || movie.status || null;
+  const isFav = Boolean(movie.user_data?.is_favorite);
+  if (shelfStatus === "favorites") {
+    return isFav && (status === "watched" || status === "rewatch");
+  }
+  if (shelfStatus === "watched") {
+    return status === "watched" || status === "rewatch";
+  }
+  if (shelfStatus === "excluded" || shelfStatus === "nope") {
+    return status === "excluded";
+  }
+  return status === shelfStatus;
+}
+
+function getMovieNotesHeadingCopy() {
+  const base = VIEW_COPY["movie-notes"];
+  if (state.movieNotesShelfFilter && VIEW_COPY[state.movieNotesShelfFilter]) {
+    return {
+      kicker: base.kicker,
+      title: `Movie Notes · ${VIEW_COPY[state.movieNotesShelfFilter].title}`,
+      description: base.description,
+    };
+  }
+  return base;
+}
+
 function applyLibraryFilters(targetPage = 1) {
   if (!state.unfilteredShelfMovies) {
     state.unfilteredShelfMovies = [...(state.movies || [])];
   }
   let list = [...state.unfilteredShelfMovies];
 
-  // 1. Text filter
-  const q = (elements.libraryFilterQuery?.value || "").trim().toLowerCase();
-  if (q) {
-    list = list.filter((m) => {
-      const title = (m.title || "").toLowerCase();
-      const overview = (m.overview || "").toLowerCase();
-      const notes = (m.user_data?.notes || "").toLowerCase();
-      return title.includes(q) || overview.includes(q) || notes.includes(q);
-    });
+  // 0. Movie Notes + Shelf Double-Select lens filter
+  if (state.currentView === "movie-notes" && state.movieNotesShelfFilter) {
+    list = list.filter(
+      (m) =>
+        Boolean((m.user_data?.notes || "").trim()) &&
+        matchesLibraryShelfStatus(m, state.movieNotesShelfFilter)
+    );
+  }
+
+  // 1. Text filter (with prefix syntax & 5-tier word-boundary matching)
+  const rawQuery = (elements.libraryFilterQuery?.value || "").trim();
+  let { mode: searchMode, term: searchTerm } = parseLibrarySearchQuery(rawQuery);
+  if (state.currentView === "movie-notes" && searchMode === "all") {
+    searchMode = "notes";
+  }
+  const normSearchTerm = normalizeLibrarySearchText(searchTerm);
+  const searchRegex = buildLibraryWordBoundaryRegex(normSearchTerm);
+
+  if (normSearchTerm && searchRegex) {
+    const matched = [];
+    for (const m of list) {
+      const rank = computeMovieSearchRank(m, searchMode, normSearchTerm, searchRegex);
+      if (rank) {
+        m._rankTier = rank.tier;
+        m._rankSubtier = rank.subtier;
+        matched.push(m);
+      }
+    }
+    list = matched;
   }
 
   // 2. Genres
@@ -2791,31 +3063,42 @@ function applyLibraryFilters(targetPage = 1) {
     });
   }
 
-  // 7. Sorting — applied across the ENTIRE collection before pagination
+  // 7. Sorting — when a search query is active, preserve the 5-Tier Relevance Hierarchy first
   const sortBy = elements.libSortCloud?.querySelector(".filter-chip.is-active")?.dataset.sort || "recent";
-  if (sortBy === "title_asc") {
-    list.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
-  } else if (sortBy === "year_desc") {
-    list.sort((a, b) => {
+  const compareBySortChip = (a, b) => {
+    if (sortBy === "title_asc") {
+      return (a.title || "").localeCompare(b.title || "");
+    }
+    if (sortBy === "year_desc") {
       const dateA = a.release_date || (a.release_year ? `${a.release_year}-01-01` : "");
       const dateB = b.release_date || (b.release_year ? `${b.release_year}-01-01` : "");
       const comp = dateB.localeCompare(dateA);
       return comp !== 0 ? comp : (a.title || "").localeCompare(b.title || "");
-    });
-  } else if (sortBy === "year_asc") {
-    list.sort((a, b) => {
+    }
+    if (sortBy === "year_asc") {
       const dateA = a.release_date || (a.release_year ? `${a.release_year}-01-01` : "9999-99-99");
       const dateB = b.release_date || (b.release_year ? `${b.release_year}-01-01` : "9999-99-99");
       const comp = (dateA || "9999-99-99").localeCompare(dateB || "9999-99-99");
       return comp !== 0 ? comp : (a.title || "").localeCompare(b.title || "");
-    });
-  } else if (sortBy === "recent") {
+    }
+    const dateA = a.user_data?.updated_at || a.user_data?.created_at || "";
+    const dateB = b.user_data?.updated_at || b.user_data?.created_at || "";
+    const comp = dateB.localeCompare(dateA);
+    return comp !== 0 ? comp : (a.title || "").localeCompare(b.title || "");
+  };
+
+  if (normSearchTerm && searchRegex) {
     list.sort((a, b) => {
-      const dateA = a.user_data?.updated_at || a.user_data?.created_at || "";
-      const dateB = b.user_data?.updated_at || b.user_data?.created_at || "";
-      const comp = dateB.localeCompare(dateA);
-      return comp !== 0 ? comp : (a.title || "").localeCompare(b.title || "");
+      const tierA = a._rankTier ?? a.search_tier ?? 99;
+      const tierB = b._rankTier ?? b.search_tier ?? 99;
+      if (tierA !== tierB) return tierA - tierB;
+      const subA = a._rankSubtier ?? a.search_subtier ?? 0;
+      const subB = b._rankSubtier ?? b.search_subtier ?? 0;
+      if (subA !== subB) return subA - subB;
+      return (a.title || "").localeCompare(b.title || "");
     });
+  } else {
+    list.sort(compareBySortChip);
   }
 
   updateLibraryFilterBadges();
@@ -2913,6 +3196,10 @@ function resetLibraryFilters({ silent = false } = {}) {
   state.selectedEntities.libKeywords = [];
   state.selectedEntities.libDirectors = [];
   state.selectedEntities.libActors = [];
+  state.movieNotesShelfFilter = null;
+  if (state.currentView === "movie-notes") {
+    setActiveView("movie-notes");
+  }
   renderSelectedEntities("libKeywords");
   renderSelectedEntities("libDirectors");
   renderSelectedEntities("libActors");
@@ -2961,7 +3248,10 @@ async function searchPersonalLibrary() {
   const requestNumber = ++state.requestNumber;
   state.isSearchingLibrary = true;
   elements.pagination.classList.add("is-hidden");
-  const shelfTitle = VIEW_COPY[state.currentView]?.title || "Current shelf";
+  const shelfTitle =
+    state.currentView === "movie-notes"
+      ? getMovieNotesHeadingCopy().title
+      : VIEW_COPY[state.currentView]?.title || "Current shelf";
   setSectionCopy({
     kicker: "Personal library search",
     title: scope === "all" ? "Personal Library" : shelfTitle,
@@ -2972,7 +3262,12 @@ async function searchPersonalLibrary() {
 
   try {
     let url = `/movies/library/search?query=${encodeURIComponent(query)}`;
-    if (scope === "shelf" && state.currentView && state.currentView !== "library" && state.currentView !== "entries") {
+    if (state.currentView === "movie-notes") {
+      const statusParam = state.movieNotesShelfFilter
+        ? `movie-notes:${state.movieNotesShelfFilter}`
+        : "movie-notes";
+      url += `&status=${encodeURIComponent(statusParam)}`;
+    } else if (scope === "shelf" && state.currentView && state.currentView !== "library" && state.currentView !== "entries") {
       url += `&status=${encodeURIComponent(state.currentView)}`;
     }
     const results = await fetchJSON(url);
@@ -2982,7 +3277,7 @@ async function searchPersonalLibrary() {
     state.unfilteredShelfMovies = list;
     applyLibraryFilters();
 
-    const count = state.movies.length;
+    const count = state.allFilteredMovies ? state.allFilteredMovies.length : state.movies.length;
     const scopeLabel = scope === "all" ? "all shelves" : shelfTitle;
     const filterDetail = query ? ` matching "${query}"` : " matching filters";
     const countText = `${count} ${count === 1 ? "movie" : "movies"}${filterDetail} (${scopeLabel})`;
@@ -3175,7 +3470,7 @@ async function loadMovieNotes(page = 1) {
     elements.discoverWorkspace.classList.add("is-hidden");
   }
   if (elements.notesSearchContainer) {
-    elements.notesSearchContainer.classList.remove("is-hidden");
+    elements.notesSearchContainer.classList.add("is-hidden");
   }
   hideFilmographyToolbar();
   state.mode = "shelf";
@@ -3185,7 +3480,7 @@ async function loadMovieNotes(page = 1) {
   elements.simpleControls.classList.add("is-hidden");
   elements.advancedControls.classList.add("is-hidden");
   elements.pagination.classList.add("is-hidden");
-  setSectionCopy(VIEW_COPY["movie-notes"]);
+  setSectionCopy(getMovieNotesHeadingCopy());
   clearNotice();
 
   if (hasActiveLibraryFilters()) {
@@ -3261,17 +3556,24 @@ async function searchMovies(query, page = 1) {
   setSearchOriginMovie();
   setEntriesVisible(false);
   if (elements.discoverWorkspace) {
-    elements.discoverWorkspace.classList.add("is-hidden");
+    elements.discoverWorkspace.classList.remove("is-hidden");
   }
   if (elements.notesSearchContainer) {
     elements.notesSearchContainer.classList.add("is-hidden");
   }
   state.mode = "search";
-  state.currentView = null;
-  setActiveView(null);
-  setModeButton(null);
+  state.currentView = "discover";
+  setActiveView("discover");
+  if (elements.profileSelect) {
+    elements.profileSelect.value = "";
+  }
+  syncRibbonActiveState();
+  updateProfileButtons();
   elements.simpleControls.classList.add("is-hidden");
-  elements.advancedControls.classList.add("is-hidden");
+  elements.advancedControls.classList.remove("is-hidden");
+  if (elements.personalFilters) {
+    elements.personalFilters.classList.remove("is-hidden");
+  }
   elements.pagination.classList.add("is-hidden");
   setSectionCopy({
     kicker: "TMDB title search",
@@ -3413,11 +3715,19 @@ async function prefetchDiscoveryPage(spec, page) {
     body: JSON.stringify({ ...body, page: p }),
   });
 
+  const fetchSpeculative = (p) => {
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ results: [] }), 1500));
+    return Promise.race([
+      fetchOne(p).catch(() => ({ results: [] })),
+      timeoutPromise,
+    ]);
+  };
+
   try {
     const [p1, p2, p3] = await Promise.all([
       fetchOne(basePage + 1),
-      fetchOne(basePage + 2).catch(() => ({ results: [] })),
-      fetchOne(basePage + 3).catch(() => ({ results: [] })),
+      fetchSpeculative(basePage + 2),
+      fetchSpeculative(basePage + 3),
     ]);
 
     const rawCombined = [
@@ -3542,11 +3852,19 @@ async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } =
     body: JSON.stringify({ ...body, page: p }),
   });
 
+  const fetchSpeculative = (p) => {
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ results: [] }), 1500));
+    return Promise.race([
+      fetchOne(p).catch(() => ({ results: [] })),
+      timeoutPromise,
+    ]);
+  };
+
   try {
     const [p1, p2, p3] = await Promise.all([
       fetchOne(basePage + 1),
-      fetchOne(basePage + 2).catch(() => ({ results: [] })),
-      fetchOne(basePage + 3).catch(() => ({ results: [] })),
+      fetchSpeculative(basePage + 2),
+      fetchSpeculative(basePage + 3),
     ]);
 
     if (requestNumber !== state.requestNumber) {
@@ -3697,6 +4015,9 @@ function renderProfileRibbon() {
     chip.dataset.profile = String(prof.id);
     chip.textContent = prof.name;
     chip.addEventListener("click", () => {
+      if (elements.query) {
+        elements.query.value = "";
+      }
       elements.profileSelect.value = String(prof.id);
       applySelectedProfile();
       clearDiscoveryCache();
@@ -4202,6 +4523,7 @@ function hideFilmographyToolbar() {
   }
   state.activeFilmographyPerson = null;
   state.activeFilmographyData = null;
+  updateGreyContext();
 }
 
 async function loadPersonFilmography(person, entityKey = "directors", department = null) {
@@ -4313,6 +4635,7 @@ async function loadPersonFilmography(person, entityKey = "directors", department
     }
 
     window.scrollTo({ top: 0, behavior: "smooth" });
+    updateGreyContext();
   } catch (error) {
     showNotice(`Could not load filmography for ${person.name}: ${error.message}`);
   }
@@ -4438,6 +4761,14 @@ function renderMovieDetails(movie) {
   elements.dialogKicker.textContent = getStatus(movie)
     ? STATUS_LABELS[getStatus(movie)]
     : "Untracked movie";
+
+  if (movie.is_offline_preview) {
+    const offlinePill = document.createElement("span");
+    offlinePill.className = "offline-preview-pill";
+    offlinePill.textContent = "Offline Preview";
+    offlinePill.title = "Viewing cached preview data while offline. Shelving and notes remain fully functional.";
+    elements.dialogKicker.append(offlinePill);
+  }
   elements.dialogTitle.textContent =
     movie.title || movie.original_title || "Untitled movie";
   elements.dialogMeta.replaceChildren();
@@ -4518,7 +4849,15 @@ function createRelatedMovieCard(movie) {
   button.className = "related-card";
   const title = movie.title || movie.original_title || "Untitled movie";
   const yearText = getMovieYear(movie);
-  button.title = `${title}${yearText ? ` (${yearText})` : ""}`;
+  const voteCountStr = formatVoteCount(movie.vote_count);
+  const notesText = movie.user_data?.notes ? movie.user_data.notes.trim() : "";
+
+  let tooltip = title;
+  if (yearText) tooltip += ` (${yearText})`;
+  if (voteCountStr) tooltip += ` • (${voteCountStr})`;
+  if (notesText) tooltip += `\n📝 ${notesText}`;
+
+  button.title = tooltip;
   button.setAttribute("aria-label", `Open details for ${title}`);
   button.append(createPoster(movie));
 
@@ -4529,6 +4868,10 @@ function createRelatedMovieCard(movie) {
     badge.dataset.status = status;
     badge.textContent = STATUS_LABELS[status];
     button.append(badge);
+
+    if (status === "excluded") {
+      button.classList.add("is-noped");
+    }
   }
 
   const rating = getMovieRating(movie);
@@ -4549,19 +4892,21 @@ async function loadRelatedMovies(movieId) {
   elements.relatedMovies.innerHTML = '<p class="related-message">Finding related movies…</p>';
   elements.relatedFamiliarToggle.classList.add("is-hidden");
   try {
+    const showTracked = state.showRelatedTracked !== false;
     const parameters = new URLSearchParams({
-      limit: "12",
-      include_previously_watched: String(state.showRelatedFamiliar),
+      limit: "20",
+      include_tracked: String(showTracked),
+      include_previously_watched: String(showTracked),
     });
     const response = await fetchJSON(`/movies/${movieId}/related?${parameters}`);
     if (state.selectedMovie?.tmdb_id !== movieId) return;
     const movies = Array.isArray(response.results) ? response.results : [];
     state.detailRelatedMovies = movies;
-    const familiarCount = Number(response.hidden_familiar_count || 0);
-    if (familiarCount > 0) {
-      elements.relatedFamiliarToggle.textContent = state.showRelatedFamiliar
-        ? "Hide watched movies"
-        : `Show ${familiarCount} watched ${familiarCount === 1 ? "movie" : "movies"}`;
+    const trackedCount = Number(response.hidden_tracked_count || response.hidden_familiar_count || 0);
+    if (trackedCount > 0) {
+      elements.relatedFamiliarToggle.textContent = showTracked
+        ? `Hide tracked movies (${trackedCount})`
+        : `Show ${trackedCount} tracked ${trackedCount === 1 ? "movie" : "movies"}`;
       elements.relatedFamiliarToggle.classList.remove("is-hidden");
     }
     elements.relatedMovies.replaceChildren();
@@ -4608,7 +4953,7 @@ async function openMovieDetails(
   }
   state.selectedMovie = null;
   state.detailRelatedMovies = [];
-  state.showRelatedFamiliar = false;
+  state.showRelatedTracked = true;
   elements.shell.classList.add("is-hidden");
   elements.detailPage.classList.remove("is-hidden");
   elements.dialogContent.classList.add("is-hidden");
@@ -4640,8 +4985,38 @@ async function openMovieDetails(
     renderDetailTrail();
     elements.dialogLoading.classList.add("is-hidden");
     elements.dialogContent.classList.remove("is-hidden");
+    if (elements.detailPage) {
+      elements.detailPage.scrollTop = 0;
+    }
+    window.scrollTo({ top: 0, behavior: "instant" });
     loadRelatedMovies(movie.tmdb_id);
   } catch (error) {
+    const fallbackMovie = (state.movies || []).find((m) => getMovieNavId(m) === Number(movieId))
+      || (state.allFilteredMovies || []).find((m) => getMovieNavId(m) === Number(movieId))
+      || (state.detailNavQueue || []).find((m) => getMovieNavId(m) === Number(movieId));
+
+    if (fallbackMovie) {
+      const offlineMovie = {
+        ...fallbackMovie,
+        tmdb_id: Number(fallbackMovie.id || fallbackMovie.tmdb_id),
+        is_offline_preview: true,
+        genres: fallbackMovie.genres || [],
+        keywords: fallbackMovie.keywords || [],
+        directors: fallbackMovie.directors || [],
+        actors: fallbackMovie.actors || [],
+        user_data: fallbackMovie.user_data || null,
+      };
+      state.selectedMovie = offlineMovie;
+      renderMovieDetails(offlineMovie);
+      renderDetailTrail();
+      elements.dialogLoading.classList.add("is-hidden");
+      elements.dialogContent.classList.remove("is-hidden");
+      if (elements.detailPage) {
+        elements.detailPage.scrollTop = 0;
+      }
+      window.scrollTo({ top: 0, behavior: "instant" });
+      return;
+    }
     elements.dialogLoading.textContent = error.message;
   }
 }
@@ -4649,13 +5024,19 @@ async function openMovieDetails(
 function closeMovieDetails() {
   elements.detailPage.classList.add("is-hidden");
   elements.shell.classList.remove("is-hidden");
-  if (elements.shell && state.previousScrollPosition) {
-    elements.shell.scrollTop = state.previousScrollPosition;
+  const isGreyOpen = document.body.classList.contains("grey-docked-open");
+  if (isGreyOpen && elements.shell) {
+    elements.shell.scrollTop = state.previousScrollPosition || 0;
+    window.scrollTo({ top: 0, behavior: "instant" });
+  } else {
+    if (elements.shell && state.previousScrollPosition) {
+      elements.shell.scrollTop = state.previousScrollPosition;
+    }
+    window.scrollTo({
+      top: state.previousScrollPosition || 0,
+      behavior: "auto",
+    });
   }
-  window.scrollTo({
-    top: state.previousScrollPosition,
-    behavior: "auto",
-  });
   state.selectedMovie = null;
   state.detailRelatedMovies = [];
   state.detailTrail = [];
@@ -5182,8 +5563,8 @@ function appendEntryBody(container, body) {
     }
     olList = null;
 
-    // Bullet list: - Item or * Item
-    const ulMatch = line.match(/^\s*[-*]\s+(.+)/);
+    // Bullet list: - Item, * Item, or • Item
+    const ulMatch = line.match(/^\s*[-*•]\s+(.+)/);
     if (ulMatch) {
       const target = getTarget();
       if (!ulList || ulList.parentElement !== target) {
@@ -6437,14 +6818,19 @@ async function saveReaderEntry(targetStatus = "published") {
 
 elements.form.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (elements.discoverWorkspace) {
-    elements.discoverWorkspace.classList.add("is-hidden");
-  }
   if (elements.notesSearchContainer) {
     elements.notesSearchContainer.classList.add("is-hidden");
   }
   searchMovies(elements.query.value);
 });
+
+if (elements.query) {
+  elements.query.addEventListener("search", () => {
+    if (!elements.query.value.trim() && (state.mode === "search" || state.currentView === "discover")) {
+      activateDiscoverView();
+    }
+  });
+}
 
 if (elements.nopeModeToggle) {
   elements.nopeModeToggle.addEventListener("click", () => toggleNopeMode());
@@ -6505,10 +6891,52 @@ if (elements.refreshFeed) {
 
 elements.navLinks.forEach((button) => {
   button.addEventListener("click", () => {
-    if (button.dataset.view === "entries") {
+    const clickedView = button.dataset.view;
+    const normalLibraryShelves = [
+      "favorites",
+      "watched",
+      "watch_later",
+      "rewatch",
+      "excluded",
+      "new_discovery",
+    ];
+
+    if (clickedView === "movie-notes") {
+      if (state.currentView === "movie-notes") {
+        const exitTarget = state.movieNotesShelfFilter || state.lastNormalShelf || "favorites";
+        state.movieNotesShelfFilter = null;
+        loadShelf(exitTarget);
+        return;
+      }
+      if (normalLibraryShelves.includes(state.currentView)) {
+        state.lastNormalShelf = state.currentView;
+      }
+      state.movieNotesShelfFilter = null;
+      loadMovieNotes(1);
+      return;
+    }
+
+    if (state.currentView === "movie-notes" && normalLibraryShelves.includes(clickedView)) {
+      if (state.movieNotesShelfFilter === clickedView) {
+        state.movieNotesShelfFilter = null;
+      } else {
+        state.movieNotesShelfFilter = clickedView;
+      }
+      setActiveView("movie-notes");
+      if (state.isSearchingLibrary && state.librarySearchScope === "shelf") {
+        searchPersonalLibrary();
+      } else {
+        setSectionCopy(getMovieNotesHeadingCopy());
+        applyLibraryFilters(1);
+      }
+      return;
+    }
+
+    state.movieNotesShelfFilter = null;
+    if (clickedView === "entries") {
       resetEntryFiltersToCurrent();
     }
-    loadShelf(button.dataset.view);
+    loadShelf(clickedView);
   });
 });
 
@@ -6642,7 +7070,7 @@ elements.favoriteButton.addEventListener("click", toggleSelectedFavorite);
 elements.lookingOutToggle.addEventListener("click", toggleLookingOutFor);
 elements.relatedFamiliarToggle.addEventListener("click", () => {
   if (!state.selectedMovie) return;
-  state.showRelatedFamiliar = !state.showRelatedFamiliar;
+  state.showRelatedTracked = state.showRelatedTracked === false ? true : false;
   loadRelatedMovies(state.selectedMovie.tmdb_id);
 });
 elements.saveNotes.addEventListener("click", saveSelectedNotes);
@@ -6936,15 +7364,33 @@ function updateGreyContext() {
     return;
   }
 
+  if (state.mode === "filmography" && state.activeFilmographyPerson) {
+    const personName = state.activeFilmographyPerson.name || "Filmography";
+    const dept = state.activeFilmographyData?.department && state.activeFilmographyData.department !== "all"
+      ? ` (${state.activeFilmographyData.department})`
+      : "";
+    elements.greyContextView.textContent = "Filmography";
+    elements.greyContextDetail.textContent = `${personName}${dept}`;
+    if (elements.greyStatusText) elements.greyStatusText.textContent = `Viewing ${personName}'s filmography`;
+    return;
+  }
+
   const view = state.currentView || "discover";
   if (view === "discover") {
     elements.greyContextView.textContent = "Discover";
     elements.greyContextDetail.textContent = "Browsing new titles";
     if (elements.greyStatusText) elements.greyStatusText.textContent = "Perched in Discovery";
-  } else if (view === "entries" || view === "movie-notes") {
+  } else if (view === "entries") {
     elements.greyContextView.textContent = "Notes";
     elements.greyContextDetail.textContent = state.entryTagFilter ? `Tag: ${state.entryTagFilter}` : "Personal observations";
-    if (elements.greyStatusText) elements.greyStatusText.textContent = "Reading your notes";
+    if (elements.greyStatusText) elements.greyStatusText.textContent = "Browsing journal notes";
+  } else if (view === "movie-notes") {
+    elements.greyContextView.textContent = "Movie Notes";
+    const paired = state.movieNotesShelfFilter
+      ? `Shelf: ${STATUS_LABELS[state.movieNotesShelfFilter] || state.movieNotesShelfFilter}`
+      : "All shelves";
+    elements.greyContextDetail.textContent = paired;
+    if (elements.greyStatusText) elements.greyStatusText.textContent = "Browsing personal movie notes";
   } else {
     elements.greyContextView.textContent = "Library";
     const shelfName = view.replace(/_/g, " ");
@@ -6959,22 +7405,38 @@ function toggleGreyDrawer(forceOpen) {
   const shouldOpen = typeof forceOpen === "boolean" ? forceOpen : isCurrentlyCollapsed;
 
   if (shouldOpen) {
+    const isDetailOpen = elements.detailPage && !elements.detailPage.classList.contains("is-hidden");
+    const currentWindowScroll = window.scrollY;
+
     document.documentElement.classList.add("grey-docked-open");
     document.body.classList.add("grey-docked-open");
     elements.greyDrawer.classList.remove("is-collapsed");
     elements.greyDrawer.setAttribute("aria-hidden", "false");
     elements.greyToggle?.setAttribute("aria-expanded", "true");
+
+    if (isDetailOpen && elements.detailPage) {
+      elements.detailPage.scrollTop = currentWindowScroll;
+    }
+    window.scrollTo({ top: 0, behavior: "instant" });
+
     updateGreyContext();
-    elements.greyInput?.focus();
+    elements.greyInput?.focus({ preventScroll: true });
     if (elements.greyMessages) {
       elements.greyMessages.scrollTop = elements.greyMessages.scrollHeight;
     }
   } else {
+    const isDetailOpen = elements.detailPage && !elements.detailPage.classList.contains("is-hidden");
+    const internalDetailScroll = elements.detailPage ? elements.detailPage.scrollTop : 0;
+
     document.documentElement.classList.remove("grey-docked-open");
     document.body.classList.remove("grey-docked-open");
     elements.greyDrawer.classList.add("is-collapsed");
     elements.greyDrawer.setAttribute("aria-hidden", "true");
     elements.greyToggle?.setAttribute("aria-expanded", "false");
+
+    if (isDetailOpen) {
+      window.scrollTo({ top: internalDetailScroll, behavior: "instant" });
+    }
   }
 }
 
@@ -7274,11 +7736,36 @@ async function sendGreyMessage(query) {
       };
     }
 
+    let activePerson = null;
+    if (state.mode === "filmography" && state.activeFilmographyPerson) {
+      activePerson = {
+        id: state.activeFilmographyPerson.id || state.activeFilmographyPerson.tmdb_person_id,
+        name: state.activeFilmographyPerson.name,
+        known_for_department: state.activeFilmographyPerson.known_for_department || state.activeFilmographyData?.department,
+        department: state.activeFilmographyData?.department || "all",
+        total_count: state.activeFilmographyData?.total_count || 0,
+      };
+    }
+
+    const visibleMovies = Array.isArray(state.movies)
+      ? state.movies.slice(0, 20).map((m) => ({
+          id: m.tmdb_id || m.id,
+          title: m.title || m.original_title,
+          year: (m.release_date || "").slice(0, 4),
+          rating: m.vote_average,
+          status: m.user_data?.status || (m.status || "unseen"),
+          verdict: m.user_data?.verdict || m.verdict || null,
+        }))
+      : [];
+
     const payload = {
       message: query,
-      current_view: state.currentView || "library",
+      current_view: state.mode === "filmography" ? "filmography" : (state.currentView || "library"),
       inspected_movie_id: state.selectedMovie?.tmdb_id || null,
       inspected_note: inspectedNote,
+      active_person: activePerson,
+      visible_movies: visibleMovies,
+      notes_shelf_filter: state.currentView === "movie-notes" ? (state.movieNotesShelfFilter || null) : null,
       related_movies: state.selectedMovie ? (state.detailRelatedMovies || []).map((m) => ({
         id: m.tmdb_id,
         title: m.title || m.original_title,
@@ -7451,12 +7938,10 @@ function initGreyCompanion() {
     hideSlashMenu();
     if (cmd === "/related") {
       sendGreyMessage("/related");
-    } else if (cmd === "/tonight") {
-      sendGreyMessage("/tonight");
     } else {
       if (elements.greyInput) {
         elements.greyInput.value = `${cmd} `;
-        elements.greyInput.focus();
+        elements.greyInput.focus({ preventScroll: true });
         elements.greyInput.selectionStart = elements.greyInput.selectionEnd = elements.greyInput.value.length;
       }
     }
@@ -7572,7 +8057,7 @@ function initGreyCompanion() {
     if ((e.key === "g" || e.key === "G") && !isInputFocused && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       toggleGreyDrawer(true);
-      elements.greyInput?.focus();
+      elements.greyInput?.focus({ preventScroll: true });
       return;
     }
 

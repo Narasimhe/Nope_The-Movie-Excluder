@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from app.advanced_filters import FilterLogic
 from app.advanced_search_service import AdvancedSearchService
 from app.general_entry_repository import GeneralEntryRepository
-from app.database import initialize_database
+from app.database import initialize_database, get_connection
 from app.movie_service import MovieService
 from app.movie_status import MovieStatus
 from app.search_preference_repository import (
@@ -241,6 +241,58 @@ def web_home():
 def health_check():
     print("HEALTH ENDPOINT HIT", flush=True)
     return {"status": "ok"}
+
+
+@app.get(
+    "/images/posters/{file_path:path}",
+    tags=["images"],
+    summary="Serve or cache poster images locally",
+)
+def get_cached_poster(file_path: str):
+    filename = Path(file_path).name
+    if not filename or not any(
+        filename.lower().endswith(ext)
+        for ext in [".jpg", ".jpeg", ".png", ".webp"]
+    ):
+        raise HTTPException(status_code=400, detail="Invalid poster image path")
+
+    # 1. Local disk hit
+    cached_file = movie_service.poster_cache_service.get_poster_file(filename)
+    if cached_file:
+        return FileResponse(
+            cached_file,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=31536000, immutable"},
+        )
+
+    # 2. Check if movie is marked as excluded in database (invariant)
+    with get_connection() as conn:
+        row = conn.execute(
+            """
+            SELECT u.status
+            FROM movies m
+            JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
+            WHERE m.poster_path LIKE ?
+            LIMIT 1
+            """,
+            (f"%{filename}",),
+        ).fetchone()
+        if row and row["status"] == "excluded":
+            raise HTTPException(
+                status_code=404,
+                detail="Poster caching excluded for rejected titles",
+            )
+
+    # 3. Online download and cache
+    cached_file = movie_service.poster_cache_service.cache_poster(filename)
+    if cached_file:
+        return FileResponse(
+            cached_file,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=31536000, immutable"},
+        )
+
+    raise HTTPException(status_code=404, detail="Poster image unavailable offline")
 
 
 @app.get("/movies/watched")
@@ -817,17 +869,25 @@ def get_looking_out_for_movies(page: int = 1):
 )
 def get_related_movies(
     tmdb_id: int,
-    limit: int = 6,
+    limit: int = 20,
     include_previously_watched: bool = False,
+    include_tracked: bool | None = None,
 ):
     try:
-        if not include_previously_watched:
-            return movie_service.get_related_movies(tmdb_id, limit)
-        return movie_service.get_related_movies(
-            tmdb_id,
-            limit,
-            include_previously_watched,
-        )
+        if include_tracked is not None:
+            return movie_service.get_related_movies(
+                tmdb_id=tmdb_id,
+                limit=limit,
+                include_previously_watched=include_previously_watched,
+                include_tracked=include_tracked,
+            )
+        if include_previously_watched:
+            return movie_service.get_related_movies(
+                tmdb_id,
+                limit,
+                include_previously_watched,
+            )
+        return movie_service.get_related_movies(tmdb_id, limit)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
@@ -1574,6 +1634,9 @@ class GreyChatRequest(BaseModel):
     inspected_note: dict[str, Any] | None = None
     related_movies: list[dict[str, Any]] | None = None
     active_filters: dict[str, Any] | None = None
+    active_person: dict[str, Any] | None = None
+    visible_movies: list[dict[str, Any]] | None = None
+    notes_shelf_filter: str | None = None
     history: list[dict[str, str]] | None = None
     model_mode: str = "auto"
 
@@ -1591,6 +1654,9 @@ def chat_with_grey(req: GreyChatRequest):
         inspected_note=req.inspected_note,
         related_movies=req.related_movies,
         active_filters=req.active_filters,
+        active_person=req.active_person,
+        visible_movies=req.visible_movies,
+        notes_shelf_filter=req.notes_shelf_filter,
         history=req.history,
         model_mode=req.model_mode,
     )

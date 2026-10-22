@@ -1,12 +1,18 @@
 from datetime import timedelta
+import json
+import logging
 
+from app.database import get_connection
 from app.movie_metadata_repository import MovieMetadataRepository
 from app.movie_repository import MovieRepository
 from app.movie_status import MovieStatus, validate_movie_status
 from app.looking_out_for_repository import LookingOutForRepository
+from app.poster_cache_service import PosterCacheService
 from app.time_utils import local_today, parse_release_date
 from app.tmdb_client import TMDBClient
 from app.user_movie_repository import UserMovieRepository
+
+logger = logging.getLogger(__name__)
 
 
 class MovieService:
@@ -17,6 +23,7 @@ class MovieService:
         metadata_repository: MovieMetadataRepository | None = None,
         looking_out_for_repository: LookingOutForRepository | None = None,
         tmdb_client: TMDBClient | None = None,
+        poster_cache_service: PosterCacheService | None = None,
     ) -> None:
         self.movie_repository = (
             movie_repository
@@ -43,6 +50,46 @@ class MovieService:
             if tmdb_client is not None
             else TMDBClient()
         )
+        self.poster_cache_service = (
+            poster_cache_service
+            if poster_cache_service is not None
+            else PosterCacheService()
+        )
+
+    def _find_movie_in_discover_cache(self, tmdb_id: int) -> dict | None:
+        try:
+            with get_connection() as connection:
+                rows = connection.execute(
+                    "SELECT response_json FROM tmdb_discover_cache ORDER BY updated_at DESC LIMIT 100"
+                ).fetchall()
+                for row in rows:
+                    if not row["response_json"]:
+                        continue
+                    try:
+                        data = json.loads(row["response_json"])
+                        for m in data.get("results", []):
+                            if m.get("id") == tmdb_id:
+                                return m
+                    except Exception:
+                        continue
+        except Exception as e:
+            logger.warning(f"Error reading discover cache for movie {tmdb_id}: {e}")
+        return None
+
+    def _resolve_genre_names(self, g_ids: list[int]) -> list[dict]:
+        if not g_ids:
+            return []
+        try:
+            with get_connection() as conn:
+                placeholders = ",".join("?" for _ in g_ids)
+                rows = conn.execute(
+                    f"SELECT tmdb_genre_id, name FROM genres WHERE tmdb_genre_id IN ({placeholders})",
+                    tuple(g_ids),
+                ).fetchall()
+                found = {r["tmdb_genre_id"]: r["name"] for r in rows}
+                return [{"id": gid, "name": found.get(gid, f"Genre #{gid}")} for gid in g_ids]
+        except Exception:
+            return [{"id": gid, "name": f"Genre #{gid}"} for gid in g_ids]
 
     def get_movie(self, tmdb_id: int) -> dict:
         local_movie = self.movie_repository.get_movie(tmdb_id)
@@ -52,12 +99,27 @@ class MovieService:
             or local_movie.get("metadata_fetched_at") is None
             or int(local_movie.get("metadata_version") or 1) < 2
         ):
-            self._fetch_and_save_movie_metadata(tmdb_id)
-            local_movie = self.movie_repository.get_movie(tmdb_id)
+            try:
+                self._fetch_and_save_movie_metadata(tmdb_id)
+                local_movie = self.movie_repository.get_movie(tmdb_id)
+            except Exception as e:
+                logger.warning(
+                    f"Could not fetch online metadata for movie {tmdb_id}: {e}"
+                )
+                if local_movie is None:
+                    cached_movie = self._find_movie_in_discover_cache(tmdb_id)
+                    if cached_movie:
+                        self.movie_repository.save_movie(cached_movie)
+                        g_ids = cached_movie.get("genre_ids") or []
+                        if g_ids:
+                            genre_list = self._resolve_genre_names(g_ids)
+                            if genre_list:
+                                self.metadata_repository.replace_movie_genres(tmdb_id, genre_list)
+                        local_movie = self.movie_repository.get_movie(tmdb_id)
 
         if local_movie is None:
             raise RuntimeError(
-                "Movie was fetched but could not be read from SQLite."
+                f"Movie #{tmdb_id} is not cached locally and could not be fetched while offline."
             )
 
         self.movie_repository.touch_movie(tmdb_id)
@@ -70,8 +132,8 @@ class MovieService:
             self.metadata_repository.get_movie_keywords(tmdb_id)
         )
         credits = self.metadata_repository.get_movie_credits(tmdb_id)
-        result["directors"] = credits["directors"]
-        result["actors"] = credits["actors"]
+        result["directors"] = credits.get("directors", [])
+        result["actors"] = credits.get("actors", [])
         result["user_data"] = (
             self.user_repository.get_user_movie_data(tmdb_id)
         )
@@ -82,13 +144,20 @@ class MovieService:
         result["can_add_to_looking_out_for"] = bool(
             release_date and release_date > local_today()
         )
+        result["is_offline_preview"] = bool(
+            local_movie.get("metadata_fetched_at") is None
+            or int(local_movie.get("metadata_version") or 1) < 2
+        )
+        if result.get("poster_path") and (result.get("user_data") or {}).get("status") != "excluded":
+            self.poster_cache_service.cache_posters_async([result])
         return result
 
     def get_related_movies(
         self,
         tmdb_id: int,
-        limit: int = 6,
+        limit: int = 20,
         include_previously_watched: bool = False,
+        include_tracked: bool | None = None,
     ) -> dict:
         if (
             isinstance(tmdb_id, bool)
@@ -100,9 +169,9 @@ class MovieService:
             isinstance(limit, bool)
             or not isinstance(limit, int)
             or limit < 1
-            or limit > 12
+            or limit > 20
         ):
-            raise ValueError("Related movie limit must be between 1 and 12.")
+            raise ValueError("Related movie limit must be between 1 and 20.")
 
         response = self.tmdb_client.get_movie_recommendations(tmdb_id)
         raw_movies = response.get("results") or []
@@ -128,40 +197,70 @@ class MovieService:
 
         if not isinstance(include_previously_watched, bool):
             raise ValueError("include_previously_watched must be true or false.")
+        if include_tracked is not None and not isinstance(include_tracked, bool):
+            raise ValueError("include_tracked must be true or false.")
 
         formatted = self._format_tmdb_results(unique_movies)
-        allowed = [
-            movie
-            for movie in formatted
-            if (movie.get("user_data") or {}).get("status")
-            != MovieStatus.EXCLUDED.value
-        ]
+        tracked_statuses = {
+            MovieStatus.WATCHED.value,
+            MovieStatus.REWATCH.value,
+            MovieStatus.EXCLUDED.value,
+            MovieStatus.WATCH_LATER.value,
+        }
         familiar_statuses = {
             MovieStatus.WATCHED.value,
             MovieStatus.REWATCH.value,
         }
-        hidden_familiar_count = sum(
-            1
-            for movie in allowed
-            if (movie.get("user_data") or {}).get("status")
-            in familiar_statuses
-        )
-        visible = (
-            allowed
-            if include_previously_watched
-            else [
+
+        if include_tracked is not None:
+            tracked_count = sum(
+                1
+                for movie in formatted
+                if (movie.get("user_data") or {}).get("status") in tracked_statuses
+            )
+            visible = (
+                formatted
+                if include_tracked
+                else [
+                    movie
+                    for movie in formatted
+                    if (movie.get("user_data") or {}).get("status")
+                    not in tracked_statuses
+                ]
+            )[:limit]
+            hidden_count = tracked_count
+        else:
+            allowed = [
                 movie
+                for movie in formatted
+                if (movie.get("user_data") or {}).get("status")
+                != MovieStatus.EXCLUDED.value
+            ]
+            hidden_count = sum(
+                1
                 for movie in allowed
                 if (movie.get("user_data") or {}).get("status")
-                not in familiar_statuses
-            ]
-        )[:limit]
+                in familiar_statuses
+            )
+            visible = (
+                allowed
+                if include_previously_watched
+                else [
+                    movie
+                    for movie in allowed
+                    if (movie.get("user_data") or {}).get("status")
+                    not in familiar_statuses
+                ]
+            )[:limit]
+
         return {
             "tmdb_id": tmdb_id,
             "source": source,
             "result_count": len(visible),
-            "hidden_familiar_count": hidden_familiar_count,
+            "hidden_familiar_count": hidden_count,
+            "hidden_tracked_count": hidden_count,
             "include_previously_watched": include_previously_watched,
+            "include_tracked": include_tracked if include_tracked is not None else include_previously_watched,
             "results": visible,
         }
 
@@ -601,13 +700,30 @@ class MovieService:
     ) -> dict:
         validated_status = validate_movie_status(status)
 
-        if self.movie_repository.get_movie(tmdb_id) is None:
-            self._fetch_and_save_movie_metadata(tmdb_id)
+        local_movie = self.movie_repository.get_movie(tmdb_id)
+        if local_movie is None:
+            try:
+                self._fetch_and_save_movie_metadata(tmdb_id)
+                local_movie = self.movie_repository.get_movie(tmdb_id)
+            except Exception:
+                cached_movie = self._find_movie_in_discover_cache(tmdb_id)
+                if cached_movie:
+                    self.movie_repository.save_movie(cached_movie)
+                    local_movie = self.movie_repository.get_movie(tmdb_id)
 
-        return self.user_repository.set_status(
+        res = self.user_repository.set_status(
             tmdb_id,
             validated_status,
         )
+
+        # Storage optimization invariant: NOPE movies never cache posters
+        if local_movie and local_movie.get("poster_path"):
+            if validated_status == MovieStatus.EXCLUDED:
+                self.poster_cache_service.purge_excluded_poster(local_movie["poster_path"])
+            else:
+                self.poster_cache_service.cache_posters_async([local_movie])
+
+        return res
 
     def remove_movie_status(self, tmdb_id: int) -> None:
         if (
@@ -762,6 +878,7 @@ class MovieService:
             result["user_data"] = user_data_by_id.get(tmdb_id)
             results.append(result)
 
+        self.poster_cache_service.cache_posters_async(results)
         return results
 
     def search_user_library(

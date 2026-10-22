@@ -35,45 +35,25 @@ SKILLS_REGISTRY = {
     "watchlist": {
         "command": "/watchlist",
         "name": "Toggle Watchlist Builder",
-        "description": "Drafts or updates a watchlist note using clean >> Title (Year) toggles.",
+        "description": "Compiles or appends to watchlist notes using rich >> Title (Year) toggles.",
         "requires_dossier": True,
         "directive": (
             "ACTIVE SKILL: /watchlist (Toggle Watchlist Builder)\n"
-            "Create a new journal draft note using clean Notion-style expandable toggles.\n"
-            "Use the 'create_draft' action with 'title', 'tags', and 'body'.\n"
-            "Format every single movie inside the body using >> Title (Year):\n"
+            "1. NO LAZY 3-MOVIE SHORTCUTS: When compiling or drafting a watchlist note from the user's queue, compile a substantial, comprehensive tranche (8-12 titles) drawn from their actual pending watchlist ({{WATCHLIST_JSON}}).\n"
+            "2. EXACT NOTE/POST TITLE RESOLUTION: Check {{JOURNAL_NOTES_LIST}} to see if the user has an existing watchlist or themed note (e.g., 'Watchlist 1', 'Watchlist 2', 'Spoof Movies', 'Documentary Movies').\n"
+            "   - If the user says 'add this to my [Post Title] post' or 'update my [Post Title] note', you MUST use action 'update_entry' with mode 'append' targeting that existing note ID/title.\n"
+            "   - If creating a brand new watchlist note, use action 'create_draft'.\n"
+            "3. FORMAT & STYLE MIMICRY: When drafting a NEW watchlist note from scratch, format each entry using Notion-style toggles:\n"
             ">> [Movie Title] ([Year])\n"
-            "- **Cast:** [Actor names]\n"
-            "- **Synopsis:** [1-sentence premise]\n"
-            "- **Why YES:** [1-sentence cinephile reason]\n\n"
-            "NEVER use raw HTML tags like <details> or <summary>. ALWAYS use >> [Title] ([Year])."
+            "- **Cast:** [Main cast]\n"
+            "- **Synopsis:** [1-2 sentence hook and premise]\n"
+            "- **Why YES:** [Sharp cinephile reason why it demands watching]\n"
+            "BUT when appending to or updating an EXISTING note, you MUST inspect its existing layout and mimic its exact style (e.g. single-line bullets with actor/director and IMDb link if the user has a concise bullet list). NEVER force multi-line toggles or Cast/Synopsis blocks onto a note that uses simple bullet points!\n"
+            "   - ZERO REDUNDANCY & IN-PLACE UPSERT: If adding commentary, critique, or a toggle for a movie ALREADY in the note, NEVER create a duplicate second bullet! Replace or expand the existing entry in-place so each movie appears strictly once.\n"
+            "   - EXPLICIT TOGGLE REQUESTS: If the user explicitly asks for a 'toggle' or 'collapse', format the entry using >> Title followed by two blank lines to exit the toggle mode.\n"
+            "4. ZERO SHELF CONFUSION: When the user mentions 'post', 'note', 'journal', or 'entry', NEVER call set_movie_status. You must strictly route to update_entry or create_draft."
         ),
-        "default_query": "Create a watchlist draft note using >> Title (Year) toggles.",
-    },
-    "tonight": {
-        "command": "/tonight",
-        "name": "Tonight's Pick",
-        "description": "Selects 1-2 curated films from your Watchlist or Rewatch shelf.",
-        "requires_dossier": True,
-        "directive": (
-            "ACTIVE SKILL: /tonight (Tonight's Pick)\n"
-            "Recommend 1 or 2 specific films from the user's Watchlist or designated Rewatch shelf.\n"
-            "State clearly why it fits tonight's viewing with a 1-2 sentence pitch.\n"
-            "Provide 'open_movie' pills for the recommended titles."
-        ),
-        "default_query": "What should I watch tonight from my watchlist or rewatch shelf?",
-    },
-    "nope": {
-        "command": "/nope",
-        "name": "Why Did I Nope This?",
-        "description": "Diagnoses why a film was rejected or excluded based on your notes and craft criteria.",
-        "requires_dossier": False,
-        "directive": (
-            "ACTIVE SKILL: /nope (Why Did I Nope This?)\n"
-            "Diagnose why the inspected film was rejected or excluded.\n"
-            "Reference the user's personal memory notes and deliver an honest critique of the script/pacing flaws."
-        ),
-        "default_query": "Why did I nope/reject this movie?",
+        "default_query": "Create a comprehensive watchlist draft note using >> Title (Year) toggles for my pending queue.",
     },
     "batch": {
         "command": "/batch",
@@ -195,6 +175,23 @@ class GreyService:
                         "tags": [tr["name"] for tr in t_rows],
                     })
 
+                journal_notes_list = []
+                jn_rows = conn.execute(
+                    """
+                    SELECT entry_id, title, status
+                    FROM general_entries
+                    WHERE is_deleted = 0 AND is_archived = 0 AND status = 'published'
+                    ORDER BY updated_at DESC
+                    LIMIT 50
+                    """
+                ).fetchall()
+                for jnr in jn_rows:
+                    journal_notes_list.append({
+                        "entry_id": jnr["entry_id"],
+                        "title": jnr["title"],
+                        "status": jnr["status"],
+                    })
+
                 watched_titles = []
                 w_rows = conn.execute(
                     """
@@ -244,10 +241,201 @@ class GreyService:
             "discarded_count": discarded_count,
             "discarded_samples": discarded_samples,
             "journal_digest": journal_digest if 'journal_digest' in locals() else [],
+            "journal_notes_list": journal_notes_list if 'journal_notes_list' in locals() else [],
             "all_watched_titles": watched_titles if 'watched_titles' in locals() else [],
             "rewatch_list": rewatch_list if 'rewatch_list' in locals() else [],
             "all_excluded_titles": excluded_titles if 'excluded_titles' in locals() else [],
         }
+
+    def _deduplicate_and_format_note_body(
+        self,
+        existing_body: str,
+        new_body: str,
+        mode: str,
+        user_message: str,
+        inspected_movie_id: int | None = None,
+        inspected_movie_title: str | None = None,
+    ) -> str:
+        import re
+
+        lower_msg = (user_message or "").lower()
+        wants_toggle = any(w in lower_msg for w in ["toggle", "collapse", "collpase", "collapsible", "expandable", "spoiler"])
+
+        # 1. Identify target movie title candidates
+        candidate_titles: list[str] = []
+        if inspected_movie_title and len(inspected_movie_title.strip()) >= 2:
+            candidate_titles.append(inspected_movie_title.strip())
+
+        if not candidate_titles and inspected_movie_id:
+            try:
+                with self._get_connection() as conn:
+                    row = conn.execute("SELECT title FROM movies WHERE tmdb_id = ?", (inspected_movie_id,)).fetchone()
+                    if row and row["title"]:
+                        candidate_titles.append(row["title"].strip())
+            except Exception:
+                pass
+
+        raw_new_lines = [l.strip() for l in (new_body or "").splitlines() if l.strip()]
+        first_line_clean = ""
+        if raw_new_lines:
+            first_line = raw_new_lines[0]
+            first_line_clean = re.sub(r"^(?:<details\b[^>]*>|<summary\b[^>]*>|[•\-*]|\d+\.|\>\>|\-\>|[▸▶])\s*", "", first_line)
+            first_line_clean = re.sub(r"</summary>.*$", "", first_line_clean).strip()
+            m = re.match(r"^([^(\n:\-\[<]+)", first_line_clean)
+            if m:
+                extracted = m.group(1).strip()
+                if len(extracted) >= 2 and extracted.lower() not in ["the", "a", "an", "movie", "film", "note", "critique", "review", "here", "ok"]:
+                    if extracted not in candidate_titles:
+                        candidate_titles.append(extracted)
+
+        # 2. Check if existing_body contains any candidate title
+        existing_text = (existing_body or "").strip()
+        matched_cand = None
+        for cand in candidate_titles:
+            pattern = rf"\b{re.escape(cand)}\b"
+            if re.search(pattern, existing_text, re.IGNORECASE):
+                matched_cand = cand
+                break
+
+        # If user message explicitly mentions a known title in existing_text, prefer that
+        if existing_text:
+            for line in existing_text.splitlines():
+                stripped = line.strip()
+                if stripped.startswith("•") or stripped.startswith("-") or stripped.startswith("*"):
+                    clean_l = re.sub(r"^[•\-*]\s*", "", stripped)
+                    m = re.match(r"^([^(\n:\-\[<]+)", clean_l)
+                    if m:
+                        t = m.group(1).strip()
+                        if len(t) >= 3 and re.search(rf"\b{re.escape(t)}\b", user_message, re.IGNORECASE):
+                            matched_cand = t
+                            if t not in candidate_titles:
+                                candidate_titles.insert(0, t)
+                            break
+
+        # Extract critique block for matched candidate in existing_body if new_body is sparse
+        existing_critique = []
+        if matched_cand and existing_text:
+            lines = existing_text.splitlines()
+            cand_pat = rf"\b{re.escape(matched_cand)}\b"
+            recording = False
+            for line in lines:
+                stripped = line.strip()
+                if re.search(cand_pat, stripped, re.IGNORECASE):
+                    recording = True
+                    continue
+                if recording:
+                    if stripped.startswith("•") or stripped.startswith("-") or stripped.startswith("*") or stripped.startswith("#") or stripped.startswith(">>") or stripped.startswith("<details"):
+                        recording = False
+                    elif stripped:
+                        existing_critique.append(stripped)
+
+        # Convert any raw HTML <details><summary> tags in existing_text or new_body to clean human-readable >> syntax
+        if "<details" in existing_text.lower():
+            existing_text = re.sub(
+                r"<details[^>]*>\s*<summary[^>]*>(.*?)</summary>\s*(.*?)\s*</details>",
+                r">> \1\n\2\n",
+                existing_text,
+                flags=re.DOTALL | re.IGNORECASE,
+            ).strip()
+
+        formatted_entry = (new_body or "").strip()
+        if "<details" in formatted_entry.lower():
+            formatted_entry = re.sub(
+                r"<details[^>]*>\s*<summary[^>]*>(.*?)</summary>\s*(.*?)\s*</details>",
+                r">> \1\n\2\n",
+                formatted_entry,
+                flags=re.DOTALL | re.IGNORECASE,
+            ).strip()
+
+        # 3. Format entry / toggle using clean Notion-style >> syntax
+        already_has_toggle = (
+            formatted_entry.startswith(">>")
+            or "\n>>" in f"\n{formatted_entry}"
+            or formatted_entry.startswith("->")
+            or "\n->" in f"\n{formatted_entry}"
+        )
+
+        if wants_toggle and not already_has_toggle:
+            summary_title = first_line_clean or matched_cand or (candidate_titles[0] if candidate_titles else "Notes")
+            if raw_new_lines and (raw_new_lines[0].startswith("•") or raw_new_lines[0].startswith("-") or raw_new_lines[0].startswith("*")):
+                summary_title = re.sub(r"^[•\-*]\s*", "", raw_new_lines[0]).strip()
+                body_content = "\n\n".join(raw_new_lines[1:]).strip()
+            elif raw_new_lines and any(cand.lower() in raw_new_lines[0].lower() for cand in candidate_titles):
+                summary_title = raw_new_lines[0].strip()
+                body_content = "\n\n".join(raw_new_lines[1:]).strip()
+            else:
+                body_content = formatted_entry
+
+            if not body_content and existing_critique:
+                body_content = "\n\n".join(existing_critique)
+
+            if not body_content:
+                body_content = formatted_entry or "Personal critique"
+
+            formatted_entry = f">> {summary_title}\n{body_content}\n"
+
+        if not existing_text:
+            return formatted_entry
+
+        if not matched_cand:
+            if mode == "append":
+                return f"{existing_text}\n\n{formatted_entry}" if formatted_entry else existing_text
+            return formatted_entry if formatted_entry else existing_text
+
+        # 4. In-place upsert and deduplication
+        lines = existing_text.splitlines()
+        cand_pattern = rf"\b{re.escape(matched_cand)}\b"
+
+        bare_bullet_idx = None
+        for idx, line in enumerate(lines):
+            stripped = line.strip()
+            if (stripped.startswith("•") or stripped.startswith("-") or stripped.startswith("*")) and re.search(cand_pattern, stripped, re.IGNORECASE):
+                bare_bullet_idx = idx
+                if wants_toggle and formatted_entry.startswith(">> "):
+                    rich_summary = re.sub(r"^[•\-*]\s*", "", stripped).strip()
+                    lines_f = formatted_entry.splitlines()
+                    body_rest = "\n".join(lines_f[1:])
+                    formatted_entry = f">> {rich_summary}\n{body_rest}\n"
+                break
+
+        if bare_bullet_idx is not None:
+            new_lines = []
+            replaced = False
+            skip_following_critique = False
+
+            for idx, line in enumerate(lines):
+                stripped = line.strip()
+
+                if idx == bare_bullet_idx:
+                    new_lines.append(formatted_entry.rstrip())
+                    new_lines.append("")
+                    new_lines.append("")
+                    replaced = True
+                    continue
+
+                if re.search(cand_pattern, stripped, re.IGNORECASE):
+                    if replaced:
+                        skip_following_critique = True
+                        continue
+
+                if skip_following_critique:
+                    if stripped.startswith("•") or stripped.startswith("-") or stripped.startswith("*") or stripped.startswith(">>") or stripped.startswith("#") or stripped.startswith("<details"):
+                        skip_following_critique = False
+                        new_lines.append(line)
+                    elif not stripped:
+                        continue
+                    else:
+                        continue
+                else:
+                    new_lines.append(line)
+
+            cleaned_result = "\n".join(new_lines)
+            cleaned_result = re.sub(r"\n{3,}", "\n\n", cleaned_result).strip()
+            return cleaned_result
+
+        if mode == "append":
+            return f"{existing_text}\n\n{formatted_entry}" if formatted_entry else existing_text
+        return formatted_entry if formatted_entry else existing_text
 
     def chat(
         self,
@@ -257,8 +445,12 @@ class GreyService:
         inspected_note: dict[str, Any] | None = None,
         related_movies: list[dict[str, Any]] | None = None,
         active_filters: dict[str, Any] | None = None,
+        active_person: dict[str, Any] | None = None,
+        visible_movies: list[dict[str, Any]] | None = None,
+        notes_shelf_filter: str | None = None,
         history: list[dict[str, str]] | None = None,
         model_mode: str = "auto",
+        active_skill_key: str | None = None,
     ) -> dict[str, Any]:
         if not self.api_key:
             return {
@@ -294,7 +486,7 @@ class GreyService:
                 model_label = "Gemini 3.8 Flash"
 
         # Slash Command & Skill Routing
-        active_skill_key = None
+        active_skill_key = active_skill_key or None
         user_query = message.strip()
 
         # 1. Direct slash command match
@@ -311,11 +503,7 @@ class GreyService:
             lq = user_query.lower()
             if any(p in lq for p in ["related movie", "related titles", "worth my attention", "worth my time", "any of these good", "which related"]):
                 active_skill_key = "related"
-            elif any(p in lq for p in ["why did i nope", "why is this noped", "why did i exclude", "why was this rejected", "why was it rejected"]):
-                active_skill_key = "nope"
-            elif any(p in lq for p in ["what should i watch tonight", "what to watch tonight", "pick something to watch", "tonight's pick", "pick for tonight"]):
-                active_skill_key = "tonight"
-            elif any(p in lq for p in ["make a watchlist", "create a watchlist", "draft a watchlist", "toggle watchlist"]):
+            elif any(p in lq for p in ["make a watchlist", "create a watchlist", "draft a watchlist", "toggle watchlist", "compile watchlist", "watchlist note", "watchlist toggles", "watchlist draft"]):
                 active_skill_key = "watchlist"
             elif any(p in lq for p in ["add the yes movies", "add all yes", "batch add", "batch move"]):
                 active_skill_key = "batch"
@@ -332,6 +520,7 @@ class GreyService:
                 "discarded_count": 0,
                 "discarded_samples": [],
                 "journal_digest": [],
+                "journal_notes_list": [],
                 "all_watched_titles": [],
                 "rewatch_list": [],
                 "all_excluded_titles": [],
@@ -411,6 +600,23 @@ class GreyService:
             tag_str = f" | Tags: {', '.join(ntags)}" if ntags else ""
             id_str = f" (ID: {inspected_note_id})" if inspected_note_id else ""
             inspected_note_info = f"Title: {inspected_note_title}{id_str} (Status: {nstatus}{tag_str})\nContent:\n{nbody[:25000]}"
+        elif not inspected_note_id:
+            try:
+                with self._get_connection() as conn:
+                    matched_rows = conn.execute(
+                        "SELECT entry_id, title, body, status FROM general_entries WHERE is_deleted = 0 AND is_archived = 0 ORDER BY updated_at DESC LIMIT 50"
+                    ).fetchall()
+                    for mr in matched_rows:
+                        m_title = (mr["title"] or "").lower()
+                        if len(m_title) > 2 and (m_title in lower_msg or any(word in lower_msg for word in m_title.split() if len(word) > 4)):
+                            inspected_note_id = mr["entry_id"]
+                            inspected_note_title = mr["title"]
+                            nbody = mr["body"] or ""
+                            nstatus = mr["status"] or "published"
+                            inspected_note_info = f"Title: {inspected_note_title} (ID: {inspected_note_id}) (Status: {nstatus})\nContent:\n{nbody[:25000]}"
+                            break
+            except Exception:
+                pass
 
         # Format related movies list for inspected movie
         related_movies_str = "None"
@@ -448,14 +654,48 @@ class GreyService:
             except Exception:
                 pass
 
-        prompt_path = os.path.join(os.path.dirname(__file__), "prompts", "grey_system_prompt.md")
+        active_person_info = "None"
+        if active_person and isinstance(active_person, dict):
+            p_name = active_person.get("name") or "Unknown"
+            p_dept = active_person.get("known_for_department") or active_person.get("department") or ""
+            p_id = active_person.get("id") or active_person.get("tmdb_person_id") or ""
+            active_person_info = f"{p_name} ({p_dept}) [TMDB Person ID: {p_id}]"
+
+        visible_movies_str = "None"
+        if visible_movies and isinstance(visible_movies, list) and len(visible_movies) > 0:
+            v_items = []
+            for vm in visible_movies[:20]:
+                t = vm.get("title") or vm.get("original_title") or "Unknown"
+                yr = f" ({vm['year']})" if vm.get("year") else ""
+                rt = f", TMDB {vm['rating']}" if vm.get("rating") else ""
+                st = vm.get("status") or "unseen"
+                vd = f", Verdict {vm['verdict']}/10" if vm.get("verdict") else ""
+                vmid = vm.get("id") or vm.get("tmdb_id") or ""
+                id_str = f" [ID: {vmid}]" if vmid else ""
+                v_items.append(f"- {t}{yr}{id_str}: Status: {st}{rt}{vd}")
+            if v_items:
+                visible_movies_str = "\n".join(v_items)
+
+        # Modular Prompt Architecture: Load grey_core.md and dynamically route to the active skill
+        prompts_dir = os.path.join(os.path.dirname(__file__), "prompts")
+        core_prompt_path = os.path.join(prompts_dir, "grey_core.md")
         system_template = ""
-        if os.path.exists(prompt_path):
+        if os.path.exists(core_prompt_path):
             try:
-                with open(prompt_path, "r", encoding="utf-8") as f:
+                with open(core_prompt_path, "r", encoding="utf-8") as f:
                     system_template = f.read()
             except Exception as e:
-                logger.warning(f"Could not read prompt file {prompt_path}: {e}")
+                logger.warning(f"Could not read core prompt file {core_prompt_path}: {e}")
+
+        # Fallback to monolithic prompt if core is missing
+        if not system_template:
+            monolith_path = os.path.join(prompts_dir, "grey_system_prompt.md")
+            if os.path.exists(monolith_path):
+                try:
+                    with open(monolith_path, "r", encoding="utf-8") as f:
+                        system_template = f.read()
+                except Exception as e:
+                    logger.warning(f"Could not read fallback prompt {monolith_path}: {e}")
 
         if not system_template:
             system_template = """You are Grey, the native cinema curator and personal film archivist for the NOPE (Movie Excluder) library.
@@ -467,12 +707,57 @@ User high-rated: {{FAVORITES_JSON}}
 Watchlist: {{WATCHLIST_JSON}}
 Discarded: {{DISCARDED_COUNT}}
 Screen context: {{CURRENT_VIEW}}
+Active person on screen: {{ACTIVE_PERSON_INFO}}
+Visible movies on screen:
+{{VISIBLE_MOVIES_LIST}}
 Active filters: {{ACTIVE_FILTERS_JSON}}
 """
 
+        # Dynamic Skill Module Routing
+        skill_filename = "library_ops.md"
+        if active_skill_key == "related":
+            skill_filename = "related_curator.md"
+        elif active_skill_key == "watchlist":
+            skill_filename = "watchlist_builder.md"
+        elif active_skill_key == "batch":
+            skill_filename = "library_ops.md"
+        elif (
+            current_view in ("movie-notes", "notes")
+            or inspected_note_id
+            or any(w in lower_msg for w in ["note", "draft", "journal", "post", "essay", "blog", "write-up", "entry"])
+        ):
+            skill_filename = "notes_editor.md"
+        elif (
+            current_view == "filmography"
+            or (active_person and isinstance(active_person, dict) and active_person.get("name"))
+        ):
+            skill_filename = "filmography_explorer.md"
+        elif any(w in lower_msg for w in ["related", "similar to this", "worth my attention", "recommend from these"]):
+            skill_filename = "related_curator.md"
+        elif any(w in lower_msg for w in ["make a watchlist", "create a watchlist", "draft a watchlist", "compile watchlist"]):
+            skill_filename = "watchlist_builder.md"
+        else:
+            skill_filename = "library_ops.md"
+
+        skill_directive_text = active_skill["directive"] if active_skill else ""
+        skill_file_path = os.path.join(prompts_dir, "skills", skill_filename)
+        if os.path.exists(skill_file_path):
+            try:
+                with open(skill_file_path, "r", encoding="utf-8") as sf:
+                    file_skill_text = sf.read().strip()
+                    if skill_directive_text:
+                        skill_directive_text = f"{skill_directive_text}\n\n{file_skill_text}"
+                    else:
+                        skill_directive_text = file_skill_text
+            except Exception as e:
+                logger.warning(f"Could not read skill file {skill_file_path}: {e}")
+
+        if not skill_directive_text:
+            skill_directive_text = "None"
+
         system_instruction = (
             system_template
-            .replace("{{ACTIVE_SKILL_DIRECTIVE}}", active_skill["directive"] if active_skill else "None")
+            .replace("{{ACTIVE_SKILL_DIRECTIVE}}", skill_directive_text)
             .replace("{{INSPECTED_INFO}}", inspected_info)
             .replace("{{INSPECTED_TITLE}}", inspected_title or "None")
             .replace("{{INSPECTED_MOVIE_TMDB_ID}}", str(inspected_movie_id or "None"))
@@ -480,11 +765,14 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
             .replace("{{INSPECTED_NOTE_INFO}}", inspected_note_info)
             .replace("{{INSPECTED_NOTE_TITLE}}", inspected_note_title or "None")
             .replace("{{INSPECTED_NOTE_ID}}", str(inspected_note_id or "None"))
+            .replace("{{ACTIVE_PERSON_INFO}}", active_person_info)
+            .replace("{{VISIBLE_MOVIES_LIST}}", visible_movies_str)
             .replace("{{FAVORITES_JSON}}", json.dumps(dossier["high_rated"][:8]))
-            .replace("{{WATCHLIST_JSON}}", json.dumps(dossier["watchlist"][:12]))
+            .replace("{{WATCHLIST_JSON}}", json.dumps(dossier["watchlist"][:16]))
             .replace("{{DISCARDED_COUNT}}", str(dossier["discarded_count"]))
             .replace("{{DISCARDED_SAMPLES_JSON}}", json.dumps(dossier["discarded_samples"][:6]))
             .replace("{{JOURNAL_DIGEST}}", json.dumps(dossier.get("journal_digest", [])))
+            .replace("{{JOURNAL_NOTES_LIST}}", json.dumps(dossier.get("journal_notes_list", [])))
             .replace("{{RELEVANT_JOURNAL_EXCERPT}}", relevant_journal_excerpt)
             .replace("{{ALL_WATCHED_TITLES}}", ", ".join(dossier.get("all_watched_titles", [])) or "None")
             .replace("{{REWATCH_LIST}}", ", ".join(dossier.get("rewatch_list", [])) or "None")
@@ -500,6 +788,14 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
                 contents.append({"role": role, "parts": [{"text": item.get("text", "")}]})
 
         screen_contexts = []
+        if active_person_info != "None":
+            screen_contexts.append(f"Filmography on screen: {active_person_info}")
+        if visible_movies and isinstance(visible_movies, list) and len(visible_movies) > 0:
+            titles_sample = [vm.get("title") or vm.get("original_title") for vm in visible_movies[:8] if (vm.get("title") or vm.get("original_title"))]
+            if titles_sample:
+                screen_contexts.append(f"Grid shows {len(visible_movies)} titles including: {', '.join(titles_sample)}")
+        if notes_shelf_filter:
+            screen_contexts.append(f"Movie Notes paired shelf filter: {notes_shelf_filter}")
         if inspected_title:
             id_info = f" (TMDB ID: {inspected_movie_id})" if inspected_movie_id else ""
             screen_contexts.append(f"Currently viewing movie on screen: {inspected_title}{id_info}")
@@ -643,6 +939,8 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
                     }
                 elif len(status_actions) == 1 and not action:
                     action = status_actions[0]
+
+            is_post_mention = any(w in lower_msg for w in ["post", "note", "journal", "entry", "draft", "blog", "write-up"])
 
             if action and action.get("type") == "create_draft":
                 try:
@@ -800,69 +1098,134 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
                     logger.error(f"Failed to batch set movie status via Grey: {batch_err}")
 
             elif action and action.get("type") == "set_movie_status":
-                try:
-                    from app.movie_service import MovieService
+                is_post_mention = any(w in lower_msg for w in ["post", "note", "journal", "entry", "draft", "blog", "write-up"])
+                if is_post_mention:
+                    # User intended a note/post operation, not a library shelf status change!
+                    logger.info("Intercepted set_movie_status with post/note mention; converting to update_entry.")
                     import re
-                    movie_svc = MovieService()
-                    params = action.get("params") or {}
-                    param_tmdb_id = params.get("tmdb_id")
-                    param_title = (params.get("title") or "").strip()
-                    target_tmdb_id = None
-
-                    if param_tmdb_id and str(param_tmdb_id).isdigit():
-                        target_tmdb_id = int(param_tmdb_id)
-                        # Only override with inspected_movie_id if user didn't explicitly target another film
-                        if inspected_movie_id and not param_title and target_tmdb_id != inspected_movie_id:
-                            target_tmdb_id = inspected_movie_id
-                    elif inspected_movie_id and not param_title:
-                        target_tmdb_id = inspected_movie_id
-                    elif param_title:
-                        clean_t = param_title.strip().lower()
-                        clean_t_noyear = re.sub(r"\s*\(\d{4}\)$", "", clean_t).strip()
+                    t_id = action.get("params", {}).get("tmdb_id") or inspected_movie_id
+                    t_title = action.get("params", {}).get("title") or inspected_title or "Movie"
+                    m_year = ""
+                    m_overview = ""
+                    cast_names = "Unknown"
+                    if t_id:
                         with self._get_connection() as conn:
-                            row = conn.execute(
-                                "SELECT tmdb_id, title FROM movies WHERE lower(title) = lower(?) OR lower(title) = lower(?) LIMIT 1",
-                                (clean_t, clean_t_noyear)
-                            ).fetchone()
-                            if row:
-                                target_tmdb_id = row["tmdb_id"]
-                    elif inspected_movie_id:
-                        target_tmdb_id = inspected_movie_id
+                            m_row = conn.execute("SELECT title, release_date, overview FROM movies WHERE tmdb_id = ?", (t_id,)).fetchone()
+                            if m_row:
+                                t_title = m_row["title"]
+                                m_year = f" ({(m_row['release_date'] or '')[:4]})" if m_row["release_date"] else ""
+                                m_overview = (m_row["overview"] or "").strip()
+                            c_rows = conn.execute("SELECT name FROM movie_credits WHERE tmdb_id = ? AND credit_type = 'actor' ORDER BY position ASC LIMIT 3", (t_id,)).fetchall()
+                            if c_rows:
+                                cast_names = ", ".join(c["name"] for c in c_rows)
 
-                    target_status = params.get("status")
-                    target_verdict = params.get("verdict")
-                    target_notes = params.get("notes")
+                    target_body_format = "toggle"
+                    existing_body_sample = ""
+                    if inspected_note_id:
+                        with self._get_connection() as conn:
+                            erow = conn.execute("SELECT body FROM general_entries WHERE entry_id = ?", (inspected_note_id,)).fetchone()
+                            if erow and erow["body"]:
+                                existing_body_sample = erow["body"].strip()
+                    elif inspected_note and isinstance(inspected_note, dict):
+                        existing_body_sample = (inspected_note.get("body") or "").strip()
 
-                    if target_status:
-                        raw_st = str(target_status).lower().strip()
-                        target_status = status_map.get(raw_st, raw_st)
+                    bullet_char = "•"
+                    has_imdb = "imdb" in existing_body_sample.lower()
+                    if existing_body_sample:
+                        lines = [l.strip() for l in existing_body_sample.splitlines() if l.strip()]
+                        bullet_lines = [l for l in lines if l.startswith("•") or l.startswith("- ") or l.startswith("* ")]
+                        if bullet_lines and ">>" not in existing_body_sample:
+                            target_body_format = "bullet"
+                            if bullet_lines[0].startswith("- "):
+                                bullet_char = "-"
+                            elif bullet_lines[0].startswith("* "):
+                                bullet_char = "*"
 
-                    if target_tmdb_id and str(target_tmdb_id).isdigit():
-                        target_tmdb_id = int(target_tmdb_id)
+                    if target_body_format == "bullet":
+                        cast_part = f" ({cast_names})" if cast_names and cast_names != "Unknown" else ""
+                        link_part = " - [IMDb](https://www.imdb.com/)" if has_imdb else ""
+                        appended_body = f"{bullet_char} {t_title}{m_year}{cast_part}{link_part}"
+                    else:
+                        appended_body = (
+                            f">> {t_title}{m_year}\n"
+                            f"- **Cast:** {cast_names}\n"
+                            f"- **Synopsis:** {m_overview[:180]}...\n"
+                            f"- **Why YES:** Added to watchlist post."
+                        )
+
+                    action = {
+                        "type": "update_entry",
+                        "params": {
+                            "title": None,
+                            "body": appended_body,
+                            "mode": "append",
+                        }
+                    }
+                else:
+                    try:
+                        from app.movie_service import MovieService
+                        import re
+                        movie_svc = MovieService()
+                        params = action.get("params") or {}
+                        param_tmdb_id = params.get("tmdb_id")
+                        param_title = (params.get("title") or "").strip()
+                        target_tmdb_id = None
+
+                        if param_tmdb_id and str(param_tmdb_id).isdigit():
+                            target_tmdb_id = int(param_tmdb_id)
+                            # Only override with inspected_movie_id if user didn't explicitly target another film
+                            if inspected_movie_id and not param_title and target_tmdb_id != inspected_movie_id:
+                                target_tmdb_id = inspected_movie_id
+                        elif inspected_movie_id and not param_title:
+                            target_tmdb_id = inspected_movie_id
+                        elif param_title:
+                            clean_t = param_title.strip().lower()
+                            clean_t_noyear = re.sub(r"\s*\(\d{4}\)$", "", clean_t).strip()
+                            with self._get_connection() as conn:
+                                row = conn.execute(
+                                    "SELECT tmdb_id, title FROM movies WHERE lower(title) = lower(?) OR lower(title) = lower(?) LIMIT 1",
+                                    (clean_t, clean_t_noyear)
+                                ).fetchone()
+                                if row:
+                                    target_tmdb_id = row["tmdb_id"]
+                        elif inspected_movie_id:
+                            target_tmdb_id = inspected_movie_id
+
+                        target_status = params.get("status")
+                        target_verdict = params.get("verdict")
+                        target_notes = params.get("notes")
+
                         if target_status:
-                            movie_svc.set_movie_status(target_tmdb_id, target_status)
-                        if target_verdict is not None:
-                            try:
-                                v_int = int(target_verdict)
-                                if 1 <= v_int <= 10:
-                                    movie_svc.set_movie_verdict(target_tmdb_id, v_int)
-                            except Exception:
-                                pass
-                        if target_notes and isinstance(target_notes, str):
-                            movie_svc.set_movie_notes(target_tmdb_id, target_notes)
+                            raw_st = str(target_status).lower().strip()
+                            target_status = status_map.get(raw_st, raw_st)
 
-                        if not isinstance(action.get("params"), dict):
-                            action["params"] = {}
-                        action["params"]["tmdb_id"] = target_tmdb_id
-                        action["params"]["status"] = target_status
-                except Exception as status_err:
-                    logger.error(f"Failed to set movie status via Grey: {status_err}")
-                    data["text"] = f"I couldn't update the status for this movie due to an error: {status_err}"
-                    action = None
+                        if target_tmdb_id and str(target_tmdb_id).isdigit():
+                            target_tmdb_id = int(target_tmdb_id)
+                            if target_status:
+                                movie_svc.set_movie_status(target_tmdb_id, target_status)
+                            if target_verdict is not None:
+                                try:
+                                    v_int = int(target_verdict)
+                                    if 1 <= v_int <= 10:
+                                        movie_svc.set_movie_verdict(target_tmdb_id, v_int)
+                                except Exception:
+                                    pass
+                            if target_notes and isinstance(target_notes, str):
+                                movie_svc.set_movie_notes(target_tmdb_id, target_notes)
 
-            elif action and action.get("type") == "update_entry":
+                            if not isinstance(action.get("params"), dict):
+                                action["params"] = {}
+                            action["params"]["tmdb_id"] = target_tmdb_id
+                            action["params"]["status"] = target_status
+                    except Exception as status_err:
+                        logger.error(f"Failed to set movie status via Grey: {status_err}")
+                        data["text"] = f"I couldn't update the status for this movie due to an error: {status_err}"
+                        action = None
+
+            if action and action.get("type") == "update_entry":
                 try:
                     from app.general_entry_repository import GeneralEntryRepository
+                    import re
                     repo = GeneralEntryRepository()
                     params = action.get("params") or {}
                     target_id = params.get("entry_id") or inspected_note_id
@@ -892,17 +1255,37 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
                                 existing = repo.get_entry(row["entry_id"])
 
                     # If not explicitly named, scan if the user query mentioned any existing note title
+                    # Sort by length descending so specific titles like "Watchlist 1" match before "Watchlist"
                     if not existing:
                         with self._get_connection() as conn:
                             all_titles = conn.execute("SELECT entry_id, title FROM general_entries WHERE is_deleted = 0").fetchall()
-                            for at in all_titles:
+                            sorted_titles = sorted(all_titles, key=lambda x: len(x["title"] or ""), reverse=True)
+                            for at in sorted_titles:
                                 if at["title"] and at["title"].strip().lower() in lower_msg:
                                     existing = repo.get_entry(at["entry_id"])
                                     break
 
+                    # Regex extraction fallback for patterns like "add this to my [X] post"
+                    if not existing:
+                        cand_match = re.search(r"(?:add|save|append|put)\s+(?:this\s+)?(?:to\s+|into\s+)?(?:my\s+)?['\"]?([^'\"\n]+?)['\"]?\s+(?:post|note|journal|entry|blog|draft|list)", message, re.IGNORECASE)
+                        if cand_match:
+                            cand_title = cand_match.group(1).strip()
+                            with self._get_connection() as conn:
+                                row = conn.execute(
+                                    "SELECT entry_id FROM general_entries WHERE is_deleted = 0 AND lower(title) = lower(?) ORDER BY updated_at DESC LIMIT 1",
+                                    (cand_title,)
+                                ).fetchone()
+                                if not row:
+                                    row = conn.execute(
+                                        "SELECT entry_id FROM general_entries WHERE is_deleted = 0 AND lower(title) LIKE lower(?) ORDER BY updated_at DESC LIMIT 1",
+                                        (f"%{cand_title}%",)
+                                    ).fetchone()
+                                if row:
+                                    existing = repo.get_entry(row["entry_id"])
+
                     # The user must either have the note open on screen, OR explicitly request note modification in chat message
                     explicit_note_request = (
-                        any(w in lower_msg for w in ["note", "draft", "journal", "essay", "blog", "write-up", "entry", "list"])
+                        any(w in lower_msg for w in ["note", "draft", "journal", "essay", "blog", "write-up", "entry", "list", "post"])
                         or (bool(target_title) and str(target_title).strip().lower() in lower_msg)
                         or (bool(existing) and existing["title"].strip().lower() in lower_msg)
                     )
@@ -914,9 +1297,14 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
                         action = None
                         data["text"] = f"I couldn't locate the note '{target_title or 'requested'}' in your notebook to update."
                     elif existing:
-                        final_body = new_body
-                        if mode == "append" and existing.get("body"):
-                            final_body = f"{existing['body'].rstrip()}\n\n{new_body.lstrip()}"
+                        final_body = self._deduplicate_and_format_note_body(
+                            existing_body=existing.get("body") or "",
+                            new_body=new_body,
+                            mode=mode,
+                            user_message=message,
+                            inspected_movie_id=inspected_movie_id,
+                            inspected_movie_title=inspected_title,
+                        )
 
                         raw_tags = params.get("tags")
                         if raw_tags is None:
@@ -942,6 +1330,8 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
                                 action["params"] = {}
                             action["params"]["entry_id"] = updated["entry_id"]
                             action["params"]["title"] = updated["title"]
+                            if is_post_mention and (not data.get("text") or "movie" in data.get("text", "").lower() or "status" in data.get("text", "").lower()):
+                                data["text"] = f"Added to your '{updated['title']}' post."
 
                             open_pill_found = False
                             for p in pills:

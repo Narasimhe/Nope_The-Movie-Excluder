@@ -642,5 +642,342 @@ def test_grey_slash_command_skill_routing():
         assert "ACTIVE SKILL: /related" in system_instruction
 
 
+def test_grey_pruned_skills_and_watchlist_directive():
+    from app.grey_service import SKILLS_REGISTRY
+    # /tonight and /nope pruned from registry
+    assert "tonight" not in SKILLS_REGISTRY
+    assert "nope" not in SKILLS_REGISTRY
+    assert "watchlist" in SKILLS_REGISTRY
+    assert "related" in SKILLS_REGISTRY
+
+    # Watchlist directive enforces substantial coverage, >> toggles, and zero shelf confusion
+    w_directive = SKILLS_REGISTRY["watchlist"]["directive"]
+    assert "NO LAZY 3-MOVIE SHORTCUTS" in w_directive
+    assert "8-12 titles" in w_directive
+    assert "ZERO SHELF CONFUSION" in w_directive
+    assert ">> [Movie Title] ([Year])" in w_directive
+
+
+def test_grey_intercepts_set_movie_status_when_post_mentioned_and_appends():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+        temp_db = Path(temp_dir) / "test.db"
+        with patch.object(database, "DATABASE_PATH", temp_db):
+            initialize_database()
+            repo = GeneralEntryRepository()
+            service = GreyService(db_path=str(temp_db))
+            service.api_key = "test_key"
+
+            # Create an existing post titled "Watchlist 1"
+            entry = repo.create_entry(
+                entry_type="note",
+                title="Watchlist 1",
+                body=">> Thief (1981)\n- **Cast:** James Caan\n- **Synopsis:** Master safecracker.\n- **Why YES:** Mann craft.",
+                tags=["watchlist"],
+                status="draft",
+            )
+            target_entry_id = entry["entry_id"]
+
+            # Insert inspected movie into movies table
+            with service._get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO movies (tmdb_id, title, release_date, overview, vote_average) VALUES (?, ?, ?, ?, ?)",
+                    (1392, "Carlito's Way", "1993-11-12", "An ex-con tries to stay straight.", 7.9)
+                )
+
+            # Model errantly returns set_movie_status instead of updating note
+            fake_model_reply = {
+                "text": "Added Carlito's Way to your Watchlist 1 post.",
+                "action": {
+                    "type": "set_movie_status",
+                    "params": {"status": "watch_later", "tmdb_id": 1392, "title": "Carlito's Way"}
+                },
+                "pills": [],
+            }
+
+            with patch("requests.post") as mock_post:
+                mock_resp = MagicMock()
+                mock_resp.status_code = 200
+                mock_resp.json.return_value = {
+                    "candidates": [{"content": {"parts": [{"text": json.dumps(fake_model_reply)}]}}]
+                }
+                mock_post.return_value = mock_resp
+
+                res = service.chat("Add this to my Watchlist 1 post", inspected_movie_id=1392, related_movies=[])
+
+                # Verify set_movie_status was intercepted and redirected to update_entry
+                assert res["action"]["type"] == "update_entry"
+                assert res["action"]["params"]["entry_id"] == target_entry_id
+
+                # Verify post body preserved existing content and appended Carlito's Way
+                updated = repo.get_entry(target_entry_id)
+                assert ">> Thief (1981)" in updated["body"]
+                assert ">> Carlito's Way (1993)" in updated["body"]
+
+
+def test_grey_resolves_specific_post_title_over_generic():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+        temp_db = Path(temp_dir) / "test.db"
+        with patch.object(database, "DATABASE_PATH", temp_db):
+            initialize_database()
+            repo = GeneralEntryRepository()
+            service = GreyService(db_path=str(temp_db))
+            service.api_key = "test_key"
+
+            # Create two notes: "Watchlist" and "Watchlist 2"
+            repo.create_entry(entry_type="note", title="Watchlist", body="Base list", tags=[], status="published")
+            e2 = repo.create_entry(entry_type="note", title="Watchlist 2", body="Second tranche", tags=[], status="published")
+
+            with service._get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO movies (tmdb_id, title, release_date, overview, vote_average) VALUES (?, ?, ?, ?, ?)",
+                    (1393, "Strange Days", "1995-10-06", "A former cop turned street peddler.", 7.2)
+                )
+
+            fake_model_reply = {
+                "text": "Appended Strange Days to Watchlist 2.",
+                "action": {
+                    "type": "update_entry",
+                    "params": {
+                        "mode": "append",
+                        "body": ">> Strange Days (1995)\n- **Synopsis:** Cyberpunk noir.",
+                    }
+                },
+                "pills": [],
+            }
+
+            with patch("requests.post") as mock_post:
+                mock_resp = MagicMock()
+                mock_resp.status_code = 200
+                mock_resp.json.return_value = {
+                    "candidates": [{"content": {"parts": [{"text": json.dumps(fake_model_reply)}]}}]
+                }
+                mock_post.return_value = mock_resp
+
+                res = service.chat("Add this to my Watchlist 2 post", inspected_movie_id=1393, related_movies=[])
+                assert res["action"]["params"]["entry_id"] == e2["entry_id"]
+
+                updated = repo.get_entry(e2["entry_id"])
+                assert "Second tranche" in updated["body"]
+                assert ">> Strange Days (1995)" in updated["body"]
+
+
+def test_grey_appends_respecting_bullet_list_format():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+        temp_db = Path(temp_dir) / "test.db"
+        with patch.object(database, "DATABASE_PATH", temp_db):
+            initialize_database()
+            repo = GeneralEntryRepository()
+            service = GreyService(db_path=str(temp_db))
+            service.api_key = "test_key"
+
+            # Create existing note with simple bullet list and IMDb links
+            initial_body = "• The Naked Gun (Leslie Nielsen) - IMDb\n• Top Secret! (Val Kilmer) - IMDb"
+            entry = repo.create_entry(
+                entry_type="note",
+                title="Spoof Movies",
+                body=initial_body,
+                tags=["spoofs"],
+                status="published",
+            )
+            target_id = entry["entry_id"]
+
+            with service._get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO movies (tmdb_id, title, release_date, overview, vote_average) VALUES (?, ?, ?, ?, ?)",
+                    (2457, "The Kentucky Fried Movie", "1977-08-10", "A sketch comedy satire.", 6.5)
+                )
+
+            # Fallback action interceptor formats as matching bullet point
+            fake_model_reply = {
+                "text": "Added to your Spoof Movies note.",
+                "action": {
+                    "type": "set_movie_status",
+                    "params": {"status": "watch_later", "tmdb_id": 2457, "title": "The Kentucky Fried Movie"}
+                },
+                "pills": [],
+            }
+
+            with patch("requests.post") as mock_post:
+                mock_resp = MagicMock()
+                mock_resp.status_code = 200
+                mock_resp.json.return_value = {
+                    "candidates": [{"content": {"parts": [{"text": json.dumps(fake_model_reply)}]}}]
+                }
+                mock_post.return_value = mock_resp
+
+                res = service.chat("Add to my Spoof Movies note", inspected_movie_id=2457)
+                updated = repo.get_entry(target_id)
+                assert updated is not None
+                # Should NOT contain toggle syntax
+                assert ">>" not in updated["body"]
+                assert "- **Why YES:**" not in updated["body"]
+                # Should contain bullet matching original style
+                assert "• The Kentucky Fried Movie (1977)" in updated["body"]
+
+
+def test_grey_deduplicate_and_format_note_body():
+    service = GreyService()
+
+    # Case 1: Deduplicate and convert to toggle when redundant entry was already in note
+    existing_note = (
+        "• The Settlers (Sofia Boutella)\n"
+        "• Kill the messenger (Jeremy Runner)\n"
+        "• Red Lights (Cillian Murphy & Sigourney Weaver)\n"
+        "• Syriana\n\n"
+        "• Red Lights (Cillian Murphy & Sigourney Weaver)\n\n"
+        "OK -- 1st and 2nd acts are mostly about our protagonists,\n"
+        "Cillian Murphy and Sigourney debunking fraudulent psychics.\n\n"
+        "Another silly twist -- De Niro is not blind, just pretends to be."
+    )
+
+    result = service._deduplicate_and_format_note_body(
+        existing_body=existing_note,
+        new_body="",
+        mode="append",
+        user_message="yeah good -- but toggle collpase for this",
+        inspected_movie_title="Red Lights",
+    )
+
+    # Must contain clean human-readable Notion toggle (>> Title)
+    assert ">> Red Lights (Cillian Murphy & Sigourney Weaver)" in result
+    assert "<details" not in result
+    assert "<summary" not in result
+    assert "</details>" not in result
+    assert "Cillian Murphy and Sigourney debunking fraudulent psychics." in result
+    # Must preserve other movies in order
+    assert "• The Settlers (Sofia Boutella)" in result
+    assert "• Kill the messenger (Jeremy Runner)" in result
+    assert "• Syriana" in result
+    # Red Lights must appear only ONCE (in the >> header)
+    assert result.count("Red Lights") == 1
+    # Syriana must still be after Red Lights toggle
+    assert result.index("Red Lights") < result.index("Syriana")
+
+
+def test_grey_converts_clumsy_html_details_to_clean_toggle():
+    service = GreyService()
+
+    clumsy_note = (
+        "<details><summary>Nightcrawler (2014)</summary>\n\n"
+        "Oh this is a well done movie -- jake plays that nocturnal psychopath\n"
+        "</details>"
+    )
+
+    result = service._deduplicate_and_format_note_body(
+        existing_body=clumsy_note,
+        new_body="",
+        mode="replace",
+        user_message="format this properly",
+        inspected_movie_title="Nightcrawler",
+    )
+
+    # Clumsy HTML tags must be converted to clean >> Notion toggle
+    assert "<details" not in result
+    assert "<summary" not in result
+    assert "</details>" not in result
+    assert ">> Nightcrawler (2014)" in result
+    assert "jake plays that nocturnal psychopath" in result
+
+
+def test_grey_in_place_upsert_existing_bullet():
+    service = GreyService()
+
+    existing_note = (
+        "• The Settlers (Sofia Boutella)\n"
+        "• Kill the messenger (Jeremy Runner)\n"
+        "• Red Lights (Cillian Murphy & Sigourney Weaver)\n"
+        "• Syriana"
+    )
+
+    new_entry = (
+        "• Red Lights (Cillian Murphy & Sigourney Weaver)\n\n"
+        "Great atmosphere and acting, though the twist is divisive."
+    )
+
+    result = service._deduplicate_and_format_note_body(
+        existing_body=existing_note,
+        new_body=new_entry,
+        mode="append",
+        user_message="Add my thoughts on Red Lights",
+        inspected_movie_title="Red Lights",
+    )
+
+    # Must replace the bare bullet in-place without adding duplicate after Syriana
+    assert result.count("Red Lights") == 1
+    assert result.index("Red Lights") < result.index("Syriana")
+    assert "Great atmosphere and acting" in result
+
+
+def test_grey_new_movie_appends_normally():
+    service = GreyService()
+
+    existing_note = (
+        "• The Settlers (Sofia Boutella)\n"
+        "• Syriana"
+    )
+
+    new_entry = "• Heat (1995)"
+
+    result = service._deduplicate_and_format_note_body(
+        existing_body=existing_note,
+        new_body=new_entry,
+        mode="append",
+        user_message="Add Heat to my note",
+        inspected_movie_title="Heat",
+    )
+
+    assert "• The Settlers (Sofia Boutella)" in result
+    assert "• Syriana" in result
+    assert "• Heat (1995)" in result
+    assert result.index("Syriana") < result.index("Heat")
+
+
+def test_grey_modular_skill_routing():
+    service = GreyService()
+    service.api_key = "test_key"
+
+    fake_model_reply = {
+        "text": "Skill test response.",
+        "action": None,
+        "pills": [],
+    }
+
+    with patch("requests.post") as mock_post:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "candidates": [{"content": {"parts": [{"text": json.dumps(fake_model_reply)}]}}]
+        }
+        mock_post.return_value = mock_resp
+
+        # 1. Notes view loads notes_editor skill and does NOT load unrelated skills
+        service.chat("Help with this note", current_view="notes", inspected_note={"id": 1, "title": "Test", "body": "Body"})
+        call_args = mock_post.call_args
+        payload = call_args.kwargs.get("json") or call_args[1].get("json")
+        system_instruction = payload["systemInstruction"]["parts"][0]["text"]
+        assert "ACTIVE SKILL: NOTES & JOURNAL EDITOR" in system_instruction
+        assert "CAREER FILMOGRAPHY EXPLORER" not in system_instruction
+
+        # 2. Filmography view loads filmography_explorer skill
+        service.chat("Tell me about his career", current_view="filmography", active_person={"id": 123, "name": "Daniel Kaluuya"})
+        call_args = mock_post.call_args
+        payload = call_args.kwargs.get("json") or call_args[1].get("json")
+        system_instruction = payload["systemInstruction"]["parts"][0]["text"]
+        assert "CAREER FILMOGRAPHY EXPLORER" in system_instruction
+        assert "NOTES & JOURNAL EDITOR" not in system_instruction
+
+        # 3. Related skill load
+        service.chat("Which of these are good?", current_view="movie", active_skill_key="related")
+        call_args = mock_post.call_args
+        payload = call_args.kwargs.get("json") or call_args[1].get("json")
+        system_instruction = payload["systemInstruction"]["parts"][0]["text"]
+        assert "RELATED MOVIES REALITY CHECK" in system_instruction
+        assert "NOTES & JOURNAL EDITOR" not in system_instruction
+
+
+
+
+
+
 
 

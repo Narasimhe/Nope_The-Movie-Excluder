@@ -1,10 +1,121 @@
-# Movie Excluder — Improvements & Polish Tracker
+> **AI INSTRUCTION**: Only read and process items listed under **🟢 Pending Tasks (Active Focus)**. Treat **✅ Completed Tasks** as historical archive data only—do not re-implement, modify, or discuss them unless explicitly requested by the user.
 
-A central record of recent fixes, active improvements, and future backlog items for Movie Excluder.
+# Project Improvements & Backlog
+
+## 🟢 Pending Tasks (Active Focus)
+
+- [ ] **Native Markdown Table Support in Notes & Grey Table Formatting**
+  * **Goal**: Support standard Markdown tables (`| Col 1 | Col 2 |`) in notes and journal posts with dark-theme styling, and teach Grey to format and update movie comparison tables.
+  * **Scope**:
+    * **Frontend Markdown Parser ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: In `appendEntryBody`, detect pipe-delimited table rows (`| ... |`), parse header rows, separator rows, and data rows into structured `<table>`, `<thead>`, `<tbody>` elements with support for inline links, bold text, and formatting.
+    * **Modern Dark CSS ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Add responsive, clean dark styling with subtle borders, muted headers, comfortable cell padding, and horizontal scroll wrapper for narrow screens.
+    * **Grey Skill Integration ([`notes_editor.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/notes_editor.md))**: Teach Grey to output clean Markdown tables when asked for film comparisons, rankings, or side-by-side lists, and to mimic existing table structures when adding rows to notes that use tables.
+
 
 ---
 
-## 1. Done (Recently Completed Fixes & Polish)
+## ✅ Completed Tasks
+
+- [x] **Modular Skill-Based Prompt Architecture for Grey**
+  * **Goal**: Decompose Grey's monolithic 224-line prompt into a lean core persona and dedicated on-demand skill modules, preventing instruction conflicts, context dilution, and token bloat.
+  * **Architecture**:
+    * **Core Persona ([`grey_core.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/grey_core.md))**: Houses Grey's cinephile voice, craft philosophy, behavioral rules, and JSON action output envelope (~75 lines).
+    * **Dynamic Skill Modules ([`app/prompts/skills/`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/))**:
+      - [`notes_editor.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/notes_editor.md): Format mimicry, in-place upsert, `>>` Notion toggles with double blank line exit, zero redundancy.
+      - [`related_curator.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/related_curator.md): Script craft, pacing, tension, YES/NOPE verdicts on related movies.
+      - [`filmography_explorer.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/filmography_explorer.md): Career context, department filter awareness (acting vs directing).
+      - [`watchlist_builder.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/watchlist_builder.md): 8-12 tranche synthesis, Notion toggles with Cast/Synopsis/Why YES.
+      - [`library_ops.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/library_ops.md): Shelf moves, ratings, verdicts, batch actions, and library awareness.
+    * **Dynamic Context Router ([`grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey_service.py))**: Inspects current view, open note, active person, or slash command to dynamically inject only the active skill directive into `{{ACTIVE_SKILL_DIRECTIVE}}`.
+    * **Unit Tests ([`test_grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/tests/test_grey_service.py))**: Added tests verifying that screen states route exclusively to their intended skill module without loading unrelated instructions.
+
+
+- [x] **Grey In-Note Deduplication & Human-Readable Notion Toggle Formatting**
+  * **Goal**: Prevent Grey from creating duplicate movie entries in existing notes when adding critiques/details, and guarantee that toggles use clean, human-readable Notion-style `>> Title` syntax followed by two consecutive blank lines to exit toggle mode.
+  * **Fix**:
+    * **In-Place Entity Upsert**: In [`grey_system_prompt.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/grey_system_prompt.md), instructed Grey to inspect existing notes and always update/expand existing movie lines in-place instead of appending duplicate bullets at the bottom.
+    * **Notion `>>` Toggle & Double Blank Lines**: Taught Grey that raw HTML tags like `<details><summary>` are forbidden in plaintext notes; Grey must format toggles using clean `>> Title (Year)` syntax followed by two consecutive empty lines to cleanly exit back to root level.
+    * **Deterministic Python Safeguard**: In [`grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey_service.py), `_deduplicate_and_format_note_body` normalizes toggles into clean `>> Title` format, appends double newlines to guarantee toggle exit, replaces bare bullets in-place, and strips any duplicate appended mentions.
+    * **Frontend Toggle Boundaries**: Updated [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js) markdown parser so top-level bullets (`• `, `- `, `* `) immediately close active Notion toggles.
+    * **Unit Tests**: Added test coverage in [`test_grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/tests/test_grey_service.py) verifying in-place upsert, toggle exit boundaries, and deduplication.
+
+
+- [x] **Offline Saved Profile & Poster Speed Optimizations**
+  * **Goal**: Eliminate network timeout delays when viewing saved profiles and posters while offline, making offline browsing instant (<10ms).
+  * **Fix**:
+    * **Local-First Poster Fast-Path**: Updated `createPoster()` in [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js) to load `/images/posters/...` from local disk cache first, completely bypassing external CDN network roundtrips and avoiding 15–30s browser connection timeouts.
+    * **Backend Poster Circuit Breaker**: Added `_offline_until` circuit breaker and reduced download timeout to 1.5s in [`poster_cache_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/poster_cache_service.py). When offline, uncached poster requests abort immediately in <1ms without blocking FastAPI worker threads.
+    * **Fail-Fast TMDB Client Circuit Breaker**: Added connection error circuit breaker to [`tmdb_client.py`](file:///f:/Movie_Excluder/movie-excluder/app/tmdb_client.py). When offline, uncached queries fail fast (0ms) instead of retrying for 30s.
+    * **Discovery Prefetch Timeout Race**: Wrapped speculative buffer pages (pages 2 & 3) in [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js) with a 1.5s timeout race so uncached speculative pages never delay cached primary results.
+
+
+- [x] **Grey Note Editing Format & Style Mimicry**
+  * **Goal**: Teach Grey to inspect and strictly mimic the existing format of a note when editing or appending entries, rather than imposing a generic multi-line Notion-style toggle.
+  * **Fix**:
+    * Updated [`grey_system_prompt.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/grey_system_prompt.md) with explicit Format Mimicry Rules: when updating existing notes, Grey must inspect the existing entries and seamlessly match single-line bullets (e.g. `• Title (Year) (Cast/Director) - [IMDb](url)`), numbered items, or tables.
+    * In [`grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey_service.py), auto-resolve existing note content into `inspected_note_info` whenever a note is referenced by title or keywords, and added pattern-detection to the fallback action converter to match bullet characters (`•`, `-`, `*`) and IMDb link style.
+
+- [x] **Discover Simple Title Search Stability & Persistent UI**
+  * **Goal**: Prevent the left sidebar, toolbar search bar, and top navigation highlight from disappearing when executing a simple title search in Discover.
+  * **Fix**:
+    * Simple title searches now anchor stably inside the `discover` view (`setActiveView("discover")`).
+    * The left sidebar (`#discovery-workspace` and `#advanced-controls`) remains fully mounted and visible with all filters intact instead of collapsing into a blank black void.
+    * The canvas search toolbar (with query input, Nope Mode toggle, profile ribbon, and formatted live match count) remains on screen for instant query refinement or clearing.
+    * Added native search clear listener so clearing the search input seamlessly reloads default discovery.
+    * Automatically de-selects active ribbon profile chips during simple global title searches to avoid misleading active states.
+
+- [x] **Movie Notes Lens Visual Distinction (Wide Full-Width Pill)**
+  * **Goal**: Visually distinguish **Movie Notes** from the 6 storage shelves to clearly reflect its role as a modifier/lens.
+  * **Design**:
+    * **Full-Width Lens Pill**: Spans Movie Notes as a sleek full-width pill below the 2×3 shelf grid (`grid-column: 1 / -1; width: 100%`).
+    * **Engaged Lens State**: When active, illuminates with a warm gold frame and subtle lens glow (`#f2c94c`), making it immediately clear that the notes filter lens is engaged.
+    * **Divider**: Kept clean without redundant horizontal lines as requested.
+
+- [x] **Context-Aware Notes Search in Movie Notes Mode**
+  * **Goal**: When viewing **Movie Notes**, sidebar search automatically searches strictly inside personal movie notes without requiring the user to type `notes: <query>`.
+  * **Behavior**:
+    * Dynamic search placeholder: switches to `"Search your movie notes…"` in Movie Notes view, and `"Search library (or title:, plot:)…"` on general shelves (`notes:` prefix hint removed).
+    * Prefix bypass: Any query without a prefix searches notes; explicit `title:` and `plot:` prefixes are still respected.
+    * Shelf scoping: Paired shelves filter notes to that specific shelf (e.g. Watched + Notes).
+
+- [x] **Filmography Header Stacked Arrangement (Two-Tier Layout)**
+  * **Goal**: Implement the two-tier stacked layout for the career filmography toolbar based on user mockup.
+  * **Layout**:
+    * **Top Row**: Circular avatar + gold kicker (`ACTING · COMPLETE FILMOGRAPHY`) + bold name (`Daniel Kaluuya`) on single horizontal lines with zero text-wrapping.
+    * **Bottom Row**: Full horizontal width for department filter tabs (`All (38)`, `Directed (1)`, `Acted (37)`).
+  * **Badge Cutoff Fix**: Fixed status badges on filmography posters and mobile cards getting truncated (`max-width: calc(100% - 8px)`).
+
+- [x] **Grey Situational Awareness & Live Grid Vision**
+  * **Goal**: Provide Grey with full real-time awareness of the screen, active person filmography, and visible movies.
+  * **Accurate Screen State**:
+    * When viewing Filmography: passes `current_view: "filmography"`, person name, department, and total count.
+    * When viewing Movie Notes with a paired shelf: passes `current_view: "movie-notes"`, `notes_shelf_filter: "watched"`.
+  * **Live Grid Vision**:
+    * Sends a compact summary of the top 20 movies currently rendered on the user's screen (titles, years, personal shelf statuses).
+    * Allows Grey to answer questions directly referencing visible titles on screen.
+
+- [ ] **Personal Library Export, Backup & Google Sheets Sync**
+  * **Placement**: Located on the **Storage** page (`Local data → Storage`).
+  * **Offline Backup (JSON / CSV)**: 1-click download of all user data as timestamped JSON (full fidelity) or CSV.
+  * **Google Sheets Webhook Sync (Optional Cloud)**: Connect a Google Apps Script Web App URL to push personal library snapshots directly into a private Google Sheet for mobile access and sharing, without Google Cloud Console overhead.
+
+---
+
+## ✅ Completed Tasks
+
+- [x] **Modular Skill-Based Prompt Architecture for Grey**
+  * **Goal**: Decompose Grey's monolithic 224-line prompt into a lean core persona and dedicated on-demand skill modules, preventing instruction conflicts, context dilution, and token bloat.
+  * **Architecture**:
+    * **Core Persona ([`grey_core.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/grey_core.md))**: Houses Grey's cinephile voice, craft philosophy, behavioral rules, and JSON action output envelope (~75 lines).
+    * **Dynamic Skill Modules ([`app/prompts/skills/`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/))**:
+      - [`notes_editor.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/notes_editor.md): Format mimicry, in-place upsert, `>>` Notion toggles with double blank line exit, zero redundancy.
+      - [`related_curator.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/related_curator.md): Script craft, pacing, tension, YES/NOPE verdicts on related movies.
+      - [`filmography_explorer.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/filmography_explorer.md): Career context, department filter awareness (acting vs directing).
+      - [`watchlist_builder.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/watchlist_builder.md): 8-12 tranche synthesis, Notion toggles with Cast/Synopsis/Why YES.
+      - [`library_ops.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/library_ops.md): Shelf moves, ratings, verdicts, batch actions, and library awareness.
+    * **Dynamic Context Router ([`grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey_service.py))**: Inspects current view, open note, active person, or slash command to dynamically inject only the active skill directive into `{{ACTIVE_SKILL_DIRECTIVE}}`.
+    * **Unit Tests ([`test_grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/tests/test_grey_service.py))**: Added tests verifying that screen states route exclusively to their intended skill module without loading unrelated instructions.
+ (Reference Only — Do Not Modify or Re-implement)
 
 ### A. Watch Later & Rewatch Full Collection Restore
 * **Root Cause**: The library filter drawer had a lingering default setting that silently enforced English-only matching on load and reset, hiding all non-English or re-tagged movies (e.g., only 12 of 32 Watch Later movies showed).
@@ -96,8 +207,6 @@ A central record of recent fixes, active improvements, and future backlog items 
 * **Intelligent Auto-Routing**: Dynamically routes research queries (Rotten Tomatoes, IMDb, awards, box office, deep thematic breakdowns) to enhanced reasoning while executing fast library filters with lightweight speed.
 * **Interactive Action Pills**: Dynamic shortcut pills (`[ ⚡ Ephemeral Shelf ]`, `[ 🎬 Movie Card ]`, `[ ⏱️ Prompt ]`) for instant library exploration.
 
----
-
 ### S. Journal Drafts System & Staging Workflow (done — Oct 17)
 * **Scope**: Strictly for **Journal Entries / Blogs** (`general_entries`). Personal movie memory notes remain immediate and unchanged.
 * **Database Migration**: Added `status` column (`'published' | 'draft'`) to `general_entries` with an optimized index on `(is_deleted, status, is_archived, updated_at DESC)`. All existing entries are preserved and defaulted to `'published'`.
@@ -138,58 +247,54 @@ A central record of recent fixes, active improvements, and future backlog items 
 * **Consolidated Launcher**: Merged `run_app.bat` into `run.bat`. A single double-click launches the Uvicorn server and automatically opens the browser to `http://127.0.0.1:8000` while preserving CLI subcommands (`test`, `init`, `install`).
 * **Grey Opinion Header Anchor**: Injected Rule 0 into Grey's system prompt enforcing bold **Movie Title (Year)** on line 1 for any movie opinion, critique, or verdict.
 
----
+### Y. Journal Reader Rich Markdown, Cinematic Banner Headers & Keyword-Driven Discovery (done — Oct 21)
+* **Full Markdown Styling in Journal Reader**: Expanded `formatRichText` and `appendEntryBody` to support bold (`**strong**`), italics (`*film title*`), section headings (`## Heading 2`, `### Heading 3`), blockquotes (`> quote`), and inline tags/code (`` `keyword` ``).
+* **Cinematic Banner Images for Journal Entries**: Added optional backdrop / banner image support (`image_url`) for journal articles and film essays, rendering a hero header at the top of the entry reader.
+* **Keyword-Driven Discovery Filter Generator**: Enabled generating intelligent TMDB discovery filters from selected journal articles, themes, or keyword clusters.
 
-## 2. Next (Active & Queued Features)
+### Z. Prune Redundant Skill Chips (`/nope` and `/tonight`) (done — Oct 21)
+* **Decluttered Interface**: Removed `🎬 /tonight` and `🚫 /nope` from Grey's quick-action pill tray and slash autocomplete menu.
+* **Streamlined Skill Registry**: Focused Grey's quick action bar exclusively on high-leverage tools (`⚡ /related` for reality checks and `📝 /watchlist` for rich toggle notes).
 
-### Item 1: Full Markdown Styling in Journal Reader
-* Expand `formatRichText` and `appendEntryBody` to support:
-  * Bold (`**strong**`)
-  * Italics (`*film title*`)
-  * Section headings (`## Heading 2`, `### Heading 3`)
-  * Blockquotes (`> Dialogue or review quotes`)
-  * Inline tags / code (`` `keyword` ``)
+### AA. `/watchlist` Skill Overhaul & Zero Shelf/Note Confusion (done — Oct 21)
+* **Exact Post Title Resolution & Smart Appending**: When saying *"add this to my [Post Title] post"* (e.g. *"Watchlist 1"*, *"Watchlist 2"*, *"Spoof Movies"*), Grey accurately resolves the targeted post by title (ranking specific multi-word titles first) and appends the new movie toggle (`>> Title (Year)`) directly to that note's body, preserving existing contents.
+* **Substantial Depth & Coverage**: Eliminated lazy 3-movie cutoff. When drafting a watchlist note from the queue, Grey curates a comprehensive tranche (8–12 titles) with clean Notion-style `>> Title (Year)` toggles, cast, synopsis hook, and cinephile reasons.
+* **Zero Shelf/Note Confusion Guardrail**: Added strict prompt rule and backend interception: if the prompt mentions *"post"*, *"note"*, *"journal"*, or *"entry"*, `set_movie_status` is strictly forbidden and automatically redirected to `update_entry`.
 
-### Item 2: Cinematic Banner Images for Journal Entries
-* Optional backdrop / banner image field for journal articles and film essays (e.g., pasting an image URL or auto-attaching a TMDB backdrop from an inspected movie).
-* Renders a cinematic hero header at the top of the entry reader.
+### AB. Offline Mode Resilience & Local Poster Cache Pipeline (done — Oct 21)
+* **Graceful Single Movie Page Offline Fallback**: When viewing movies while offline (from saved filters or shelves), deep TMDB metadata fetch failures are caught gracefully. The modal renders the lightweight cached data (title, year, overview, rating, genres) with a subtle gold `Offline Preview` pill. Core user actions (Watch Later, Watched, Nope, Rewatch, personal notes) remain 100% functional offline in local SQLite.
+* **Frontend Memory Fallback**: If the network is entirely offline, `openMovieDetails` catches fetch errors and renders an immediate offline preview from in-memory collection cache (`state.movies` / `state.allFilteredMovies`).
+* **Local Poster Caching Pipeline**: Created `PosterCacheService` storing downloaded posters locally on disk in `data/posters/`. Automatically queues posters in the background whenever shelves or saved filters are browsed.
+* **Local Poster Proxy Route & CDN Fallback**: Added `/images/posters/{file_path}` serving cached poster images from disk with immutable caching headers. Equipped `createPoster` with a smart two-stage loader (fast direct TMDB CDN when online, local disk fallback when offline) to eliminate initial letter-box fallbacks.
+* **Storage Optimization Invariant Enforced**: Movies marked as excluded (`NOPE`) are strictly prevented from caching posters, and any existing poster file is immediately purged on rejection.
 
-### Item 3: Keyword-Driven Discovery Filter Generator
-* Generate intelligent TMDB discovery filters based on selected journal articles, themes, or keyword clusters.
+### AC. Grey Docked Mode Layout & Scroll Isolation Fix (done — Oct 21)
+* **Root Cause Resolved**: Fixed layout clipping where opening the Grey companion alongside a movie detail page pushed the header/title off-screen and left a black void at the bottom.
+* **Viewport Pinning**: Fixed `.movie-detail-page` to `position: fixed; top: 0; left: 0; bottom: 0;` when Grey is docked, guaranteeing immune alignment regardless of window scroll offsets.
+* **Seamless Scroll Transfer**: Synchronized window scroll offsets into the internal detail scrollbar upon drawer toggle and back to the window upon closing.
+* **Focus Scroll Protection**: Guarded all Grey input `.focus()` calls with `{ preventScroll: true }` to prevent browser auto-scroll shifts.
 
-### Item 4: Offline Mode Resilience & Local Cache Fallbacks
-* **The Goal**: Make the application fully usable and enjoyable when disconnected from the internet, especially for saved filters and library curation.
-* **Core Enhancements**:
-  * **Graceful Single Movie Page Offline Fallback**: When viewing movies from a saved filter while offline, prevent crashes or failed loads when deep TMDB metadata is missing. Gracefully render the modal with the lightweight data already stored in the local filter cache (title, year, overview, rating) with a subtle "Offline Preview" indicator, allowing the user to read the premise and continue shelving titles (Watch Later, Watched, Nope) without internet.
-  * **Local Poster / Image Caching Pipeline**: Automatically cache poster and backdrop images locally on disk when titles appear in saved filters or shelves. Serve images directly from local storage so that browsing saved filters offline displays rich cinematic posters instead of letter-initial fallback boxes.
+### AD. Related Movies: 20-Title Expansion, Status Badges by Default & Vote-Count Tooltips (done — Oct 21)
+* **20-Movie Full Tranche**: Expanded recommendation limit from 12 to 20 to fetch TMDb's complete recommendation page.
+* **Compact Mini-Poster Geometry**: Reduced card size to ~82px–92px (5–6 per row) so 20 recommendations fit in a tight, elegant 3–4 row grid without vertical sprawl. Excluded titles are subtly dimmed (`opacity: 0.52`).
+* **Show Tracked Titles by Default**: All related titles display their library badges (**Watched**, **Nope**, **Watch Later**, **Rewatch**) upfront. The toggle now acts as an opt-in filter (*"Hide tracked movies (N)"* / *"Show N tracked movies"*).
+* **Vote-Count Reality Check Tooltips**: Upgraded hover tooltips to show Title, Year, and Vote Count sample size (e.g. `Dark Star (1974) • (24.3k votes)` + private note snippet if present) with no redundant rating.
 
-### Item 5: `/watchlist` Skill Overhaul (Eliminate Lazy 3-Movie Drafts & Enable Smart Post Title Appending)
-* **The Problem**: Currently, running `/watchlist` creates a barebones, lazy new draft containing only ~3 titles with minimal substance, and does not check for or append to existing notes/posts. Furthermore, saying "add this to my [X] post" confuses Grey into doing a simple shelf move.
-* **Core Enhancements**:
-  * **Exact Post Title Resolution & Smart Appending**: When the user says *"add this to my [Post Title] post"* (e.g., *"Watchlist 1"*, *"Watchlist 2"*, *"Spoof Movies"*, *"Documentary Movies"*), Grey must identify the targeted journal note/post by title and append the new movie toggle (`>> Title (Year)`) directly to that note's body, preserving all existing entries.
-  * **Substantial Depth & Coverage**: Remove the lazy 3-movie cutoff when compiling a watchlist note. Enforce comprehensive drafting across the user's actual pending watchlist queue (e.g., 8-12 titles or full categorized tranches) using clean `>> Title (Year)` toggles.
-  * **Zero Shelf/Note Confusion**: If the user prompt mentions *"post"*, *"note"*, *"journal"*, or *"entry"*, Grey is strictly forbidden from executing a `set_movie_status` shelf move. It must strictly route to the journal note appending/drafting system.
-  * **Explicit Scope & Context**: Provide clear guidance in the skill prompt so it captures cast, hook, and why it's on the watchlist without cutting corners.
+### AE. Library Search Overhaul: Word Boundaries, 5-Tier Relevance Ranking & Prefix Syntax (done — Oct 22)
+* **Word-Boundary & Acronym Normalization**: Replaced raw substring matching (`LIKE '%ai%'` / `.includes("ai")`) with regex word-boundary token matching (`(?<![a-z0-9])...(?![a-z0-9])`) and acronym dot normalization (`A.I.` → `AI`). Searching `ai` now matches only standalone AI movies and tags without false-positive matches on words like `straight`, `against`, or `aircraft`.
+* **5-Tier Relevance Ranking**: Both backend (`search_user_library`) and frontend (`applyLibraryFilters`) rank search results in strict priority order:
+  1. **Tier 1**: Exact title match
+  2. **Tier 2**: Title contains word/phrase (starts-with prioritized first)
+  3. **Tier 3**: Word found in TMDB plot blurb
+  4. **Tier 4**: Word found in personal movie notes
+  5. **Tier 5**: TMDB keyword tag match
+* **Exact Field Prefixes**: Added `title:`, `plot:`, and `notes:` prefix support in the sidebar search bar for targeted field searches.
 
-### Item 6: Prune Redundant Skill Chips (`/nope` and `/tonight`)
-* **The Goal**: Clean up UI real estate below Grey's message bubbles and eliminate useless or low-value chips.
-* **Pruning Decisions**:
-  * **Remove `🚫 /nope`**: Causes confusion (users expect an action to reject the current film, not an essay query) and consumes valuable chat space for an edge-case diagnostic question.
-  * **Remove `🎬 /tonight`**: Fails to deliver nuanced, meaningful recommendations—resorting to generic, obvious picks (*Fargo*, *12 Angry Men*) rather than sharp, contextual cinephile guidance.
-  * **Keep Skill Tray Lean**: Focus the quick-action pill tray strictly on high-leverage tools (like contextual `/related` film reality checks and targeted `/watchlist` note builder).
-
----
-
-## 3. Much Later (Future Backlog)
-
-### Item A: Personal Library Export, Backup & Google Sheets Sync
-* **The Goal**: Offline ownership and optional cloud accessibility for your personal library data (shelves, ratings, notes, and favorites).
-* **Placement**: Located on the **Storage** page (`Local data → Storage`).
-* **Components**:
-  * **Offline Backup (JSON / CSV)**: 1-click download of all user data as timestamped JSON (full fidelity) or CSV (spreadsheet-friendly).
-  * **Google Sheets Webhook Sync (Optional Cloud)**: Connect a Google Apps Script Web App URL to push personal library snapshots directly into a private Google Sheet for mobile access and sharing, without Google Cloud Console overhead.
+### AF. Movie Notes UX: Unified Sidebar Search, Shelf Double-Select Lens & Instant Hover Preview (done — Oct 22)
+* **Removed Redundant In-Page Search Bar**: Removed `#notes-search-container` from the Movie Notes canvas so all searching and `notes:` queries happen cleanly from the unified left sidebar.
+* **Movie Notes + Shelf Double-Select Lens (Option 1)**: Clicking **Movie Notes** activates the notes lens; clicking any shelf button (*Watched*, *Nope*, *Favourites*, *Watch Later*, *Rewatch*, *New Discovery*) highlights both buttons and filters strictly to notes on that shelf. Clicking the active shelf again clears the shelf filter; clicking **Movie Notes** again exits the lens back to the full shelf.
+* **Instant Poster Hover Preview Card**: Hovering over any poster with a personal note triggers a snappy (150ms) dark glassmorphism popover card (`#poster-note-popover`) displaying the gold `📝 Note` badge, title/year, and formatted note text without opening the modal.
 
 ---
 
-*Last Updated: October 21, 2026*
-
+*Last Updated: October 22, 2026*

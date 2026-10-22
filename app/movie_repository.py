@@ -1,7 +1,47 @@
+import re
 from typing import Any
 
 from app.database import get_connection
 from app.movie_status import MovieStatus, validate_movie_status
+
+_ACRONYM_DOT_RE = re.compile(r"\b([a-zA-Z])(?:\.([a-zA-Z]))+\.?")
+_PREFIX_QUERY_RE = re.compile(r"^(title|plot|notes?)\s*:\s*(.*)$", re.IGNORECASE)
+_WORD_TOKEN_RE = re.compile(r"[a-z0-9]+", re.IGNORECASE)
+
+
+def _normalize_search_text(text: str | None) -> str:
+    if not text:
+        return ""
+    collapsed_acronyms = _ACRONYM_DOT_RE.sub(
+        lambda m: m.group(0).replace(".", ""),
+        str(text),
+    )
+    return " ".join(collapsed_acronyms.split()).lower()
+
+
+def _parse_library_search_query(raw_query: str | None) -> tuple[str, str]:
+    cleaned = " ".join((raw_query or "").split())
+    if not cleaned:
+        return "all", ""
+    match = _PREFIX_QUERY_RE.match(cleaned)
+    if match:
+        prefix = match.group(1).lower()
+        mode = "notes" if prefix in ("note", "notes") else prefix
+        term = " ".join((match.group(2) or "").split())
+        return mode, term
+    return "all", cleaned
+
+
+def _build_word_boundary_pattern(normalized_term: str) -> re.Pattern | None:
+    if not normalized_term:
+        return None
+    tokens = _WORD_TOKEN_RE.findall(normalized_term)
+    if tokens:
+        joined = r"[\s\-_:,.;!?'\"/()+]+".join(re.escape(t) for t in tokens)
+        pattern_str = rf"(?<![a-z0-9]){joined}(?![a-z0-9])"
+    else:
+        pattern_str = re.escape(normalized_term)
+    return re.compile(pattern_str, re.IGNORECASE)
 
 
 class MovieRepository:
@@ -40,8 +80,8 @@ class MovieRepository:
                     last_accessed_at = CURRENT_TIMESTAMP
                 """,
                 (
-                    movie["id"],
-                    movie["title"],
+                    movie.get("id") or movie.get("tmdb_id"),
+                    movie.get("title") or movie.get("original_title") or "Untitled movie",
                     movie.get("original_title"),
                     movie.get("release_date"),
                     movie.get("overview"),
@@ -144,91 +184,123 @@ class MovieRepository:
         query: str = "",
         status: str | None = None,
     ) -> list[dict]:
-        cleaned_query = " ".join((query or "").split())
+        field_mode, search_term = _parse_library_search_query(query)
+        normalized_term = _normalize_search_text(search_term)
+        pattern = _build_word_boundary_pattern(normalized_term)
+
         where_parts: list[str] = []
         where_params: list[Any] = []
-        order_params: list[Any] = []
-        order_clause = "m.title COLLATE NOCASE ASC"
 
-        if cleaned_query:
-            escaped_query = (
-                cleaned_query.replace("!", "!!")
-                .replace("%", "!%")
-                .replace("_", "!_")
-            )
-            exact_query = cleaned_query
-            starts_query = f"{escaped_query}%"
-            contains_query = f"%{escaped_query}%"
+        effective_status = status
+        if status and status.startswith("movie-notes:"):
+            where_parts.append("u.notes IS NOT NULL AND TRIM(u.notes) <> ''")
+            effective_status = status.split(":", 1)[1].strip() or None
 
-            where_parts.append(
-                """(
-                    m.title LIKE ? ESCAPE '!' COLLATE NOCASE
-                    OR m.original_title LIKE ? ESCAPE '!' COLLATE NOCASE
-                    OR m.overview LIKE ? ESCAPE '!' COLLATE NOCASE
-                    OR (u.notes IS NOT NULL AND u.notes LIKE ? ESCAPE '!' COLLATE NOCASE)
-                    OR EXISTS (
-                        SELECT 1 FROM movie_keywords mk
-                        JOIN keywords k ON mk.keyword_id = k.keyword_id
-                        WHERE mk.tmdb_id = m.tmdb_id
-                          AND k.name LIKE ? ESCAPE '!' COLLATE NOCASE
-                    )
-                )"""
-            )
-            where_params.extend([contains_query, contains_query, contains_query, contains_query, contains_query])
-
-            order_clause = """
-                CASE
-                    WHEN lower(m.title) = lower(?) THEN 1
-                    WHEN m.title LIKE ? ESCAPE '!' COLLATE NOCASE THEN 2
-                    WHEN m.title LIKE ? ESCAPE '!' COLLATE NOCASE THEN 3
-                    WHEN m.original_title LIKE ? ESCAPE '!' COLLATE NOCASE THEN 4
-                    WHEN u.notes IS NOT NULL AND u.notes LIKE ? ESCAPE '!' COLLATE NOCASE THEN 5
-                    WHEN m.overview LIKE ? ESCAPE '!' COLLATE NOCASE THEN 6
-                    ELSE 7
-                END ASC,
-                m.title COLLATE NOCASE ASC
-            """
-            order_params = [
-                exact_query,
-                starts_query,
-                contains_query,
-                contains_query,
-                contains_query,
-                contains_query,
-            ]
-
-        if status:
-            if status == "favorites":
+        if effective_status:
+            if effective_status == "favorites":
                 where_parts.append("u.is_favorite = 1 AND u.status IN ('watched', 'rewatch')")
-            elif status == "movie-notes":
+            elif effective_status == "movie-notes":
                 where_parts.append("u.notes IS NOT NULL AND TRIM(u.notes) <> ''")
-            elif status == "watched":
+            elif effective_status == "watched":
                 where_parts.append("u.status IN ('watched', 'rewatch')")
-            elif status == "new_discovery":
+            elif effective_status == "new_discovery":
                 where_parts.append("u.status = 'new_discovery' AND NOT EXISTS (SELECT 1 FROM looking_out_for l WHERE l.tmdb_id = m.tmdb_id)")
             else:
-                target_status = "excluded" if status == "nope" else status
+                target_status = "excluded" if effective_status == "nope" else effective_status
                 validated_status = validate_movie_status(target_status)
                 where_parts.append("u.status = ?")
                 where_params.append(validated_status)
-        else:
+        elif not (status and status.startswith("movie-notes:")):
             where_parts.append("(u.status IS NOT NULL OR u.is_favorite = 1 OR (u.notes IS NOT NULL AND TRIM(u.notes) <> ''))")
 
-        where_clause = " AND ".join(where_parts)
+        where_clause = " AND ".join(where_parts) if where_parts else "1=1"
 
         with get_connection() as connection:
+            if not normalized_term or pattern is None:
+                rows = connection.execute(
+                    f"""
+                    SELECT m.*
+                    FROM movies m
+                    JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
+                    WHERE {where_clause}
+                    ORDER BY m.title COLLATE NOCASE ASC
+                    """,
+                    tuple(where_params),
+                ).fetchall()
+                return [dict(row) for row in rows]
+
             rows = connection.execute(
                 f"""
-                SELECT m.*
+                SELECT
+                    m.*,
+                    u.notes AS _user_notes,
+                    GROUP_CONCAT(k.name, '|||') AS _keyword_names
                 FROM movies m
                 JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
+                LEFT JOIN movie_keywords mk ON m.tmdb_id = mk.tmdb_id
+                LEFT JOIN keywords k ON mk.keyword_id = k.keyword_id
                 WHERE {where_clause}
-                ORDER BY {order_clause}
+                GROUP BY m.tmdb_id
                 """,
-                tuple(where_params + order_params),
+                tuple(where_params),
             ).fetchall()
 
-        return [dict(row) for row in rows]
+        effective_field_mode = field_mode
+        if field_mode == "all" and status and status.startswith("movie-notes"):
+            effective_field_mode = "notes"
+
+        ranked_results: list[tuple[int, int, str, dict[str, Any]]] = []
+        for row in rows:
+            movie = dict(row)
+            user_notes = movie.pop("_user_notes", None)
+            raw_keywords = movie.pop("_keyword_names", None) or ""
+            keyword_list = [kw for kw in raw_keywords.split("|||") if kw]
+
+            norm_title = _normalize_search_text(movie.get("title"))
+            norm_orig_title = _normalize_search_text(movie.get("original_title"))
+            norm_overview = _normalize_search_text(movie.get("overview"))
+            norm_notes = _normalize_search_text(user_notes)
+            norm_keywords = [_normalize_search_text(kw) for kw in keyword_list if kw]
+
+            tier: int | None = None
+            subtier = 0
+
+            if effective_field_mode == "title":
+                if norm_title == normalized_term or (norm_orig_title and norm_orig_title == normalized_term):
+                    tier = 1
+                elif pattern.search(norm_title) or (norm_orig_title and pattern.search(norm_orig_title)):
+                    tier = 2
+                    subtier = 0 if norm_title.startswith(normalized_term) else 1
+            elif effective_field_mode == "plot":
+                if pattern.search(norm_overview):
+                    tier = 3
+            elif effective_field_mode == "notes":
+                if pattern.search(norm_notes):
+                    tier = 4
+            else:
+                if norm_title == normalized_term or (norm_orig_title and norm_orig_title == normalized_term):
+                    tier = 1
+                elif pattern.search(norm_title) or (norm_orig_title and pattern.search(norm_orig_title)):
+                    tier = 2
+                    subtier = 0 if norm_title.startswith(normalized_term) else 1
+                elif pattern.search(norm_overview):
+                    tier = 3
+                elif pattern.search(norm_notes):
+                    tier = 4
+                elif any(kw == normalized_term for kw in norm_keywords):
+                    tier = 5
+                    subtier = 0
+                elif any(pattern.search(kw) for kw in norm_keywords):
+                    tier = 5
+                    subtier = 1
+
+            if tier is not None:
+                movie["search_tier"] = tier
+                movie["search_subtier"] = subtier
+                ranked_results.append((tier, subtier, norm_title, movie))
+
+        ranked_results.sort(key=lambda item: (item[0], item[1], item[2]))
+        return [item[3] for item in ranked_results]
 
     def get_watched_movies(self) -> list[dict]:
         with get_connection() as connection:

@@ -10,8 +10,8 @@
   >
   <title>NOPE</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/styles.css?v=20261020_skills_v2">
-  <script src="/static/app.js?v=20261020_skills_v2" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261022_notion_toggle_bullet_content_30">
+  <script src="/static/app.js?v=20261022_notion_toggle_bullet_content_30" defer></script>
 </head>
 <body>
   <div class="site-shell" id="app-shell">
@@ -441,7 +441,7 @@
           <section class="library-filters-workspace" id="library-filters-workspace" aria-label="Library filters">
             <div class="library-search-actions">
               <div class="library-quick-search-wrap">
-                <input id="library-filter-query" type="search" placeholder="Search personal library…" autocomplete="off">
+                <input id="library-filter-query" type="search" placeholder="Search library (or title:, plot:)…" title="Search across your library, or use title:, plot: prefixes" autocomplete="off">
               </div>
               <button class="reset-filters-btn" id="reset-library-filters" type="button" title="Reset shelf filters">Reset</button>
             </div>
@@ -674,14 +674,6 @@
           </div>
           <div class="section-heading-meta">
             <span class="shelf-movie-count" id="shelf-count"></span>
-          </div>
-        </div>
-
-        <div class="notes-search-container is-hidden" id="notes-search-container">
-          <div class="notes-search-wrap">
-            <span class="notes-search-icon" aria-hidden="true">🔍</span>
-            <input id="notes-search-input" type="search" placeholder="Search your movie notes (e.g. twist, quote, thoughts)..." autocomplete="off">
-            <button id="clear-notes-search" type="button" class="clear-notes-btn is-hidden" title="Clear notes search">✕</button>
           </div>
         </div>
 
@@ -1059,14 +1051,6 @@ Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or past
           <span class="grey-slash-cmd">/watchlist</span>
           <span class="grey-slash-desc">Build an expandable toggle note in your notebook</span>
         </button>
-        <button type="button" class="grey-slash-item" data-cmd="/tonight">
-          <span class="grey-slash-cmd">/tonight</span>
-          <span class="grey-slash-desc">Pick something to watch from Watchlist or Rewatch</span>
-        </button>
-        <button type="button" class="grey-slash-item" data-cmd="/nope">
-          <span class="grey-slash-cmd">/nope</span>
-          <span class="grey-slash-desc">Diagnose why a movie was rejected or excluded</span>
-        </button>
         <button type="button" class="grey-slash-item" data-cmd="/batch">
           <span class="grey-slash-cmd">/batch</span>
           <span class="grey-slash-desc">Batch add approved movies to New Discovery shelf</span>
@@ -1077,8 +1061,6 @@ Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or past
       <div class="grey-skills-bar" id="grey-skills-bar">
         <button type="button" class="grey-skill-chip" data-cmd="/related">⚡ /related</button>
         <button type="button" class="grey-skill-chip" data-cmd="/watchlist">📝 /watchlist</button>
-        <button type="button" class="grey-skill-chip" data-cmd="/tonight">🎬 /tonight</button>
-        <button type="button" class="grey-skill-chip" data-cmd="/nope">🚫 /nope</button>
       </div>
 
       <!-- Input Card Container -->
@@ -1107,5 +1089,6 @@ Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or past
       </form>
     </aside>
   </div>
+  <div class="poster-note-popover is-hidden" id="poster-note-popover" role="tooltip" aria-hidden="true"></div>
 </body>
 </html>

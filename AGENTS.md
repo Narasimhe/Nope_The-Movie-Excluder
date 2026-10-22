@@ -1,19 +1,19 @@
 # Movie Excluder — Agent Directives & Architecture
 
 ## Core Architectural Map
-- **Backend**: FastAPI (`app/main.py`), Services (`app/movie_service.py`, `app/grey_service.py`).
-- **Database**: SQLite (`app/database.py`, `app/movie_repository.py`, `app/movie_metadata_repository.py`).
+- **Backend**: FastAPI routes (`app/main.py`), Business logic & API services (`app/movie_service.py`, `app/grey_service.py`).
+- **Database**: SQLite schema (`app/database.py`), Queries (`app/movie_repository.py`, `app/movie_metadata_repository.py`).
 - **Frontend**: Vanilla JS (`app/static/app.js`), Modern dark CSS (`app/static/styles.css`), HTML (`app/web/index.html`).
-- **AI Cinema Assistant (Grey)**: Decoupled plain-text prompt (`app/prompts/grey_system_prompt.md`), Gemini Flash cascade.
-- **Launcher**: Single 1-click batch launcher (`run.bat`).
-- **Roadmap & Records**: Central improvements backlog (`docs/IMPROVEMENTS.md`).
+- **AI Cinema Assistant (Grey)**: Decoupled system prompt (`app/prompts/grey_system_prompt.md`), Gemini Flash cascade.
+- **Launcher & Roadmap**: 1-click batch launcher (`run.bat`), Central backlog (`docs/IMPROVEMENTS.md`).
+
+## Architectural & Data Invariants
+- **Strict Layering**: Keep HTTP routes in `main.py`, orchestration in `*_service.py`, and all SQLite queries isolated in `*_repository.py`.
+- **Storage Optimization**: Movies marked as excluded (`NOPE`) must only store their TMDB ID and status flag—never cache poster images or bloated metadata for them.
+- **Search Boundaries**: Never scan `.venv/`, `__pycache__/`, or binary `.db` files.
 
 ## Non-Negotiable Operational Rules
-1. **STRICTLY NO CODE IN CHAT RESPONSES**: Communicate exclusively in plain English. Never output raw code blocks, diffs, or code snippets in the chat conversation unless explicitly demanded by the user.
-2. **NO UNREQUESTED BROWSER SUBAGENTS**: Never launch the headless Chrome browser subagent or take verification screenshots unless the user explicitly asks for visual UI testing.
-3. **GIT & DOCUMENTATION RULES**:
-   - Checkpoint working changes with local git commits. NEVER run `git push` unless explicitly instructed by the user.
-   - Preserve all existing code comments, docstrings, and architectural patterns.
-   - Keep `docs/IMPROVEMENTS.md` updated with completed items and queued feature notes.
-4. **TEST SUITE VERIFICATION**:
-   - Run verification via `python -m pytest` or `run.bat test` after making backend changes.
+1. **NO CODE IN CHAT (SILENT FILE EDITS)**: Apply all code changes directly to the files using your editing tools. In the chat window, communicate exclusively in brief, plain English—never dump raw code blocks, diffs, or snippets into the chat unless explicitly asked.
+2. **NO UNREQUESTED BROWSER SUBAGENTS**: Never launch the headless browser tool or take verification screenshots unless explicitly asked for visual UI testing.
+3. **NO GIT COMMANDS**: Never run `git add`, `git commit`, or `git push` (user manages Git manually). Always preserve existing comments/docstrings and update `docs/IMPROVEMENTS.md` when completing tasks.
+4. **BACKEND VERIFICATION**: Run `python -m pytest` (or `run.bat test`) only after modifying backend Python files; skip test runs for pure CSS/HTML/prompt tweaks.

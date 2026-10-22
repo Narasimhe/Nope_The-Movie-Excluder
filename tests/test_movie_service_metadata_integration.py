@@ -261,6 +261,24 @@ class MovieServiceMetadataIntegrationTests(unittest.TestCase):
             [700, 800],
         )
 
+    def test_related_movies_include_tracked_and_limit_20(self) -> None:
+        self.service.set_movie_status(700, MovieStatus.WATCHED)
+        self.service.set_movie_status(800, MovieStatus.WATCH_LATER)
+        self.service.set_movie_status(900, MovieStatus.EXCLUDED)
+
+        # When include_tracked is True, all 3 movies (watched, watch_later, nope) are returned
+        all_tracked = self.service.get_related_movies(329865, limit=20, include_tracked=True)
+        self.assertEqual(
+            [m["tmdb_id"] for m in all_tracked["results"]],
+            [700, 800, 900],
+        )
+        self.assertEqual(all_tracked["hidden_tracked_count"], 3)
+
+        # When include_tracked is False, all tracked movies are filtered out
+        hidden_tracked = self.service.get_related_movies(329865, limit=20, include_tracked=False)
+        self.assertEqual(hidden_tracked["results"], [])
+        self.assertEqual(hidden_tracked["hidden_tracked_count"], 3)
+
 
 if __name__ == "__main__":
     unittest.main()

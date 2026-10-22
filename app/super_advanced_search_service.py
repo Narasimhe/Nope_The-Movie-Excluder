@@ -1,6 +1,7 @@
 from app.advanced_filters import AdvancedMovieFilters
 from app.advanced_search_service import AdvancedSearchService
 from app.movie_status import MovieStatus, validate_movie_status
+from app.poster_cache_service import PosterCacheService
 from app.search_preference_repository import (
     SearchPreferenceRepository,
 )
@@ -26,6 +27,7 @@ class SuperAdvancedSearchService(AdvancedSearchService):
             preference_repository=preference_repository,
             user_repository=user_repository,
         )
+        self.poster_cache_service = PosterCacheService()
 
     def search(
         self,
@@ -175,6 +177,9 @@ class SuperAdvancedSearchService(AdvancedSearchService):
             page_results = results
             visible_total_pages = None
             visible_total_results = None
+
+        if page_results:
+            self.poster_cache_service.cache_posters_async(page_results)
 
         return {
             "preference": {
