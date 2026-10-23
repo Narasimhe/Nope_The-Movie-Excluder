@@ -392,37 +392,6 @@ def _create_general_entries_table(connection: sqlite3.Connection) -> None:
     )
 
 
-def _create_looking_out_for_tables(
-    connection: sqlite3.Connection,
-) -> None:
-    connection.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS looking_out_for (
-            tmdb_id INTEGER PRIMARY KEY,
-            release_date TEXT NOT NULL,
-            tracked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            last_checked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (tmdb_id)
-                REFERENCES movies (tmdb_id)
-                ON DELETE CASCADE
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_looking_out_for_release
-        ON looking_out_for (release_date, tmdb_id);
-
-        CREATE TABLE IF NOT EXISTS app_settings (
-            setting_key TEXT PRIMARY KEY,
-            setting_value TEXT NOT NULL,
-            updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
-
-        INSERT INTO app_settings (setting_key, setting_value)
-        VALUES ('release_alerts_enabled', 'true')
-        ON CONFLICT(setting_key) DO NOTHING;
-        """
-    )
-
-
 def _ensure_movie_cache_columns(
     connection: sqlite3.Connection,
     movie_columns: set[str],
@@ -578,9 +547,11 @@ def initialize_database() -> None:
         _create_search_preferences_table(connection)
         _create_search_state_table(connection)
         _create_general_entries_table(connection)
-        _create_looking_out_for_tables(connection)
         connection.executescript(
             """
+            DROP INDEX IF EXISTS idx_looking_out_for_release;
+            DROP TABLE IF EXISTS looking_out_for;
+
             CREATE TABLE IF NOT EXISTS movie_country_cache (
                 tmdb_id INTEGER PRIMARY KEY,
                 origin_country TEXT,

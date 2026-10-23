@@ -1,4 +1,3 @@
-from datetime import timedelta
 import json
 import logging
 
@@ -6,9 +5,7 @@ from app.database import get_connection
 from app.movie_metadata_repository import MovieMetadataRepository
 from app.movie_repository import MovieRepository
 from app.movie_status import MovieStatus, validate_movie_status
-from app.looking_out_for_repository import LookingOutForRepository
 from app.poster_cache_service import PosterCacheService
-from app.time_utils import local_today, parse_release_date
 from app.tmdb_client import TMDBClient
 from app.user_movie_repository import UserMovieRepository
 
@@ -21,7 +18,6 @@ class MovieService:
         movie_repository: MovieRepository | None = None,
         user_repository: UserMovieRepository | None = None,
         metadata_repository: MovieMetadataRepository | None = None,
-        looking_out_for_repository: LookingOutForRepository | None = None,
         tmdb_client: TMDBClient | None = None,
         poster_cache_service: PosterCacheService | None = None,
     ) -> None:
@@ -39,11 +35,6 @@ class MovieService:
             metadata_repository
             if metadata_repository is not None
             else MovieMetadataRepository()
-        )
-        self.looking_out_for_repository = (
-            looking_out_for_repository
-            if looking_out_for_repository is not None
-            else LookingOutForRepository()
         )
         self.tmdb_client = (
             tmdb_client
@@ -136,13 +127,6 @@ class MovieService:
         result["actors"] = credits.get("actors", [])
         result["user_data"] = (
             self.user_repository.get_user_movie_data(tmdb_id)
-        )
-        looking_out_for = self.looking_out_for_repository.get(tmdb_id)
-        release_date = parse_release_date(result.get("release_date"))
-        result["looking_out_for"] = looking_out_for
-        result["is_looking_out_for"] = looking_out_for is not None
-        result["can_add_to_looking_out_for"] = bool(
-            release_date and release_date > local_today()
         )
         result["is_offline_preview"] = bool(
             local_movie.get("metadata_fetched_at") is None
@@ -263,105 +247,6 @@ class MovieService:
             "include_tracked": include_tracked if include_tracked is not None else include_previously_watched,
             "results": visible,
         }
-
-    def add_to_looking_out_for(self, tmdb_id: int) -> dict:
-        movie = self.get_movie(tmdb_id)
-        release_date = parse_release_date(movie.get("release_date"))
-        if release_date is None:
-            raise ValueError("This movie does not have a confirmed release date.")
-        if release_date <= local_today():
-            raise ValueError("Only movies releasing in the future can be tracked here.")
-        return self.looking_out_for_repository.add(
-            tmdb_id,
-            release_date.isoformat(),
-        )
-
-    def remove_from_looking_out_for(self, tmdb_id: int) -> bool:
-        return self.looking_out_for_repository.remove(tmdb_id)
-
-    def get_looking_out_for_movies(self, page: int = 1) -> dict:
-        self._refresh_looking_out_for_dates()
-        today = local_today()
-        result = self.looking_out_for_repository.list_page(
-            page,
-            today.isoformat(),
-        )
-        movies = self._enrich_movie_list(result["results"])
-        for movie in movies:
-            release_date = parse_release_date(
-                movie.get("looking_out_release_date")
-                or movie.get("release_date")
-            )
-            days_until_release = (
-                (release_date - today).days if release_date else None
-            )
-            if days_until_release is None:
-                release_state = "unknown"
-            elif days_until_release < 0:
-                release_state = "released"
-            elif days_until_release == 0:
-                release_state = "today"
-            elif days_until_release <= 7:
-                release_state = "soon"
-            else:
-                release_state = "upcoming"
-            movie["release_state"] = release_state
-            movie["days_until_release"] = days_until_release
-            movie["is_looking_out_for"] = True
-        alerts_enabled = (
-            self.looking_out_for_repository.get_release_alerts_enabled()
-        )
-        alert_counts = self.looking_out_for_repository.get_release_alert_counts(
-            today.isoformat(),
-            (today + timedelta(days=7)).isoformat(),
-        )
-        result["results"] = movies
-        result["release_alerts_enabled"] = alerts_enabled
-        result["alert_counts"] = alert_counts if alerts_enabled else {
-            "soon": 0,
-            "today": 0,
-            "released": 0,
-        }
-        result["alert_count"] = sum(result["alert_counts"].values())
-        return result
-
-    def move_looking_out_for_to_watch_later(self, tmdb_id: int) -> dict:
-        tracked = self.looking_out_for_repository.get(tmdb_id)
-        if tracked is None:
-            raise ValueError("This movie is not in Looking Out For.")
-        release_date = parse_release_date(tracked.get("release_date"))
-        if release_date is not None and release_date > local_today():
-            raise ValueError("This movie has not been released yet.")
-        user_data = self.set_movie_status(tmdb_id, MovieStatus.WATCH_LATER)
-        self.looking_out_for_repository.remove(tmdb_id)
-        return user_data
-
-    def get_release_alerts_enabled(self) -> bool:
-        return self.looking_out_for_repository.get_release_alerts_enabled()
-
-    def set_release_alerts_enabled(self, enabled: bool) -> bool:
-        if not isinstance(enabled, bool):
-            raise ValueError("Release alerts setting must be true or false.")
-        return self.looking_out_for_repository.set_release_alerts_enabled(
-            enabled
-        )
-
-    def _refresh_looking_out_for_dates(self) -> None:
-        for tmdb_id in self.looking_out_for_repository.get_stale_movie_ids():
-            try:
-                movie = self.tmdb_client.get_movie(tmdb_id)
-                self.movie_repository.save_movie(movie)
-                release_date = parse_release_date(movie.get("release_date"))
-                if release_date is not None:
-                    self.looking_out_for_repository.update_release_date(
-                        tmdb_id,
-                        release_date.isoformat(),
-                    )
-                else:
-                    self.looking_out_for_repository.mark_checked(tmdb_id)
-            except Exception:
-                # A temporary TMDB outage must not break the local page.
-                self.looking_out_for_repository.mark_checked(tmdb_id)
 
     def _fetch_and_save_movie_metadata(self, tmdb_id: int) -> None:
         tmdb_movie = self.tmdb_client.get_movie(tmdb_id)

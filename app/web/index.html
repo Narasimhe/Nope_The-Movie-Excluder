@@ -876,23 +876,6 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
           </div>
         </article>
 
-        <section class="looking-out-page is-hidden" id="looking-out-page" aria-labelledby="looking-out-title">
-          <div class="memory-page-heading">
-            <div>
-              <p class="section-kicker">Your future watch radar</p>
-              <h2 id="looking-out-title">Looking Out For</h2>
-              <p>Unreleased movies you want to remember.</p>
-            </div>
-            <label class="release-alert-toggle">
-              <input id="release-alerts-toggle" type="checkbox" checked>
-              <span>Release alerts</span>
-            </label>
-          </div>
-          <div class="release-alert-summary is-hidden" id="release-alert-summary"></div>
-          <div class="looking-out-grid" id="looking-out-grid"></div>
-          <nav class="pagination is-hidden" id="looking-out-pagination" aria-label="Looking Out For pages"></nav>
-        </section>
-
         <section class="storage-page is-hidden" id="storage-page" aria-labelledby="storage-title">
           <div class="memory-page-heading">
             <div>
@@ -919,9 +902,6 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
         <span>your private movie memory</span>
       </div>
       <nav class="footer-nav" aria-label="Personal memory pages">
-        <button type="button" data-footer-view="looking-out">
-          Looking Out For <span class="footer-alert-badge is-hidden" id="release-alert-badge"></span>
-        </button>
         <button type="button" data-footer-view="storage">Storage</button>
         <a class="footer-api-link" href="/docs" target="_blank" rel="noreferrer">API</a>
       </nav>
@@ -1010,10 +990,6 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
                 </button>
               </div>
               <p class="inline-feedback" id="status-feedback" aria-live="polite"></p>
-            </div>
-            <div class="looking-out-control is-hidden" id="looking-out-control">
-              <button id="looking-out-toggle" type="button">＋ Looking Out For</button>
-              <span id="looking-out-release-date"></span>
             </div>
           </div>
 

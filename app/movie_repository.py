@@ -251,8 +251,6 @@ class MovieRepository:
                 where_parts.append("u.notes IS NOT NULL AND TRIM(u.notes) <> ''")
             elif effective_status == "watched":
                 where_parts.append("u.status IN ('watched', 'rewatch')")
-            elif effective_status == "new_discovery":
-                where_parts.append("u.status = 'new_discovery' AND NOT EXISTS (SELECT 1 FROM looking_out_for l WHERE l.tmdb_id = m.tmdb_id)")
             else:
                 target_status = "excluded" if effective_status == "nope" else effective_status
                 validated_status = validate_movie_status(target_status)
@@ -422,11 +420,6 @@ class MovieRepository:
                 JOIN user_movie_data u
                     ON m.tmdb_id = u.tmdb_id
                 WHERE u.status = ?
-                  AND NOT EXISTS (
-                      SELECT 1
-                      FROM looking_out_for l
-                      WHERE l.tmdb_id = m.tmdb_id
-                  )
                 ORDER BY m.title
                 """,
                 (MovieStatus.WATCH_LATER.value,),
@@ -508,23 +501,14 @@ class MovieRepository:
     ) -> list[dict]:
         validated_status = validate_movie_status(status)
 
-        looking_out_clause = (
-            " AND NOT EXISTS ("
-            "SELECT 1 FROM looking_out_for l "
-            "WHERE l.tmdb_id = m.tmdb_id)"
-            if validated_status == MovieStatus.NEW_DISCOVERY.value
-            else ""
-        )
-
         with get_connection() as connection:
             rows = connection.execute(
-                f"""
+                """
                 SELECT m.*
                 FROM movies m
                 JOIN user_movie_data u
                     ON m.tmdb_id = u.tmdb_id
                 WHERE u.status = ?
-                {looking_out_clause}
                 ORDER BY m.title
                 """,
                 (validated_status,),
@@ -539,15 +523,8 @@ class MovieRepository:
         page_size: int = PAGE_SIZE,
     ) -> dict:
         validated_status = validate_movie_status(status)
-        where_clause = "u.status = ?"
-        if validated_status == MovieStatus.NEW_DISCOVERY.value:
-            where_clause += (
-                " AND NOT EXISTS ("
-                "SELECT 1 FROM looking_out_for l "
-                "WHERE l.tmdb_id = m.tmdb_id)"
-            )
         return self._get_user_movie_page(
-            where_clause,
+            "u.status = ?",
             (validated_status,),
             page,
             page_size=page_size,

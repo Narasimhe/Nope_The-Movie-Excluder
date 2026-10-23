@@ -69,7 +69,7 @@ class DatabaseBootstrapTests(unittest.TestCase):
                 movie = connection.execute(
                     "SELECT title FROM movies WHERE tmdb_id = 1"
                 ).fetchone()
-            self.assertIn("looking_out_for", tables)
+            self.assertNotIn("looking_out_for", tables)
             self.assertIn("general_entry_tags", tables)
             self.assertEqual(movie["title"], "Demo")
 

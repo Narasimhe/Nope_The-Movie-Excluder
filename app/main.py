@@ -109,10 +109,6 @@ class GeneralEntryRequest(BaseModel):
     image_url: str | None = None
 
 
-class ReleaseAlertsRequest(BaseModel):
-    enabled: bool
-
-
 class KeywordType(str, Enum):
     ALL = "all"
     CUSTOM = "custom"
@@ -859,18 +855,6 @@ def super_advanced_search(
 
 
 @app.get(
-    "/movies/looking-out-for",
-    tags=["movies"],
-    summary="List future movies being tracked",
-)
-def get_looking_out_for_movies(page: int = 1):
-    try:
-        return movie_service.get_looking_out_for_movies(page)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-
-
-@app.get(
     "/movies/{tmdb_id}/related",
     tags=["movies"],
     summary="Get related movies",
@@ -907,63 +891,6 @@ def get_related_movies(
 )
 def get_movie_details(tmdb_id: int):
     return movie_service.get_movie(tmdb_id)
-
-
-@app.post(
-    "/movies/{tmdb_id}/looking-out-for",
-    tags=["movies"],
-    summary="Track an unreleased movie",
-)
-def add_movie_to_looking_out_for(tmdb_id: int):
-    try:
-        tracked = movie_service.add_to_looking_out_for(tmdb_id)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-    return {"message": "Movie added to Looking Out For", "tracking": tracked}
-
-
-@app.delete(
-    "/movies/{tmdb_id}/looking-out-for",
-    tags=["movies"],
-    summary="Stop tracking an unreleased movie",
-)
-def remove_movie_from_looking_out_for(tmdb_id: int):
-    if not movie_service.remove_from_looking_out_for(tmdb_id):
-        raise HTTPException(status_code=404, detail="Movie was not being tracked.")
-    return {"message": "Movie removed from Looking Out For"}
-
-
-@app.put(
-    "/movies/{tmdb_id}/looking-out-for/watch-later",
-    tags=["movies"],
-    summary="Move a released tracked movie to Watch Later",
-)
-def move_looking_out_for_movie_to_watch_later(tmdb_id: int):
-    try:
-        user_data = movie_service.move_looking_out_for_to_watch_later(tmdb_id)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-    return {"message": "Movie moved to Watch Later", "user_movie_data": user_data}
-
-
-@app.get(
-    "/settings/release-alerts",
-    tags=["settings"],
-    summary="Get the in-app release alert preference",
-)
-def get_release_alerts_setting():
-    return {"enabled": movie_service.get_release_alerts_enabled()}
-
-
-@app.put(
-    "/settings/release-alerts",
-    tags=["settings"],
-    summary="Change the in-app release alert preference",
-)
-def set_release_alerts_setting(request: ReleaseAlertsRequest):
-    return {
-        "enabled": movie_service.set_release_alerts_enabled(request.enabled)
-    }
 
 
 @app.put(
@@ -1475,10 +1402,13 @@ async def upload_entry_banner(request: Request):
         if guessed_ext in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
             ext = guessed_ext
 
-    filename = f"{uuid.uuid4().hex[:16]}{ext}"
+    import hashlib
+    file_hash = hashlib.sha256(contents).hexdigest()[:16]
+    filename = f"{file_hash}{ext}"
     target_path = BANNERS_DIR / filename
-    with open(target_path, "wb") as f:
-        f.write(contents)
+    if not target_path.exists():
+        with open(target_path, "wb") as f:
+            f.write(contents)
     return {"url": f"/banners/{filename}"}
 
 

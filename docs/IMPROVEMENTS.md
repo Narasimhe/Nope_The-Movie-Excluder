@@ -4,15 +4,17 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
-- [ ] **Completely Blackhole `Looking Out For` (UI + Logic + Backend) & Hide Filter Sidebar on `Storage` Page**
-  * **Problem**: `Looking Out For` is unnecessary and adds extra UI/backend surface area, and opening `Storage` (or auxiliary footer pages) leaves the left filter sidebar (`#app-sidebar`) visible alongside the page.
-  * **Planned Fix**:
-    * **Remove `Looking Out For` End-to-End**: Strip `#looking-out-page`, the footer `Looking Out For` button + `#release-alert-badge`, `#looking-out-control` on the Single Movie Detail Page, `.looking-out-*` styles, frontend JS functions (`loadLookingOutFor`, `createLookingOutCard`, `updateReleaseAlerts`, `refreshReleaseAlertBadge`), the Storage stat card for `Looking Out For`, and all backend `/movies/looking-out-for`, `/movies/{tmdb_id}/looking-out-for`, and `/settings/release-alerts` routes, service methods, repository queries, schema table, and tests.
-    * **Full-Width `Storage` View Without Left Filter Sidebar**: Hide `#app-sidebar` and collapse `.workspace-layout` to a clean single column whenever `#storage-page` is active, restoring the sidebar automatically when returning to `Discover`, `Personal Library`, or `Notes`.
+*(No pending tasks — backlog is clear.)*
 
 ---
 
 ## ✅ Completed Tasks
+
+- [x] **Completely Blackhole `Looking Out For` (UI + Logic + Backend) & Hide Filter Sidebar on `Storage` Page**
+  * **Goal**: Completely remove the `Looking Out For` feature across UI, frontend JS, CSS, backend API, and SQLite schema, and hide the left filter sidebar (`#app-sidebar`) whenever viewing the `Storage` page.
+  * **Key Changes**:
+    * **End-to-End Removal of `Looking Out For` ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html), [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css), [`main.py`](file:///f:/Movie_Excluder/movie-excluder/app/main.py), [`movie_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/movie_service.py), [`movie_repository.py`](file:///f:/Movie_Excluder/movie-excluder/app/movie_repository.py), [`storage_repository.py`](file:///f:/Movie_Excluder/movie-excluder/app/storage_repository.py), [`database.py`](file:///f:/Movie_Excluder/movie-excluder/app/database.py))**: Removed `#looking-out-page`, the footer `Looking Out For` button + `#release-alert-badge`, `#looking-out-control` on the Single Movie Detail Page, `.looking-out-*` CSS rules, frontend handlers (`loadLookingOutFor`, `createLookingOutCard`, `updateReleaseAlerts`, `refreshReleaseAlertBadge`), the Storage stat card for `Looking Out For`, `/movies/looking-out-for` and `/settings/release-alerts` routes/service/repository methods, and dropped the `looking_out_for` table on startup.
+    * **Full-Width `Storage` View Without Left Filter Sidebar ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Hid `#app-sidebar` and collapsed `.app-layout` to a centered single column (`margin: 0 auto`) whenever `#storage-page` is open, restoring `#app-sidebar` automatically when returning to `Discover`, `Personal Library`, or `Notes`.
 
 - [x] **Quick Keyboard Triage on Movie Detail Page (`U`, `D`, `W`, `L`, `R`, `X`, `F`) & `Untracked` Dropdown Option**
   * **Goal**: Pair `←` / `→` movie navigation on `#movie-detail-page` with instant single-key shelf assignment and an explicit `Untracked (U)` option so movies (especially from the Excluded/Nope shelf in Continuous mode) can be untracked or sorted from the detail page.

@@ -1,10 +1,10 @@
 # Movie Excluder — Agent Directives & Architecture
 
 ## Core Architectural Map
-- **Backend**: FastAPI routes (`app/main.py`), Business logic & API services (`app/movie_service.py`, `app/grey_service.py`).
+- **Backend**: FastAPI routes (`app/main.py`), Business logic & API services (`app/movie_service.py`), AI Cinema Assistant (`app/grey/service.py`, `app/grey/prompts/`).
 - **Database**: SQLite schema (`app/database.py`), Queries (`app/movie_repository.py`, `app/movie_metadata_repository.py`).
 - **Frontend**: Vanilla JS (`app/static/app.js`), Modern dark CSS (`app/static/styles.css`), HTML (`app/web/index.html`).
-- **AI Cinema Assistant (Grey)**: Decoupled system prompt (`app/prompts/grey_system_prompt.md`), Gemini Flash cascade.
+- **AI Cinema Assistant (Grey)**: Decoupled package (`app/grey/`), prompt cascade (`app/grey/prompts/`), Gemini Flash cascade.
 - **Launcher & Roadmap**: 1-click batch launcher (`run.bat`), Central backlog (`docs/IMPROVEMENTS.md`).
 
 ## Architectural & Data Invariants

@@ -251,9 +251,6 @@ const elements = {
   relatedPanel: document.querySelector("#related-panel"),
   relatedMovies: document.querySelector("#related-movies"),
   relatedFamiliarToggle: document.querySelector("#related-familiar-toggle"),
-  lookingOutControl: document.querySelector("#looking-out-control"),
-  lookingOutToggle: document.querySelector("#looking-out-toggle"),
-  lookingOutReleaseDate: document.querySelector("#looking-out-release-date"),
   entriesPage: document.querySelector("#entries-page"),
   entryList: document.querySelector("#entry-list"),
   entryPagination: document.querySelector("#entry-pagination"),
@@ -314,12 +311,6 @@ const elements = {
   readerSavePublish: document.querySelector("#reader-save-publish"),
   readerWordCount: document.querySelector("#reader-word-count"),
   readerReadTime: document.querySelector("#reader-read-time"),
-  lookingOutPage: document.querySelector("#looking-out-page"),
-  lookingOutGrid: document.querySelector("#looking-out-grid"),
-  lookingOutPagination: document.querySelector("#looking-out-pagination"),
-  releaseAlertsToggle: document.querySelector("#release-alerts-toggle"),
-  releaseAlertSummary: document.querySelector("#release-alert-summary"),
-  releaseAlertBadge: document.querySelector("#release-alert-badge"),
   storagePage: document.querySelector("#storage-page"),
   storageSummary: document.querySelector("#storage-summary"),
   cleanupCache: document.querySelector("#cleanup-cache"),
@@ -429,7 +420,6 @@ const state = {
   notesLayoutMode: "list",
   notesExpandedYears: new Set(),
   focusedEntryIndex: -1,
-  lookingOutPage: 1,
   showRelatedTracked: true,
   detailRelatedMovies: [],
   profileDialogMode: "create",
@@ -532,6 +522,7 @@ function setActiveView(view) {
   const appSidebar = document.querySelector("#app-sidebar");
   if (appSidebar) {
     appSidebar.classList.toggle("is-notes-mode", isNotes);
+    appSidebar.classList.toggle("is-hidden", view === null || view === "storage");
   }
 
   const discoverHeader = document.querySelector("#discover-canvas-header");
@@ -2856,12 +2847,15 @@ function setAuxiliaryView(view = null) {
   const sections = {
     entries: elements.entriesPage,
     "entry-reader": elements.entryReader,
-    "looking-out": elements.lookingOutPage,
     storage: elements.storagePage,
   };
   Object.entries(sections).forEach(([name, section]) => {
-    section.classList.toggle("is-hidden", view !== name);
+    section?.classList.toggle("is-hidden", view !== name);
   });
+  const appSidebar = document.querySelector("#app-sidebar");
+  if (appSidebar) {
+    appSidebar.classList.toggle("is-hidden", view === "storage");
+  }
   const visible = Boolean(view);
   document.querySelector(".section-heading")?.classList.toggle("is-hidden", visible);
   elements.grid?.classList.toggle("force-hidden", visible);
@@ -5059,23 +5053,6 @@ function formatReleaseDate(value) {
     });
 }
 
-function renderLookingOutControl(movie) {
-  const tracked = Boolean(movie.is_looking_out_for);
-  const eligible = Boolean(movie.can_add_to_looking_out_for);
-  elements.lookingOutControl.classList.toggle("is-hidden", !tracked && !eligible);
-  if (!tracked && !eligible) return;
-  elements.lookingOutToggle.textContent = tracked
-    ? "✓ Looking Out For"
-    : "＋ Looking Out For";
-  elements.lookingOutToggle.classList.toggle("is-active", tracked);
-  elements.lookingOutReleaseDate.textContent = formatReleaseDate(
-    movie.looking_out_for?.release_date || movie.release_date,
-  );
-  elements.lookingOutToggle.title = tracked
-    ? "Remove from Looking Out For"
-    : "Remember this unreleased movie";
-}
-
 function formatVoteCount(count) {
   const num = Number(count);
   if (!num || isNaN(num) || num <= 0) return "";
@@ -5123,7 +5100,6 @@ function renderMovieDetails(movie) {
   renderPeople(elements.dialogDirectors, movie.directors, "directors");
   renderPeople(elements.dialogActors, (movie.actors || []).slice(0, 5), "actors");
   renderPersonalControls(movie);
-  renderLookingOutControl(movie);
   elements.notes.value = movie.user_data?.notes || "";
   elements.notesPanel.open = true;
   [elements.statusFeedback, elements.verdictFeedback, elements.notesFeedback].forEach((item) => {
@@ -5280,7 +5256,7 @@ async function openMovieDetails(
         ? "Back to movies"
         : (state.mode === "filmography"
           ? (state.activeFilmographyPerson ? `Back to ${state.activeFilmographyPerson.name}` : "Back to filmography")
-          : (state.mode === "looking-out" ? "Back to Looking Out For" : "Back to results")));
+          : "Back to results"));
 
     let activeList = [];
     if (state.currentView === "discover" || state.mode === "search" || state.mode === "discover") {
@@ -5569,32 +5545,6 @@ async function toggleSelectedFavorite() {
   } catch (error) {
     feedback(elements.statusFeedback, error.message, "error");
     renderPersonalControls(state.selectedMovie);
-  }
-}
-
-async function toggleLookingOutFor() {
-  if (!state.selectedMovie) return;
-  const movieId = state.selectedMovie.tmdb_id;
-  const removing = Boolean(state.selectedMovie.is_looking_out_for);
-  elements.lookingOutToggle.disabled = true;
-  try {
-    const response = await fetchJSON(`/movies/${movieId}/looking-out-for`, {
-      method: removing ? "DELETE" : "POST",
-    });
-    state.selectedMovie.is_looking_out_for = !removing;
-    state.selectedMovie.looking_out_for = removing ? null : response.tracking;
-    renderLookingOutControl(state.selectedMovie);
-    feedback(
-      elements.statusFeedback,
-      removing
-        ? "Removed from Looking Out For."
-        : "Added to Looking Out For.",
-    );
-    await refreshReleaseAlertBadge();
-  } catch (error) {
-    feedback(elements.statusFeedback, error.message, "error");
-  } finally {
-    elements.lookingOutToggle.disabled = false;
   }
 }
 
@@ -7342,139 +7292,6 @@ async function deleteEntry(entry) {
   await loadEntries(state.entryPage);
 }
 
-function releaseStateCopy(movie) {
-  const date = formatReleaseDate(
-    movie.looking_out_release_date || movie.release_date,
-  );
-  if (movie.release_state === "released") return `Now released · ${date}`;
-  if (movie.release_state === "today") return `Releases today · ${date}`;
-  if (movie.release_state === "soon") {
-    return `Releases in ${movie.days_until_release} days · ${date}`;
-  }
-  return `Releases ${date}`;
-}
-
-function createLookingOutCard(movie) {
-  const article = document.createElement("article");
-  article.className = "looking-out-card";
-  const poster = document.createElement("button");
-  poster.type = "button";
-  poster.className = "looking-out-poster";
-  poster.append(createPoster(movie));
-  poster.addEventListener("click", () => openMovieDetails(getMovieId(movie)));
-  const copy = document.createElement("div");
-  copy.className = "looking-out-copy";
-  const title = document.createElement("h3");
-  title.textContent = movie.title || movie.original_title || "Untitled movie";
-  const release = document.createElement("span");
-  release.className = "release-state";
-  release.dataset.state = movie.release_state;
-  release.textContent = releaseStateCopy(movie);
-  const actions = document.createElement("div");
-  actions.className = "looking-out-actions";
-  if (["released", "today"].includes(movie.release_state)) {
-    const watchLater = document.createElement("button");
-    watchLater.type = "button";
-    watchLater.textContent = "Move to Watch Later";
-    watchLater.addEventListener("click", async () => {
-      watchLater.disabled = true;
-      try {
-        await fetchJSON(`/movies/${movie.tmdb_id}/looking-out-for/watch-later`, {
-          method: "PUT",
-        });
-        showNotice(`Moved “${title.textContent}” to Watch Later.`);
-        await loadLookingOutFor(state.lookingOutPage);
-      } catch (error) {
-        showNotice(error.message);
-      } finally {
-        watchLater.disabled = false;
-      }
-    });
-    actions.append(watchLater);
-  }
-  const remove = document.createElement("button");
-  remove.type = "button";
-  remove.textContent = "Remove";
-  remove.addEventListener("click", async () => {
-    if (!window.confirm(`Remove “${title.textContent}” from Looking Out For?`)) return;
-    remove.disabled = true;
-    try {
-      await fetchJSON(`/movies/${movie.tmdb_id}/looking-out-for`, { method: "DELETE" });
-      showNotice(`Removed “${title.textContent}” from Looking Out For.`);
-      await loadLookingOutFor(state.lookingOutPage);
-    } catch (error) {
-      showNotice(error.message);
-    } finally {
-      remove.disabled = false;
-    }
-  });
-  actions.append(remove);
-  copy.append(title, release, actions);
-  article.append(poster, copy);
-  return article;
-}
-
-function updateReleaseAlerts(response) {
-  const enabled = Boolean(response.release_alerts_enabled);
-  const count = Number(response.alert_count || 0);
-  elements.releaseAlertsToggle.checked = enabled;
-  elements.releaseAlertBadge.textContent = String(count);
-  elements.releaseAlertBadge.classList.toggle("is-hidden", !enabled || count < 1);
-  elements.releaseAlertSummary.classList.toggle("is-hidden", !enabled || count < 1);
-  if (enabled && count > 0) {
-    const counts = response.alert_counts || {};
-    const parts = [];
-    if (counts.released) parts.push(`${counts.released} now released`);
-    if (counts.today) parts.push(`${counts.today} releasing today`);
-    if (counts.soon) parts.push(`${counts.soon} releasing within 7 days`);
-    elements.releaseAlertSummary.textContent = parts.join(" · ");
-  }
-}
-
-async function loadLookingOutFor(page = 1) {
-  setSearchOriginMovie();
-  state.mode = "looking-out";
-  state.currentView = "looking-out";
-  state.lookingOutPage = page;
-  setActiveView(null);
-  setAuxiliaryView("looking-out");
-  elements.lookingOutGrid.innerHTML = '<div class="entry-empty">Checking release dates…</div>';
-  try {
-    const response = await fetchJSON(`/movies/looking-out-for?page=${page}`);
-    const movies = response.results || [];
-    elements.lookingOutGrid.replaceChildren();
-    if (!movies.length) {
-      const empty = document.createElement("div");
-      empty.className = "entry-empty";
-      empty.textContent = "No upcoming movies are being tracked yet.";
-      elements.lookingOutGrid.append(empty);
-    } else {
-      movies.forEach((movie) => elements.lookingOutGrid.append(createLookingOutCard(movie)));
-    }
-    updateReleaseAlerts(response);
-    renderPagination(
-      elements.lookingOutPagination,
-      Number(response.page || page),
-      Number(response.total_pages || 1),
-      async (target) => { await loadLookingOutFor(target); elements.lookingOutPage.scrollIntoView(); },
-    );
-  } catch (error) {
-    const message = document.createElement("div");
-    message.className = "entry-empty";
-    message.textContent = error.message;
-    elements.lookingOutGrid.replaceChildren(message);
-  }
-}
-
-async function refreshReleaseAlertBadge() {
-  try {
-    const response = await fetchJSON("/movies/looking-out-for?page=1");
-    updateReleaseAlerts(response);
-  } catch {
-    elements.releaseAlertBadge.classList.add("is-hidden");
-  }
-}
-
 function formatBytes(value) {
   const bytes = Number(value || 0);
   if (bytes < 1024) return `${bytes} B`;
@@ -7494,7 +7311,6 @@ async function loadStorage() {
       [formatBytes(summary.size_bytes), "SQLite database size"],
       [summary.cached_movies, "Cached movie records"],
       [summary.personal_movies, "Movies with personal status/data"],
-      [summary.looking_out_for_movies, "Looking Out For"],
       [summary.old_unprotected_cache_movies, "Disposable cache older than 90 days"],
       [summary.soft_deleted_entries, "Deleted Notes retained"],
     ];
@@ -8233,7 +8049,6 @@ elements.returnToOrigin.addEventListener("click", () => {
 
 elements.saveStatus.addEventListener("click", saveSelectedStatus);
 elements.favoriteButton.addEventListener("click", toggleSelectedFavorite);
-elements.lookingOutToggle.addEventListener("click", toggleLookingOutFor);
 elements.relatedFamiliarToggle.addEventListener("click", () => {
   if (!state.selectedMovie) return;
   state.showRelatedTracked = state.showRelatedTracked === false ? true : false;
@@ -8838,19 +8653,6 @@ elements.entryReaderDelete.addEventListener("click", () => {
   deleteEntry(state.entryReaderEntry).catch((error) => showNotice(error.message));
 });
 
-elements.releaseAlertsToggle.addEventListener("change", async () => {
-  try {
-    await fetchJSON("/settings/release-alerts", {
-      method: "PUT",
-      body: JSON.stringify({ enabled: elements.releaseAlertsToggle.checked }),
-    });
-    await loadLookingOutFor(state.lookingOutPage);
-  } catch (error) {
-    elements.releaseAlertsToggle.checked = !elements.releaseAlertsToggle.checked;
-    showNotice(error.message);
-  }
-});
-
 elements.cleanupCache.addEventListener("click", async () => {
   if (!window.confirm("Remove TMDB-only cache that has been untouched for at least 90 days? Your personal movie data will be preserved.")) return;
   elements.cleanupCache.disabled = true;
@@ -8944,10 +8746,6 @@ elements.footerViews.forEach((button) => {
     const view = button.dataset.footerView;
     if (view === "movie-notes") {
       loadMovieNotes(1);
-      return;
-    }
-    if (view === "looking-out") {
-      loadLookingOutFor(1);
       return;
     }
     if (view === "storage") {
@@ -9919,7 +9717,7 @@ async function initializeApp() {
 
   const validLibraryViews = ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes"];
   const validNotesViews = ["entries", "entry-reader"];
-  const validAuxViews = ["looking-out", "storage"];
+  const validAuxViews = ["storage"];
 
   // Immediately apply view state to DOM BEFORE any async operations so discovery NEVER flashes
   if (validLibraryViews.includes(initialView)) {
@@ -9950,7 +9748,7 @@ async function initializeApp() {
   } else if (validAuxViews.includes(initialView)) {
     setActiveView(null);
     if (elements.discoverWorkspace) elements.discoverWorkspace.classList.add("is-hidden");
-    setEntriesVisible(false);
+    setAuxiliaryView("storage");
   } else {
     setActiveView("discover");
     if (elements.discoverWorkspace) elements.discoverWorkspace.classList.remove("is-hidden");
@@ -9999,11 +9797,10 @@ async function initializeApp() {
       }
     }
   } else if (validAuxViews.includes(initialView)) {
-    const auxTask = initialView === "looking-out" ? loadLookingOutFor(1) : loadStorage();
     await Promise.all([
       loadProfiles().catch(() => {}),
       restoreSearchState().catch(() => {}),
-      auxTask,
+      loadStorage(),
     ]);
   } else {
     await loadProfiles();
@@ -10017,7 +9814,6 @@ async function initializeApp() {
     setActiveView("discover");
     await setDiscoveryMode(restoredMode || "super", true);
   }
-  await refreshReleaseAlertBadge();
 }
 
 window.addEventListener("hashchange", () => {
@@ -10052,10 +9848,6 @@ window.addEventListener("hashchange", () => {
         resetEntryFiltersToCurrent();
       }
       loadShelf(hashView);
-    }
-  } else if (hashView === "looking-out") {
-    if (state.currentView !== "looking-out") {
-      loadLookingOutFor(1);
     }
   } else if (hashView === "storage") {
     if (state.currentView !== "storage") {

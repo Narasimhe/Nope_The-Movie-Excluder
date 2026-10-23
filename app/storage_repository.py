@@ -13,9 +13,6 @@ class StorageRepository:
             personal_movies = connection.execute(
                 "SELECT COUNT(*) FROM user_movie_data"
             ).fetchone()[0]
-            upcoming_movies = connection.execute(
-                "SELECT COUNT(*) FROM looking_out_for"
-            ).fetchone()[0]
             deleted_entries = connection.execute(
                 "SELECT COUNT(*) FROM general_entries WHERE is_deleted = 1"
             ).fetchone()[0]
@@ -31,7 +28,6 @@ class StorageRepository:
             "size_bytes": size_bytes,
             "cached_movies": cached_movies,
             "personal_movies": personal_movies,
-            "looking_out_for_movies": upcoming_movies,
             "old_unprotected_cache_movies": cleanup_candidates,
             "soft_deleted_entries": deleted_entries,
         }
@@ -81,6 +77,26 @@ class StorageRepository:
                 )
                 """
             )
+            # Find all banner URLs still in use by active entries
+            active_rows = connection.execute(
+                "SELECT image_url FROM general_entries WHERE image_url IS NOT NULL AND image_url != ''"
+            ).fetchall()
+            active_banners = {
+                Path(row["image_url"]).name
+                for row in active_rows
+                if row["image_url"].startswith("/banners/")
+            }
+
+        # Automatically clean up orphaned banner files on disk
+        banners_dir = Path(__file__).resolve().parent.parent / "data" / "banners"
+        if banners_dir.exists():
+            for p in banners_dir.iterdir():
+                if p.is_file() and p.name not in active_banners:
+                    try:
+                        p.unlink()
+                    except Exception:
+                        pass
+
         self._vacuum()
         return {"removed_entries": max(0, removed)}
 
@@ -106,10 +122,6 @@ class StorageRepository:
                   JOIN keywords k ON k.keyword_id = mk.keyword_id
                   WHERE mk.tmdb_id = {movie_ref}
                     AND k.is_custom = 1
-              )
-              AND NOT EXISTS (
-                  SELECT 1 FROM looking_out_for l
-                  WHERE l.tmdb_id = {movie_ref}
               )
         """
 

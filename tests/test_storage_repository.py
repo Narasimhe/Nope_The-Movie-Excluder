@@ -6,7 +6,6 @@ from unittest.mock import patch
 from app import database
 from app.database import initialize_database
 from app.general_entry_repository import GeneralEntryRepository
-from app.looking_out_for_repository import LookingOutForRepository
 from app.movie_metadata_repository import MovieMetadataRepository
 from app.movie_repository import MovieRepository
 from app.movie_status import MovieStatus
@@ -34,21 +33,20 @@ class StorageRepositoryTests(unittest.TestCase):
         })
 
     def test_cleanup_removes_only_old_tmdb_only_cache(self) -> None:
-        for movie_id in range(1, 6):
+        for movie_id in range(1, 5):
             self._save_movie(movie_id)
         UserMovieRepository().set_status(2, MovieStatus.WATCHED)
         MovieMetadataRepository().add_custom_keyword(3, "personal")
-        LookingOutForRepository().add(4, "2030-01-01")
         with database.get_connection() as connection:
             connection.execute(
-                "UPDATE movies SET last_accessed_at = '2020-01-01 00:00:00' WHERE tmdb_id < 5"
+                "UPDATE movies SET last_accessed_at = '2020-01-01 00:00:00' WHERE tmdb_id < 4"
             )
 
         result = self.storage.cleanup_old_cache(90)
 
         self.assertEqual(result["removed_movies"], 1)
         self.assertIsNone(self.movies.get_movie(1))
-        for movie_id in (2, 3, 4, 5):
+        for movie_id in (2, 3, 4):
             self.assertIsNotNone(self.movies.get_movie(movie_id))
 
     def test_deleted_general_entries_can_be_purged(self) -> None:
