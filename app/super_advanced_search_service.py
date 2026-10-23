@@ -14,6 +14,28 @@ DEFAULT_INCLUDED_STATUSES = (
     MovieStatus.WATCH_LATER.value,
 )
 
+TMDB_GENRES = {
+    28: "Action",
+    12: "Adventure",
+    16: "Animation",
+    35: "Comedy",
+    80: "Crime",
+    99: "Documentary",
+    18: "Drama",
+    10751: "Family",
+    14: "Fantasy",
+    36: "History",
+    27: "Horror",
+    10402: "Music",
+    9648: "Mystery",
+    10749: "Romance",
+    878: "Science Fiction",
+    10770: "TV Movie",
+    53: "Thriller",
+    10752: "War",
+    37: "Western",
+}
+
 
 class SuperAdvancedSearchService(AdvancedSearchService):
     def __init__(
@@ -55,6 +77,15 @@ class SuperAdvancedSearchService(AdvancedSearchService):
         )
         normalized_notes_query = self._normalize_notes_query(
             notes_query
+        )
+        notes_terms = (
+            [
+                t.strip().casefold()
+                for t in normalized_notes_query.split(",")
+                if t.strip()
+            ]
+            if normalized_notes_query is not None
+            else []
         )
         preference = self._resolve_preference(
             preference_id,
@@ -123,12 +154,38 @@ class SuperAdvancedSearchService(AdvancedSearchService):
                 if user_data is None:
                     continue
 
-                notes = str(user_data.get("notes") or "")
+                notes = str(user_data.get("notes") or "").strip()
+                if not notes:
+                    continue
 
-                if (
-                    normalized_notes_query.casefold()
-                    not in notes.casefold()
-                ):
+                movie_title = str(
+                    movie.get("title") or movie.get("original_title") or ""
+                ).casefold()
+
+                genre_names = []
+                if "genres" in movie and isinstance(movie["genres"], list):
+                    for g in movie["genres"]:
+                        if isinstance(g, dict) and "name" in g:
+                            genre_names.append(str(g["name"]).casefold())
+                        elif isinstance(g, str):
+                            genre_names.append(g.casefold())
+                if "genre_ids" in movie and isinstance(movie["genre_ids"], list):
+                    for gid in movie["genre_ids"]:
+                        name = TMDB_GENRES.get(gid)
+                        if name:
+                            genre_names.append(name.casefold())
+
+                match_all = True
+                for term in notes_terms:
+                    if not (
+                        term in notes.casefold()
+                        or term in movie_title
+                        or any(term in g for g in genre_names)
+                    ):
+                        match_all = False
+                        break
+
+                if not match_all:
                     continue
 
             candidate = dict(movie)
@@ -251,7 +308,8 @@ class SuperAdvancedSearchService(AdvancedSearchService):
 
         cleaned_query = " ".join(notes_query.split())
 
-        if not cleaned_query:
+        terms = [t.strip() for t in cleaned_query.split(",") if t.strip()]
+        if not terms:
             raise ValueError(
                 "notes_query cannot be empty when provided."
             )

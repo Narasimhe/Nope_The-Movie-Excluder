@@ -217,9 +217,11 @@ class GeneralEntryRepository:
         month: int | None = None,
         is_archived: bool = False,
         status: str | None = "published",
+        date_field: str = "updated_at",
     ) -> dict[str, Any]:
         self._validate_page(page)
         limit = per_page if per_page is not None and per_page > 0 else self.PAGE_SIZE
+        col = "created_at" if date_field == "created_at" else "updated_at"
         clauses = ["is_deleted = 0", f"is_archived = {1 if is_archived else 0}"]
         parameters: list[Any] = []
 
@@ -280,8 +282,7 @@ class GeneralEntryRepository:
             if isinstance(year, bool) or not isinstance(year, int):
                 raise ValueError("Entry year must be an integer.")
             clauses.append(
-                "strftime('%Y', datetime(updated_at, "+
-                "'+5 hours', '+30 minutes')) = ?"
+                f"strftime('%Y', datetime({col}, '+5 hours', '+30 minutes')) = ?"
             )
             parameters.append(f"{year:04d}")
 
@@ -294,8 +295,7 @@ class GeneralEntryRepository:
             ):
                 raise ValueError("Entry month must be between 1 and 12.")
             clauses.append(
-                "strftime('%m', datetime(updated_at, "+
-                "'+5 hours', '+30 minutes')) = ?"
+                f"strftime('%m', datetime({col}, '+5 hours', '+30 minutes')) = ?"
             )
             parameters.append(f"{month:02d}")
 
@@ -311,7 +311,7 @@ class GeneralEntryRepository:
                 SELECT *
                 FROM general_entries
                 WHERE {where_clause}
-                ORDER BY is_pinned DESC, updated_at DESC, entry_id DESC
+                ORDER BY is_pinned DESC, {col} DESC, entry_id DESC
                 LIMIT ? OFFSET ?
                 """,
                 [*parameters, limit, offset],
@@ -529,13 +529,14 @@ class GeneralEntryRepository:
                 "tags": tags,
             }
 
-    def get_timeline_summary(self) -> list[dict[str, Any]]:
+    def get_timeline_summary(self, date_field: str = "created_at") -> list[dict[str, Any]]:
+        col = "created_at" if date_field == "created_at" else "updated_at"
         with get_connection() as connection:
             rows = connection.execute(
-                """
+                f"""
                 SELECT
-                    strftime('%Y', datetime(updated_at, '+5 hours', '+30 minutes')) AS year,
-                    strftime('%m', datetime(updated_at, '+5 hours', '+30 minutes')) AS month,
+                    strftime('%Y', datetime({col}, '+5 hours', '+30 minutes')) AS year,
+                    strftime('%m', datetime({col}, '+5 hours', '+30 minutes')) AS month,
                     COUNT(*) AS count
                 FROM general_entries
                 WHERE is_deleted = 0

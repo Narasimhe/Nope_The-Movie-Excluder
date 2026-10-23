@@ -44,6 +44,9 @@ STATIC_DIR = APP_DIR / "static"
 WEB_DIR = APP_DIR / "web"
 BANNERS_DIR = APP_DIR.parent / "data" / "banners"
 BANNERS_DIR.mkdir(parents=True, exist_ok=True)
+ASSETS_DIR = APP_DIR.parent / "assets"
+ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+(ASSETS_DIR / "gifs_n_media").mkdir(parents=True, exist_ok=True)
 
 app.mount(
     "/static",
@@ -54,6 +57,11 @@ app.mount(
     "/banners",
     StaticFiles(directory=BANNERS_DIR),
     name="banners",
+)
+app.mount(
+    "/assets",
+    StaticFiles(directory=ASSETS_DIR),
+    name="assets",
 )
 
 movie_service = MovieService()
@@ -1394,6 +1402,7 @@ def list_general_entries(
     archived: bool = False,
     per_page: int = 6,
     status: str | None = "published",
+    date_field: str = "created_at",
 ):
     try:
         repo_status = None if status == "all" else status
@@ -1407,6 +1416,7 @@ def list_general_entries(
             month=month,
             is_archived=archived,
             status=repo_status,
+            date_field=date_field,
         )
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
@@ -1637,6 +1647,7 @@ class GreyChatRequest(BaseModel):
     active_person: dict[str, Any] | None = None
     visible_movies: list[dict[str, Any]] | None = None
     notes_shelf_filter: str | None = None
+    live_movie_notes: str | None = None
     history: list[dict[str, str]] | None = None
     model_mode: str = "auto"
 
@@ -1657,7 +1668,10 @@ def chat_with_grey(req: GreyChatRequest):
         active_person=req.active_person,
         visible_movies=req.visible_movies,
         notes_shelf_filter=req.notes_shelf_filter,
+        live_movie_notes=req.live_movie_notes,
         history=req.history,
         model_mode=req.model_mode,
     )
+
+
 

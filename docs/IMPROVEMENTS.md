@@ -4,17 +4,205 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
-- [ ] **Native Markdown Table Support in Notes & Grey Table Formatting**
-  * **Goal**: Support standard Markdown tables (`| Col 1 | Col 2 |`) in notes and journal posts with dark-theme styling, and teach Grey to format and update movie comparison tables.
-  * **Scope**:
-    * **Frontend Markdown Parser ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: In `appendEntryBody`, detect pipe-delimited table rows (`| ... |`), parse header rows, separator rows, and data rows into structured `<table>`, `<thead>`, `<tbody>` elements with support for inline links, bold text, and formatting.
-    * **Modern Dark CSS ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Add responsive, clean dark styling with subtle borders, muted headers, comfortable cell padding, and horizontal scroll wrapper for narrow screens.
-    * **Grey Skill Integration ([`notes_editor.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/notes_editor.md))**: Teach Grey to output clean Markdown tables when asked for film comparisons, rankings, or side-by-side lists, and to mimic existing table structures when adding rows to notes that use tables.
-
+- [ ] **Completely Blackhole `Looking Out For` (UI + Logic + Backend) & Hide Filter Sidebar on `Storage` Page**
+  * **Problem**: `Looking Out For` is unnecessary and adds extra UI/backend surface area, and opening `Storage` (or auxiliary footer pages) leaves the left filter sidebar (`#app-sidebar`) visible alongside the page.
+  * **Planned Fix**:
+    * **Remove `Looking Out For` End-to-End**: Strip `#looking-out-page`, the footer `Looking Out For` button + `#release-alert-badge`, `#looking-out-control` on the Single Movie Detail Page, `.looking-out-*` styles, frontend JS functions (`loadLookingOutFor`, `createLookingOutCard`, `updateReleaseAlerts`, `refreshReleaseAlertBadge`), the Storage stat card for `Looking Out For`, and all backend `/movies/looking-out-for`, `/movies/{tmdb_id}/looking-out-for`, and `/settings/release-alerts` routes, service methods, repository queries, schema table, and tests.
+    * **Full-Width `Storage` View Without Left Filter Sidebar**: Hide `#app-sidebar` and collapse `.workspace-layout` to a clean single column whenever `#storage-page` is active, restoring the sidebar automatically when returning to `Discover`, `Personal Library`, or `Notes`.
 
 ---
 
 ## ✅ Completed Tasks
+
+- [x] **Quick Keyboard Triage on Movie Detail Page (`U`, `D`, `W`, `L`, `R`, `X`, `F`) & `Untracked` Dropdown Option**
+  * **Goal**: Pair `←` / `→` movie navigation on `#movie-detail-page` with instant single-key shelf assignment and an explicit `Untracked (U)` option so movies (especially from the Excluded/Nope shelf in Continuous mode) can be untracked or sorted from the detail page.
+  * **Key Changes**:
+    * **`Untracked` Option & Single-Key Shelf Shortcuts ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html))**: Added `<option value="untracked">Untracked (U)</option>` to `#status-select` (wired to `DELETE /movies/{id}/status`) and added keyboard listeners on `#movie-detail-page` for **`U`** (`Untracked`), **`D`** (`New discovery`), **`W`** (`Watched`), **`L`** (`Watch later`), **`R`** (`Rewatch`), **`X`** (`Nope / Excluded`), and **`F`** (toggle `♥ Favourite`).
+
+- [x] **Simple `@movie` Mentions in Notes, Grey Side-by-Side Note Reader Fix, & Looking Out For / Storage Polish**
+  * **Goal**: Enable natural `@movie` linking inside notes (with live autocomplete, hover preview cards, and 1-click navigation to movie details), fix the `.entry-reader-toolbar` two-line collision when Grey is docked open, and polish the Looking Out For and Storage pages.
+  * **Key Changes**:
+    * **Simple `@movie` Mentions ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html), [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Typing `@` followed by a movie title in `#reader-body-input` opens `#reader-movie-mention-popover` with poster thumbnails, release years, and personal shelf badges; selecting a film inserts `@Movie Title (Year)` which renders in Read Mode as an interactive `.note-movie-mention` chip with a floating hover preview card and 1-click navigation to the movie detail page (`← Back to note`).
+    * **Grey Side-by-Side Reader Toolbar Fix ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Removed the legacy `@media (max-width: 1280px) body.grey-docked-open .entry-reader-toolbar { flex-direction: column }` rule that caused the toolbar buttons to wrap onto the note headline, keeping the toolbar on a single `36px` horizontal line and compacting `Previous`/`Next` to icon chevrons on narrower split-screen viewports.
+    * **Looking Out For & Storage Polish + 1-Click Exports ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html), [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Aligned `#looking-out-page` and `#storage-page` to a clean `820px` container with `object-fit: cover` poster cards, tabular storage stat cards, and 1-click **Export Notes (.md)** and **Export Library Snapshot (.json)** actions.
+
+- [x] **Compact Circular `↑` Back-to-Top Button Next to Grey & Continuous/Notes-Only Visibility**
+  * **Goal**: Eliminate the lopsided vertical totem-pole stacking of `^ Top` above `Grey` in the bottom-right corner and prevent `^ Top` from appearing on 24-movie Paged views (Discover, Watch Later, or shelves in `Pages` mode).
+  * **Key Changes**:
+    * **Horizontal Circular Icon (`[ ↑ ]  [ 🐱 Grey • ]`) ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Replaced the wide `^ Top` text pill with a `40×40px` circular upward-arrow icon button placed cleanly to the left of `Grey` on the same `bottom: 24px` row (`right: 146px`, shifting beside the docked drawer when Grey is open).
+    * **Context-Aware Visibility ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Added [`updateBackToTopVisibility`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js#L3086-L3106) so the button only appears when scrolled down (`scrollY > 380`) inside `Continuous` library shelves or when browsing/reading in Notes—staying hidden on Discover and all `Pages` views.
+
+- [x] **Unified Numbered Pagination Across All Views & Exact 6-Column Grid Centering**
+  * **Goal**: Standardize page numbering across every view in the app (Discover, Filtered Discovery, Title/Keyword Search, Personal Library Shelves, Movie Notes, Notes Cards, and Looking Out For) and center `#pagination` directly beneath the 6-column poster grid.
+  * **Key Changes**:
+    * **Unified Numbered Pagination ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Removed the separate `Page X` capsule variant so all views render the same numbered pagination bar (`‹ Previous   1  2  3 … N   Next ›`) with uniform `38px` button heights, symmetrical `106px` `Previous` / `Next` buttons, crisp SVG chevrons, and tabular page numbers.
+    * **Exact 6-Column Poster Grid Centering ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Locked `#pagination` to `width: 100%; max-width: 670px; margin: 3.5rem 0 2rem` to match the exact `670px` width (`6 × 105px + 5 × 8px`) and left-alignment of `.movie-grid`, placing the center of the pagination bar dead-center between poster columns 3 and 4.
+
+- [x] **Notion / Bear Style Debounced Auto-Save for Notes, `✓ Done` Mode Switch, & Inline `"✓ Saved"` Indicator**
+  * **Goal**: Replace manual `Save` / `Cancel` buttons and the giant full-width `#notice` banner with debounced background auto-save, `Ctrl+S` muscle memory, a `✓ Done` button to return to Read Mode, a quiet `Move to Drafts` pill, and an inline `"Saving…" → "✓ Saved"` toolbar status indicator.
+  * **Key Changes**:
+    * **Debounced Auto-Save + `Ctrl+S` Muscle Memory ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Automatically saves title, body, tags, and banner changes ~750ms after pausing typing (plus instant in-place save on `Ctrl+S` without leaving Edit mode, and auto-flush when clicking `← Notes`).
+    * **Inline Toolbar Status & Top Banner Removal ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html), [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Added `#reader-save-status` and `#reader-view-save-status` (`Saving…` → `✓ Saved`) directly in the toolbar, eliminating the full-width reddish `#notice` banner that previously pushed the page down by 60px.
+    * **Removed Shortcut Hint ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html))**: Removed the `Tip: Press Ctrl + Enter to save` footer hint below the note textarea.
+
+- [x] **Zero-Shift Single Note View (Read Mode vs. Edit Mode) & Notes Polish Batch**
+  * **Goal**: Eliminate all layout jumping and shapeshifting when toggling between Read Mode and Edit Mode inside `#entry-reader` (modeled on [`zero_shift_note_editor_mockup_v2_1792772628276.jpg`](file:///C:/Users/Narasimha/.gemini/antigravity/brain/253ff604-4289-4fb0-89c6-082d7ea9ebbb/zero_shift_note_editor_mockup_v2_1792772628276.jpg)), plus complete the active Notes & Movie Detail UI polish items.
+  * **Key Changes**:
+    * **Zero-Shift Reader & Editor ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html), [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Locked the top toolbar to a fixed `36px` height with a pro-designer SVG `← Notes` back pill anchored on the left in both modes, segmented `[ ← Previous | Next → ]` stepper buttons, removed the redundant `#entry-reader-type` (`note`) label above the headline, unified `#entry-reader-title` and `#reader-title-input` typography/margins, matched the gold tag pills (`[ tag ]` vs `[ tag × ]`) and `26px` dashed `+ Tag` / `🖼️ Banner` controls, and locked the divider and body text/textarea to identical coordinates.
+    * **Reader Keyboard Stepper ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Added `ArrowLeft` and `ArrowRight` shortcuts inside `#entry-reader` (when not editing) to step to Previous and Next notes.
+    * **List Mode Row Polish ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Fixed `.card-action-btn` opacity on `.entry-ledger-row:hover` so `📌`, `✎`, and `📥` fade in cleanly on row hover; removed the repetitive `edited` row badge and attached a hover/click timestamp tooltip on `.ledger-date` (`Created ... · Updated ...`); and added breathing room between `.entries-search-bar` and `#entry-active-filters`.
+    * **Personal Memory Header Alignment ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Vertically aligned `#notes-feedback` with the `"Minimize"` button and simplified the save confirmation copy to `"Note saved"`.
+
+- [x] **Banner-Less / High-Density Compact View for Notes & Journal + Footer & Storage Cleanups**
+  * **Goal**: Prevent archive browsing exhaustion as notes and journal entries grow in number by introducing a high-density, banner-less chronological index stream with simple year-wise navigation, plus clean up legacy "Notes & Links" storage wording and redundant footer buttons.
+  * **Key Changes**:
+    * **Banner-Less Chronological Index ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css), [`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html))**: Added `#notes-view-switcher` (`[ ≡ List | ☷ Cards ]`, defaulting to `List`). List view renders single-line typographic rows (`Pin · Short Date • Bold Title + subtle edited badge · Tag Pills`) inside a 920px column container with zero reading-time/word-count clutter and pagination-free continuous timeline streaming.
+    * **Historical Date Anchoring ([`general_entry_repository.py`](file:///f:/Movie_Excluder/movie-excluder/app/general_entry_repository.py), [`main.py`](file:///f:/Movie_Excluder/movie-excluder/app/main.py))**: Anchored `GET /entries` and timeline summary aggregations to `created_at` so editing an older note never teleports it out of its original `YYYY · MONTH` chapter.
+    * **Collapsible Year-Wise & Month-Wise Sidebar ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Grouped sidebar timeline filters under collapsible year headers (`▾ 2026 (13)`) supporting 1-click full-year filtering or individual month drill-down, paired with instant filter breadcrumb chips (`#entry-active-filters`).
+    * **Hover-Only Action Tray & Writer Keyboard Shortcuts ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Row actions (`📌`, `✎`, `📥`) remain invisible until row hover/focus; added keyboard navigation (`j`/`k` or `ArrowDown`/`ArrowUp`, `Enter` to open, `n` for new note, `Escape` to close reader or clear filters) and exact scroll restoration when returning from the reader.
+    * **Storage & Footer Cleanup ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html), [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`test_web_ui.py`](file:///f:/Movie_Excluder/movie-excluder/tests/test_web_ui.py))**: Updated `#purge-deleted-entries` button to `"Permanently delete notes"` (removing legacy `"& Links"` phrasing) and removed redundant `Notes` and `Movie Notes` links from the bottom footer bar.
+
+- [x] **Library Infinite Scroll Toggle (Excluding Watch Later)**
+  * **Goal**: Provide an optional user toggle across the library shelves to seamlessly switch between standard pagination and continuous infinite movie poster scrolling, keeping pagination as the default mode and strictly preserving pagination on Watch Later.
+  * **Key Changes**:
+    * **Toggle Switch ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Added `#shelf-view-toggle` (`Pages` / `Continuous`) next to `#shelf-count`. Default is always `Pages`. Watch Later is strictly excluded by deliberation (toggle automatically hides and forces paged mode).
+    * **Continuous Batch Engine & Silent Hairline Dividers ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Lightweight `IntersectionObserver` dynamically appends subsequent 30-movie batches separated by a text-free gradient hairline rule (`.continuous-batch-divider`) spanning across the grid.
+    * **Floating "Back to Top" Pill ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css), [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Added `#back-to-top-btn` that smoothly reveals when scrolling down, supporting both 1-click smooth glide and keyboard shortcuts (`Home` or `t`). Vertically stacked cleanly above the Grey pill (`bottom: 78px; right: 24px`) to prevent any icon collision.
+    * **Shelf Coverage**: Supported across Watched, Rewatch, Favorites, Excluded (Nope), New Discoveries, and Movie Notes. Navigation to/from movie detail pages preserves exact scroll position and all loaded batches.
+
+- [x] **Debounced Auto-Save for Personal Memory & Manual Save Button Removal**
+  * **Goal**: Upgrade the single movie detail page's "Personal Memory" note editor to automatically save thoughts as you type (debounced) and on blur/navigation, eliminating the manual "Save notes" button and accidental loss of notes.
+  * **Key Changes**:
+    * **Debounced Auto-Save ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Triggers auto-save ~750ms after user pauses typing, with instant save on textarea blur, detail navigation (prev/next/close/back-to-origin), or `Ctrl+S`.
+    * **Header Status Micro-Indicator ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css), [`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html))**: Removed the manual `#save-notes` button. Added quiet inline status indicator (`Saving…` → `✓ Saved`) directly next to *Minimize* in the Personal Memory header.
+
+- [x] **Persistent Grey Chat Memory & Live Personal Memory Integration**
+  * **Goal**: Expand Grey's conversational memory window, remove artificial midnight session wipes, and bridge live movie notes directly into Grey's prompt for seamless, contextual to-and-fro.
+  * **Key Changes**:
+    * **Expanded Turn Window ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey_service.py))**: Increased conversational history from 6 to 16 messages (8 back-and-forth exchanges) in backend prompt generation and client chat payloads.
+    * **Multi-Day Session Persistence ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Removed calendar date reset check from `loadGreyDailySession`, preserving conversations across days until explicitly cleared.
+    * **Live Note Context Bridging ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`main.py`](file:///f:/Movie_Excluder/movie-excluder/app/main.py), [`grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey_service.py))**: Provided `live_movie_notes` in `/grey/chat` schema, auto-flushed unsaved drafts on send, and prioritized live text in Grey's inspected movie prompt context.
+
+- [x] **Removal of `/watchlist` Chip and Watchlist Builder Skill**
+  * **Goal**: Completely remove the `📝 /watchlist` quick action chip and strip out the artificial `/watchlist` (Toggle Watchlist Builder) skill module from Grey, eliminating clutter and keeping Grey focused on sharp recommendations and research.
+  * **Key Changes**:
+    * **UI Quick Skills Bar ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html))**: Removed `📝 /watchlist` button from `#grey-skills-bar` and slash command suggestions.
+    * **Backend Skill Cleanup ([`grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey_service.py))**: Removed `watchlist` skill handler and routing table entries.
+
+- [x] **Eliminate Redundant Context Strip Subtitles ("Personal observations", etc.)**
+  * **Goal**: Remove obvious, patronizing filler subtitles from Grey's top context strip, keeping headers punchy, minimal, and informative.
+  * **Key Changes**:
+    * **Context Subtitle Cleanup ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Dropped `"Personal observations"` when viewing Notes without tag filters, `"Browsing new titles"` in Discover, and `"All shelves"` in Movie Notes. Added `.grey-context-detail:empty { display: none; }` to collapse empty badges cleanly.
+
+- [x] **Movie Detail Full-Width Topbar, Hover Popover Polish, & Discover Spacing**
+  * **Goal**: Modernize the top navigation of the single movie detail page into a full-width edge-to-edge bar, polish the movie card notes hover popover with prominent brand-yellow title typography, close baseline spacing with rating/votes, ensure top-only positioning and adaptive width, eliminate redundant personal keywords UI, and optimize sidebar top padding.
+  * **Key Changes**:
+    * **Full-Width Header ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Extended the frosted-glass header edge-to-edge (100% width) across the single movie detail page with sticky positioning, centered 1080px content grid, and 24px side gutters.
+    * **Hover Popover Polish ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Removed redundant `📝 Note` badge, styled movie titles prominently in NOPE brand accent yellow (`#f2c94c`), placed rating and vote count immediately adjacent with a cohesive 10px baseline gap, removed raw notes duplication from native browser tooltips, enforced strict top-only positioning, and enabled responsive width expansion (up to 400px) for longer notes.
+    * **Personal Keywords Cleanup ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html), [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`test_web_ui.py`](file:///f:/Movie_Excluder/movie-excluder/tests/test_web_ui.py))**: Removed the `(+)` toggle button, input form, and feedback line under the movie poster, keeping official TMDB keywords as clean read-only badges.
+    * **Discover Sidebar Padding ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Collapsed stacked top margins/padding across `.discovery-workspace`, `#workspace-controls`, and `.advanced-controls` to eliminate the 46px void above the "See results" button.
+
+- [x] **Breathing Space for Personal Memory Saved Feedback**
+  * **Goal**: Provide comfortable vertical spacing between the "Save notes" button and the "Personal memory saved." confirmation text in the movie details panel.
+  * **Key Changes**:
+    * **Detail Notes CSS ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Added `margin-top: 0.65rem` to `#notes-feedback` and collapsed empty feedback nodes (`:empty { display: none; }`) so confirmation text has breathing space beneath the button without causing awkward whitespace when idle.
+
+- [x] **Native Markdown Table Support in Notes & Grey Table Formatting**
+  * **Goal**: Support standard Markdown tables (`| Col 1 | Col 2 |`) in notes, journal posts, and Grey chat with dark-theme styling, and teach Grey to format and update movie comparison tables.
+  * **Key Changes**:
+    * **Markdown Table Parser ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Added `tryRenderMarkdownTable` to parse pipe-delimited table rows, separator rows with alignments (`:---:`, `---:`, `:---`), and body rows into structured `<table>`, `<thead>`, `<tbody>` elements with support for inline links, bold text, and formatting inside both `appendEntryBody` and `appendGreyMessage`.
+    * **Modern Dark CSS ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Added responsive `.note-table-wrap` with horizontal scroll for narrow screens, subtle borders, muted headers (`#f3f4f6`), comfortable cell padding, and dark theme hover highlights.
+    * **Grey Skill Integration ([`notes_editor.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/notes_editor.md))**: Taught Grey to format side-by-side film comparisons, matrix breakdowns, and ranking lists as clean Markdown tables, and to extract and append new films as matching rows when a note already contains a table.
+
+- [x] **Minimalist Confirmation for "Grey It" / Note Appends**
+  * **Goal**: Replace the verbose echo of the entire critique block upon saving with a clean, punchy acknowledgment like `"Greyed it."`.
+  * **Key Changes**:
+    * **Succinct Acknowledgment ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Updated `saveGreyToMovieNotes` so Grey replies with `"Greyed it."` instead of dumping the entire multi-line critique block into the drawer, eliminating repetitive clutter.
+
+- [x] **Save Grey's Critique to Movie Notes (`grey says`, `g says`, `grey it` & Quick Pill)**
+  * **Goal**: Seamlessly save Grey's sharp film suggestion/critique directly into that movie's notes on single movie pages via conversational triggers or a quick action pill, preserving existing notes and appending cleanly below.
+  * **Key Changes**:
+    * **Trigger & Pill Handler ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Added regex triggers for `grey says`, `g says`, `grey it` (with optional colons/punctuation) and attached a `[ 📝 Save to Movie Notes ]` pill to Grey's critique responses.
+    * **Clean Append Formatting**: Emits formatted note starting with `Grey says:\nTitle (Year) [Genre 1, Genre 2]\n<critique>`. If notes already exist, appends to the bottom separated by a clean blank line (`\n\n`) without ever overwriting prior personal notes.
+    * **Immediate Sync**: Saves directly via `PUT /movies/{tmdb_id}/notes`, updates the `#movie-notes` textarea, updates discovery cache, and gives instant visual feedback.
+
+- [x] **Multi-Keyword Comma-Separated Notes Search**
+  * **Goal**: Allow multi-term comma-separated queries like `grey says, horror` or `scorsese, crime` that check note bodies, movie titles, and genre tags together using `AND` matching logic.
+  * **Key Changes**:
+    * **Database Repository ([`user_movie_repository.py`](file:///f:/Movie_Excluder/movie-excluder/app/user_movie_repository.py))**: Extended `search_notes()` to split by comma and build combined SQL clauses matching `u.notes`, `m.title`, or `EXISTS (SELECT 1 FROM movie_genres mg JOIN genres g ON mg.tmdb_genre_id = g.tmdb_genre_id WHERE mg.tmdb_id = u.tmdb_id AND g.name LIKE ...)`.
+    * **Super Advanced Search Service ([`super_advanced_search_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/super_advanced_search_service.py))**: Validates comma-separated `notes_query` terms and ensures candidate movies match each term across note text, titles, or genre definitions.
+    * **Unit Tests ([`test_movie_notes.py`](file:///f:/Movie_Excluder/movie-excluder/tests/test_movie_notes.py), [`test_super_advanced_search_service.py`](file:///f:/Movie_Excluder/movie-excluder/tests/test_super_advanced_search_service.py))**: Added comprehensive unit test coverage for comma-separated term searches across notes and genres.
+
+- [x] **GIF Frequency Cooldown & Zero-Clutter Quiet Mode**
+  * **Goal**: Eliminate reaction GIF fatigue by enforcing a minimum 4-turn spacing between reaction media, and provide a prompt/command-driven quiet mode for the session with zero UI clutter.
+  * **Key Changes**:
+    * **Turn Cooldown Counter ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Tracks conversational turns in memory (`state.greyTurnsSinceReaction`), enforcing a minimum 4-turn cooldown between any visual media reactions.
+    * **Conversational Quiet Commands ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Added prompt commands (`no gifs`, `no gifs this session`, `quiet mode`, `/quiet`, `/focus`) to mute reaction media for the active session, with `gifs ok`, `reset session`, or `/normal` to re-enable.
+
+- [x] **Suppress Unsolicited Shelf Categorization Chips (`+ Add to Watchlist`, `✨ New Discovery`)**
+  * **Goal**: Prevent Grey from generating unsolicited shelf action chips/pills below movie critiques so users categorize films manually.
+  * **Key Changes**:
+    * **System Prompt Updates ([`grey_system_prompt.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/grey_system_prompt.md), [`grey_core.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/grey_core.md))**: Added explicit instructions forbidding AI-generated shelf categorization chips (`+ Add to Watchlist`, `✨ New Discovery`, etc.).
+    * **Backend Pill Sanitization ([`grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey_service.py))**: Strips any status-changing action pills from the response payload before returning to the frontend.
+
+- [x] **Keyboard Scrolling on Single Movie View**
+  * **Goal**: Enable keyboard scrolling (`ArrowUp`, `ArrowDown`, `PageUp`, `PageDown`, `Space`, `Home`, `End`) when viewing the single movie detail page.
+  * **Key Changes**:
+    * **Focusable Viewport ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html))**: Added `tabindex="-1"` to `#movie-detail-page`.
+    * **Global Keyboard Listener ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Intercepts navigation keys when the single movie page is open and active focus is not inside an input/textarea, scrolling the detail page smoothly in both full-screen and docked Grey panel layouts.
+
+- [x] **Contextual Reaction Media & Hybrid Context Index (`assets/gifs_n_media/*`)**
+  * **Goal**: Enable Grey to deliver contextual reaction GIFs and transparent stickers with semantic accuracy using a local `reactions.json` file and automatic filename fallback.
+  * **Key Changes**:
+    * **Static Route Mount ([`main.py`](file:///f:/Movie_Excluder/movie-excluder/app/main.py))**: Mounted `/assets` pointing directly to `assets/gifs_n_media/` for zero-lag local browser image delivery.
+    * **Dynamic Media Scanner & Fallback Reader ([`grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey_service.py))**: `get_reactions_index()` parses `assets/gifs_n_media/reactions.json` when present, or cleanly infers context from filenames for unlisted media.
+    * **Curated Reaction Index ([`reactions.json`](file:///f:/Movie_Excluder/movie-excluder/assets/gifs_n_media/reactions.json))**: Configured cinema context for all active GIFs (e.g., Scorsese/masterpiece for `absolute-cinema`, De Niro approval, Cillian Murphy deadpan comedy, Apollo 13 sci-fi disaster, sleepy snoozefest, and mobster cat).
+    * **Chatbox Renderer ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js) & [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Rendered and styled reaction media within message bubbles, persisting across daily sessions.
+    * **Unit Tests ([`test_grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/tests/test_grey_service.py))**: Added comprehensive test coverage for indexing, fallback handling, and sanitized reaction delivery (25/25 passing).
+
+- [x] **Minimalist Grey Cat Face Icon for Grey**
+  * **Goal**: Replace the paw prints (`🐾`) in Grey's launcher pill and drawer header with a clean, vector cat face featuring sharp ears, sleek eyes, nose, and whiskers in a subtle grey tone.
+  * **Key Changes**:
+    * **Vector Cat Face Icon ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html))**: Swapped emoji paws in `.grey-pill-icon` and `.grey-avatar` for a crisp inline SVG cat face.
+    * **Dark Theme Styling ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Styled with `currentColor` and muted grey tones (`#9ca3af` / `#b0b8c4`) that brighten on hover.
+
+- [x] **Vote Count Tooltips on Discover Movie Posters & Badges**
+  * **Goal**: Show the number of votes when hovering over movie posters in Discover mode, exactly like the existing Related Movies cards.
+  * **Key Changes**:
+    * **Poster Card Tooltip ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: In `createMovieCard`, formatted `posterButton.title` to include `• (${voteCountStr})` using the existing `formatVoteCount(movie.vote_count)` helper, displaying e.g. `Upgrade (2018) • (4.2k votes)`.
+    * **Rating Badge Tooltip ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Attached a descriptive title to `.card-rating` (e.g. `★ 7.5 (4.2k votes)`) so hovering over the bottom-right score directly reveals total vote volume.
+
+- [x] **Grey Note Editing: Exact Library Matching, Literal Format Precedence & Toggle Deduplication**
+  * **Goal**: Ensure Grey respects literal formatting constraints (such as "as it is" or "raw text" overriding format mimicry), strictly resolves movies against existing library records instead of external/newer releases, and eliminates duplicate entries by properly replacing existing toggles/headings.
+  * **Key Changes**:
+    * **Literal Format Precedence ([`notes_editor.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/notes_editor.md))**: Added Rule 0 setting explicit prompt priority so instructions like "as it is", "raw", "verbatim", or "without toggles" override automatic format mimicry.
+    * **Strict Library Record Lookup ([`grey_core.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/grey_core.md) & [`grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey_service.py))**: Upgraded candidate title resolution and library search to match singular/plural stems and normalized titles directly against stored `user_movie_data` / `movies` records, preventing external title/year hallucinations.
+    * **Universal In-Place Deduplication ([`grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey_service.py))**: Extended `_deduplicate_and_format_note_body` to match existing entries formatted as Notion toggles (`>> Title`), Markdown headings (`### Title`), or numbered items, and normalize titles (stripping leading articles and years) so variations match and replace cleanly in-place with zero duplicate appends.
+    * **Unit Tests ([`test_grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/tests/test_grey_service.py))**: Added comprehensive test coverage for in-place toggle replacement and raw format precedence; full test suite passes (236/236).
+
+- [x] **Ctrl+E Keyboard Shortcut to Enter Edit Mode**
+  * **Goal**: Support standard `Ctrl+E` / `Cmd+E` (and `E` while reading) keyboard shortcuts to transition directly into edit mode without requiring mouse clicks.
+  * **Key Changes**:
+    * **Journal Reader ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Added window `keydown` listeners for `Ctrl+E` / `Cmd+E` and single-key `E` when viewing a post to immediately switch the reader into edit mode.
+    * **Movie Memory Notes ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Added `Ctrl+E` handling when viewing movie details to open the memory panel and focus the textarea.
+    * **Action Tooltip ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html))**: Added shortcut indicator to the Edit button tooltip.
+
+- [x] **Ctrl+S Keyboard Shortcut to Save Posts After Edit**
+  * **Goal**: Support standard `Ctrl+S` / `Cmd+S` keyboard shortcuts to save changes when editing journal posts, drafts, and movie memory notes without triggering the browser's default "Save Page As" dialog.
+  * **Key Changes**:
+    * **Post / Journal Reader Editor ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Added `Ctrl+S` / `Cmd+S` listeners across reader inputs (`readerTitleInput`, `readerBodyInput`, `readerTagInput`) and window-level listener during active edit mode (`state.readerEditing`) to save the post retaining its status (`published` or `draft`).
+    * **Movie Memory Notes ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Added `Ctrl+S` / `Cmd+S` listener to the movie memory notes textarea (`#movie-notes`) calling `saveSelectedNotes()`.
+    * **Action Tooltips ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html))**: Added shortcut hints to save/publish buttons.
+
+
+- [x] **File-Based Research Partner & Clean Conversational Workflow (`data/research/*.md`)**
+  * **Goal**: Enable direct file-based research storage in `data/research/*.md` accessible in VS Code, with zero UI clutter, automatic dynamic disk indexing, and conversational file commands.
+  * **Key Changes**:
+    * **Zero UI Clutter**: Completely removed drawer header buttons, modal overlays, session badges, and research chips from [`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css), and [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js).
+    * **File-Based Research Directory (`data/research/`)**: Stored as clean, editable `.md` files that can be edited or deleted directly in VS Code / File Explorer.
+    * **Dynamic Disk Indexer ([`grey_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey_service.py))**: Real-time `Path("data/research").glob("*.md")` scanning on every prompt. Index updates instantly when files are created, renamed, or deleted outside the app.
+    * **Lean Research Partner Skill ([`research_partner.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/research_partner.md))**: Replaced complex database session logic with concise instructions for `save_research_file`, `append_research_file`, `delete_research_file`, and conversational indexing via `{{RESEARCH_FILES_INDEX}}`.
+    * **Comprehensive Verification ([`test_grey_research_sessions.py`](file:///f:/Movie_Excluder/movie-excluder/tests/test_grey_research_sessions.py))**: Verified all operations and edge cases; full test suite passes (234/234).
 
 - [x] **Modular Skill-Based Prompt Architecture for Grey**
   * **Goal**: Decompose Grey's monolithic 224-line prompt into a lean core persona and dedicated on-demand skill modules, preventing instruction conflicts, context dilution, and token bloat.
@@ -101,7 +289,19 @@
 
 ---
 
-## ✅ Completed Tasks
+- [x] **Grey Research Mode: Saved Sessions, On-the-Fly Appends, and Interactive Index**
+  * **Goal**: Support dedicated, opt-in cinema research topics where conversations can be frozen into investigations, new discoveries appended on the fly without breaking browsing flow, and topics reviewed via an interactive Index.
+  * **Architecture & Layering**:
+    * **Database Schema ([`database.py`](file:///f:/Movie_Excluder/movie-excluder/app/database.py))**: Added `grey_research_sessions` table (`id`, `title`, `description`, `messages_json`, `created_at`, `updated_at`) with indexed `updated_at`.
+    * **Repository ([`grey_research_repository.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey_research_repository.py))**: Clean query layer for session creation, retrieval, fuzzy title matching, appending discoveries, and deletion.
+    * **Skill Module & Prompt ([`research_partner.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/skills/research_partner.md), [`grey_core.md`](file:///f:/Movie_Excluder/movie-excluder/app/prompts/grey_core.md))**: Taught Grey how to freeze sessions (`save_research_session`), append discoveries (`append_research_session`), output conversational index lists from `{{RESEARCH_SESSIONS_INDEX}}`, and synthesize findings into notes.
+    * **FastAPI Routes ([`main.py`](file:///f:/Movie_Excluder/movie-excluder/app/main.py))**: Registered endpoints for listing, fetching, creating, appending, and deleting research sessions.
+    * **Frontend UI ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html), [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
+      - `📌 Save Current Chat` and `📑 Index` buttons in Grey drawer header.
+      - Active research session badge with one-click exit back to General Chat.
+      - Sleek, backdrop-blurred Research Index overlay displaying session titles, entry counts, and delete actions.
+      - Automatic background appending to active research topics.
+    * **Unit Tests ([`test_grey_research_sessions.py`](file:///f:/Movie_Excluder/movie-excluder/tests/test_grey_research_sessions.py))**: Comprehensive test coverage across repository, endpoints, and skill routing; all 235 tests pass.
 
 - [x] **Modular Skill-Based Prompt Architecture for Grey**
   * **Goal**: Decompose Grey's monolithic 224-line prompt into a lean core persona and dedicated on-demand skill modules, preventing instruction conflicts, context dilution, and token bloat.

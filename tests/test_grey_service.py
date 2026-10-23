@@ -642,20 +642,13 @@ def test_grey_slash_command_skill_routing():
         assert "ACTIVE SKILL: /related" in system_instruction
 
 
-def test_grey_pruned_skills_and_watchlist_directive():
+def test_grey_pruned_skills():
     from app.grey_service import SKILLS_REGISTRY
-    # /tonight and /nope pruned from registry
+    # /tonight, /nope, and /watchlist pruned from registry
     assert "tonight" not in SKILLS_REGISTRY
     assert "nope" not in SKILLS_REGISTRY
-    assert "watchlist" in SKILLS_REGISTRY
+    assert "watchlist" not in SKILLS_REGISTRY
     assert "related" in SKILLS_REGISTRY
-
-    # Watchlist directive enforces substantial coverage, >> toggles, and zero shelf confusion
-    w_directive = SKILLS_REGISTRY["watchlist"]["directive"]
-    assert "NO LAZY 3-MOVIE SHORTCUTS" in w_directive
-    assert "8-12 titles" in w_directive
-    assert "ZERO SHELF CONFUSION" in w_directive
-    assert ">> [Movie Title] ([Year])" in w_directive
 
 
 def test_grey_intercepts_set_movie_status_when_post_mentioned_and_appends():
@@ -973,6 +966,121 @@ def test_grey_modular_skill_routing():
         system_instruction = payload["systemInstruction"]["parts"][0]["text"]
         assert "RELATED MOVIES REALITY CHECK" in system_instruction
         assert "NOTES & JOURNAL EDITOR" not in system_instruction
+
+
+def test_grey_deduplicate_replaces_existing_toggle_in_place():
+    service = GreyService()
+
+    existing_note = (
+        ">> The Settlers (2021)\n"
+        "Old brief note here.\n\n"
+        ">> Funny games (Michael Haneke)\n"
+        "Dark and funny at times."
+    )
+
+    new_entry = (
+        ">> The Settlers (2021)\n"
+        "Expanded in-depth critique with much more craft detail."
+    )
+
+    result = service._deduplicate_and_format_note_body(
+        existing_body=existing_note,
+        new_body=new_entry,
+        mode="append",
+        user_message="Update my thoughts on Settlers",
+        inspected_movie_title="The Settlers",
+    )
+
+    # Should appear only once
+    assert result.count("The Settlers") == 1
+    assert "Expanded in-depth critique" in result
+    assert "Old brief note here" not in result
+    assert "Funny games" in result
+
+
+def test_grey_raw_format_precedence_avoids_toggle():
+    service = GreyService()
+
+    existing_note = ">> Funny games\nDark and funny."
+    new_entry = ">> Settlers\nLiked it as it is."
+
+    result = service._deduplicate_and_format_note_body(
+        existing_body=existing_note,
+        new_body=new_entry,
+        mode="append",
+        user_message="add it as it is",
+        inspected_movie_title="Settlers",
+    )
+
+    assert "Liked it as it is." in result
+    # Should not keep the generated toggle header when explicitly asked for raw / as it is
+    assert not result.endswith(">> Settlers\nLiked it as it is.")
+
+
+def test_grey_reactions_indexing_and_delivery():
+    service = GreyService()
+    index_str = service.get_reactions_index()
+    # gangster_cat.gif is present in assets/gifs_n_media
+    assert "gangster_cat.gif" in index_str
+
+    with patch("requests.post") as mock_post:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "candidates": [
+                {
+                    "content": {
+                        "parts": [
+                            {
+                                "text": json.dumps({
+                                    "text": "As far back as I can remember, I always wanted to be a gangster.",
+                                    "reaction": "gangster_cat.gif",
+                                    "action": None,
+                                    "pills": [],
+                                })
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+        mock_post.return_value = mock_resp
+
+        res = service.chat("What do you think of Goodfellas?")
+        assert res["reaction"] == "gangster_cat.gif"
+        assert "gangster" in res["text"]
+
+
+def test_grey_reactions_sanitizes_nonexistent_files():
+    service = GreyService()
+
+    with patch("requests.post") as mock_post:
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {
+            "candidates": [
+                {
+                    "content": {
+                        "parts": [
+                            {
+                                "text": json.dumps({
+                                    "text": "Nice movie.",
+                                    "reaction": "non_existent_fake_cat.gif",
+                                    "action": None,
+                                    "pills": [],
+                                })
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+        mock_post.return_value = mock_resp
+
+        res = service.chat("What do you think of Fargo?")
+        assert res["reaction"] is None
+
+
 
 
 

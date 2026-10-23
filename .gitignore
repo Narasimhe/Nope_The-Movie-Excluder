@@ -228,3 +228,4 @@ __pycache__/
 data/*.db
 data/posters/
 data/banners/
+data/research/

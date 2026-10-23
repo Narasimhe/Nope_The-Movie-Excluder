@@ -44,6 +44,43 @@ def _build_word_boundary_pattern(normalized_term: str) -> re.Pattern | None:
     return re.compile(pattern_str, re.IGNORECASE)
 
 
+def _stem_search_word(word: str) -> str:
+    w = word.lower().strip()
+    for s in ("ence", "ency", "ent", "ing", "tion", "able", "ible", "ical"):
+        if len(w) > 5 and w.endswith(s):
+            return w[:-len(s)]
+    for s in ("es", "ed", "er", "ly"):
+        if len(w) > 4 and w.endswith(s):
+            return w[:-len(s)]
+    if len(w) > 3 and w.endswith("s"):
+        return w[:-1]
+    return w
+
+
+def _text_matches_term(norm_term: str, norm_text: str, pattern: re.Pattern | None = None) -> bool:
+    if not norm_term or not norm_text:
+        return False
+    if norm_term in norm_text:
+        return True
+    if pattern and pattern.search(norm_text):
+        return True
+    q_tokens = _WORD_TOKEN_RE.findall(norm_term)
+    if not q_tokens:
+        return False
+    text_tokens = _WORD_TOKEN_RE.findall(norm_text)
+    if not text_tokens:
+        return False
+    if len(q_tokens) == 1:
+        q_stem = _stem_search_word(q_tokens[0])
+        if len(q_stem) >= 4:
+            for tt in text_tokens:
+                t_stem = _stem_search_word(tt)
+                if len(t_stem) >= 4:
+                    if q_stem == t_stem or t_stem.startswith(q_stem) or q_stem.startswith(t_stem):
+                        return True
+    return False
+
+
 class MovieRepository:
     PAGE_SIZE = 20
 
@@ -188,6 +225,17 @@ class MovieRepository:
         normalized_term = _normalize_search_text(search_term)
         pattern = _build_word_boundary_pattern(normalized_term)
 
+        raw_subterms = [t.strip() for t in search_term.split(",") if t.strip()]
+        is_multi_term = len(raw_subterms) > 1
+        subterm_patterns = [
+            (
+                _normalize_search_text(t),
+                _build_word_boundary_pattern(_normalize_search_text(t)),
+            )
+            for t in raw_subterms
+            if _normalize_search_text(t)
+        ]
+
         where_parts: list[str] = []
         where_params: list[Any] = []
 
@@ -234,11 +282,14 @@ class MovieRepository:
                 SELECT
                     m.*,
                     u.notes AS _user_notes,
-                    GROUP_CONCAT(k.name, '|||') AS _keyword_names
+                    GROUP_CONCAT(DISTINCT k.name) AS _keyword_names,
+                    GROUP_CONCAT(DISTINCT g.name) AS _genre_names
                 FROM movies m
                 JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
                 LEFT JOIN movie_keywords mk ON m.tmdb_id = mk.tmdb_id
                 LEFT JOIN keywords k ON mk.keyword_id = k.keyword_id
+                LEFT JOIN movie_genres mg ON m.tmdb_id = mg.tmdb_id
+                LEFT JOIN genres g ON mg.tmdb_genre_id = g.tmdb_genre_id
                 WHERE {where_clause}
                 GROUP BY m.tmdb_id
                 """,
@@ -254,18 +305,59 @@ class MovieRepository:
             movie = dict(row)
             user_notes = movie.pop("_user_notes", None)
             raw_keywords = movie.pop("_keyword_names", None) or ""
-            keyword_list = [kw for kw in raw_keywords.split("|||") if kw]
+            keyword_list = [kw for kw in raw_keywords.split(",") if kw]
+            raw_genres = movie.pop("_genre_names", None) or ""
+            genre_list = [g for g in raw_genres.split(",") if g]
 
             norm_title = _normalize_search_text(movie.get("title"))
             norm_orig_title = _normalize_search_text(movie.get("original_title"))
             norm_overview = _normalize_search_text(movie.get("overview"))
             norm_notes = _normalize_search_text(user_notes)
             norm_keywords = [_normalize_search_text(kw) for kw in keyword_list if kw]
+            norm_genres = [_normalize_search_text(g) for g in genre_list if g]
 
             tier: int | None = None
             subtier = 0
 
-            if effective_field_mode == "title":
+            if is_multi_term:
+                matches_all = True
+                for norm_sub, sub_pat in subterm_patterns:
+                    if not sub_pat:
+                        continue
+                    term_matched = False
+                    if effective_field_mode == "title":
+                        term_matched = bool(
+                            norm_title == norm_sub
+                            or (norm_orig_title and norm_orig_title == norm_sub)
+                            or sub_pat.search(norm_title)
+                            or (norm_orig_title and sub_pat.search(norm_orig_title))
+                        )
+                    elif effective_field_mode == "plot":
+                        term_matched = bool(sub_pat.search(norm_overview))
+                    elif effective_field_mode == "notes":
+                        term_matched = bool(
+                            _text_matches_term(norm_sub, norm_notes, sub_pat)
+                            or _text_matches_term(norm_sub, norm_title, sub_pat)
+                            or (norm_orig_title and _text_matches_term(norm_sub, norm_orig_title, sub_pat))
+                            or any(_text_matches_term(norm_sub, g, sub_pat) for g in norm_genres)
+                        )
+                    else:
+                        term_matched = bool(
+                            _text_matches_term(norm_sub, norm_title, sub_pat)
+                            or (norm_orig_title and _text_matches_term(norm_sub, norm_orig_title, sub_pat))
+                            or _text_matches_term(norm_sub, norm_overview, sub_pat)
+                            or _text_matches_term(norm_sub, norm_notes, sub_pat)
+                            or any(kw == norm_sub or _text_matches_term(norm_sub, kw, sub_pat) for kw in norm_keywords)
+                            or any(_text_matches_term(norm_sub, g, sub_pat) for g in norm_genres)
+                        )
+                    if not term_matched:
+                        matches_all = False
+                        break
+
+                if matches_all:
+                    tier = 4 if effective_field_mode == "notes" else 2
+                    subtier = 0
+            elif effective_field_mode == "title":
                 if norm_title == normalized_term or (norm_orig_title and norm_orig_title == normalized_term):
                     tier = 1
                 elif pattern.search(norm_title) or (norm_orig_title and pattern.search(norm_orig_title)):
@@ -275,7 +367,7 @@ class MovieRepository:
                 if pattern.search(norm_overview):
                     tier = 3
             elif effective_field_mode == "notes":
-                if pattern.search(norm_notes):
+                if _text_matches_term(normalized_term, norm_notes, pattern):
                     tier = 4
             else:
                 if norm_title == normalized_term or (norm_orig_title and norm_orig_title == normalized_term):

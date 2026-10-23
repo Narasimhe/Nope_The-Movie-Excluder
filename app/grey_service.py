@@ -1,7 +1,9 @@
 import json
 import logging
 import os
+import re
 import sqlite3
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -32,29 +34,6 @@ SKILLS_REGISTRY = {
         ),
         "default_query": "Are any of the related movies on screen worth my attention?",
     },
-    "watchlist": {
-        "command": "/watchlist",
-        "name": "Toggle Watchlist Builder",
-        "description": "Compiles or appends to watchlist notes using rich >> Title (Year) toggles.",
-        "requires_dossier": True,
-        "directive": (
-            "ACTIVE SKILL: /watchlist (Toggle Watchlist Builder)\n"
-            "1. NO LAZY 3-MOVIE SHORTCUTS: When compiling or drafting a watchlist note from the user's queue, compile a substantial, comprehensive tranche (8-12 titles) drawn from their actual pending watchlist ({{WATCHLIST_JSON}}).\n"
-            "2. EXACT NOTE/POST TITLE RESOLUTION: Check {{JOURNAL_NOTES_LIST}} to see if the user has an existing watchlist or themed note (e.g., 'Watchlist 1', 'Watchlist 2', 'Spoof Movies', 'Documentary Movies').\n"
-            "   - If the user says 'add this to my [Post Title] post' or 'update my [Post Title] note', you MUST use action 'update_entry' with mode 'append' targeting that existing note ID/title.\n"
-            "   - If creating a brand new watchlist note, use action 'create_draft'.\n"
-            "3. FORMAT & STYLE MIMICRY: When drafting a NEW watchlist note from scratch, format each entry using Notion-style toggles:\n"
-            ">> [Movie Title] ([Year])\n"
-            "- **Cast:** [Main cast]\n"
-            "- **Synopsis:** [1-2 sentence hook and premise]\n"
-            "- **Why YES:** [Sharp cinephile reason why it demands watching]\n"
-            "BUT when appending to or updating an EXISTING note, you MUST inspect its existing layout and mimic its exact style (e.g. single-line bullets with actor/director and IMDb link if the user has a concise bullet list). NEVER force multi-line toggles or Cast/Synopsis blocks onto a note that uses simple bullet points!\n"
-            "   - ZERO REDUNDANCY & IN-PLACE UPSERT: If adding commentary, critique, or a toggle for a movie ALREADY in the note, NEVER create a duplicate second bullet! Replace or expand the existing entry in-place so each movie appears strictly once.\n"
-            "   - EXPLICIT TOGGLE REQUESTS: If the user explicitly asks for a 'toggle' or 'collapse', format the entry using >> Title followed by two blank lines to exit the toggle mode.\n"
-            "4. ZERO SHELF CONFUSION: When the user mentions 'post', 'note', 'journal', or 'entry', NEVER call set_movie_status. You must strictly route to update_entry or create_draft."
-        ),
-        "default_query": "Create a comprehensive watchlist draft note using >> Title (Year) toggles for my pending queue.",
-    },
     "batch": {
         "command": "/batch",
         "name": "Batch Move / Queue",
@@ -67,6 +46,22 @@ SKILLS_REGISTRY = {
         ),
         "default_query": "Add the approved YES movies to my New Discovery shelf.",
     },
+    "research": {
+        "command": "/research",
+        "name": "Cinema Research Files",
+        "description": "Manages focused 1-5 research markdown files in data/research/*.md.",
+        "requires_dossier": True,
+        "directive": (
+            "ACTIVE SKILL: /research (Cinema Research Files)\n"
+            "You manage 1–5 focused research markdown files stored directly in data/research/*.md.\n"
+            "Active files on disk:\n{{RESEARCH_FILES_INDEX}}\n\n"
+            "1. SAVE CHAT TO FILE: When asked to save/freeze chat (e.g. 'save this chat to [xyz] file'), format findings into markdown and return action 'save_research_file' with filename and content.\n"
+            "2. ADD TO FILE: When asked to add or append an insight, word, director, or film to a research file (e.g. 'add this to high frequency words file'), match target file from active list and return action 'append_research_file' with filename and entry.\n"
+            "3. RESEARCH INDEX: When asked 'what research files do I have?' or 'show research index', present the active files from {{RESEARCH_FILES_INDEX}} with filenames and details.\n"
+            "4. DELETE FILE: When asked to delete a research file, return action 'delete_research_file' with filename."
+        ),
+        "default_query": "What research files do I have on disk?",
+    },
 }
 
 
@@ -74,6 +69,72 @@ class GreyService:
     def __init__(self, db_path: str = "data/movie_excluder.db"):
         self.db_path = db_path
         self.api_key = os.getenv("GEMINI_API_KEY", "").strip()
+        self.research_dir = Path(__file__).resolve().parent.parent / "data" / "research"
+        self.research_dir.mkdir(parents=True, exist_ok=True)
+        self.reactions_dir = Path(__file__).resolve().parent.parent / "assets" / "gifs_n_media"
+        self.reactions_dir.mkdir(parents=True, exist_ok=True)
+
+    def get_reactions_index(self) -> str:
+        if not self.reactions_dir.exists():
+            return "No reaction media available."
+        valid_exts = {".gif", ".webp", ".png", ".jpg", ".jpeg"}
+        files = [f.name for f in self.reactions_dir.iterdir() if f.is_file() and f.suffix.lower() in valid_exts]
+        if not files:
+            return "No reaction media available."
+
+        metadata: dict[str, str] = {}
+        meta_file = self.reactions_dir / "reactions.json"
+        if meta_file.exists():
+            try:
+                metadata = json.loads(meta_file.read_text(encoding="utf-8"))
+            except Exception:
+                metadata = {}
+
+        items = []
+        for f in sorted(files):
+            if f in metadata and metadata[f]:
+                items.append(f"- `{f}`: {metadata[f]}")
+            else:
+                inferred = re.sub(r"[_\-]+", " ", Path(f).stem).strip()
+                items.append(f"- `{f}`: {inferred}")
+
+        return "\n".join(items)
+
+    def get_research_files_index(self) -> str:
+        if not self.research_dir.exists():
+            return "No research files on disk yet."
+        files = sorted(self.research_dir.glob("*.md"), key=lambda f: f.stat().st_mtime, reverse=True)[:5]
+        if not files:
+            return "No research files on disk yet."
+        items = []
+        for f in files:
+            try:
+                content = f.read_text(encoding="utf-8", errors="ignore").strip()
+                size = f.stat().st_size
+                if not content:
+                    items.append(f"### File: `{f.name}` (Empty, 0 bytes)\n*(File currently contains no text)*")
+                else:
+                    snippet = content[:3000] + ("\n... [remaining text truncated]" if len(content) > 3000 else "")
+                    items.append(f"### File: `{f.name}` ({size} bytes)\n```markdown\n{snippet}\n```")
+            except Exception as e:
+                items.append(f"### File: `{f.name}` ({f.stat().st_size} bytes)")
+        return "\n\n".join(items)
+
+    def resolve_research_file(self, query: str) -> Path | None:
+        if not self.research_dir.exists():
+            return None
+        clean_q = re.sub(r"[^a-zA-Z0-9]", "", (query or "").lower())
+        if not clean_q:
+            return None
+        files = list(self.research_dir.glob("*.md"))
+        for f in files:
+            if re.sub(r"[^a-zA-Z0-9]", "", f.stem.lower()) == clean_q:
+                return f
+        for f in files:
+            f_clean = re.sub(r"[^a-zA-Z0-9]", "", f.stem.lower())
+            if clean_q in f_clean or f_clean in clean_q:
+                return f
+        return None
 
     def _get_connection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
@@ -256,10 +317,27 @@ class GreyService:
         inspected_movie_id: int | None = None,
         inspected_movie_title: str | None = None,
     ) -> str:
-        import re
-
         lower_msg = (user_message or "").lower()
-        wants_toggle = any(w in lower_msg for w in ["toggle", "collapse", "collpase", "collapsible", "expandable", "spoiler"])
+        wants_raw = any(
+            w in lower_msg
+            for w in [
+                "as it is",
+                "raw",
+                "verbatim",
+                "plain text",
+                "no toggle",
+                "without toggle",
+                "dont format",
+                "don't format",
+            ]
+        )
+        wants_toggle = (
+            any(
+                w in lower_msg
+                for w in ["toggle", "collapse", "collpase", "collapsible", "expandable", "spoiler"]
+            )
+            and not wants_raw
+        )
 
         # 1. Identify target movie title candidates
         candidate_titles: list[str] = []
@@ -288,6 +366,19 @@ class GreyService:
                     if extracted not in candidate_titles:
                         candidate_titles.append(extracted)
 
+        # Expand candidate_titles with normalized forms (without 'The', 'A', 'An', and trailing years/plurals)
+        expanded_candidates: list[str] = []
+        for cand in candidate_titles:
+            if cand not in expanded_candidates:
+                expanded_candidates.append(cand)
+            norm = re.sub(r"^(?:the|a|an)\s+", "", cand, flags=re.IGNORECASE).strip()
+            if norm and norm not in expanded_candidates:
+                expanded_candidates.append(norm)
+            stem = norm.rstrip("s").strip()
+            if stem and len(stem) >= 3 and stem not in expanded_candidates:
+                expanded_candidates.append(stem)
+        candidate_titles = expanded_candidates
+
         # 2. Check if existing_body contains any candidate title
         existing_text = (existing_body or "").strip()
         matched_cand = None
@@ -301,16 +392,15 @@ class GreyService:
         if existing_text:
             for line in existing_text.splitlines():
                 stripped = line.strip()
-                if stripped.startswith("•") or stripped.startswith("-") or stripped.startswith("*"):
-                    clean_l = re.sub(r"^[•\-*]\s*", "", stripped)
-                    m = re.match(r"^([^(\n:\-\[<]+)", clean_l)
-                    if m:
-                        t = m.group(1).strip()
-                        if len(t) >= 3 and re.search(rf"\b{re.escape(t)}\b", user_message, re.IGNORECASE):
-                            matched_cand = t
-                            if t not in candidate_titles:
-                                candidate_titles.insert(0, t)
-                            break
+                clean_l = re.sub(r"^(?:[•\-*]|\d+\.|\>\>|\-\>|[▸▶]|#+)\s*", "", stripped)
+                m = re.match(r"^([^(\n:\-\[<]+)", clean_l)
+                if m:
+                    t = m.group(1).strip()
+                    if len(t) >= 3 and re.search(rf"\b{re.escape(t)}\b", user_message, re.IGNORECASE):
+                        matched_cand = t
+                        if t not in candidate_titles:
+                            candidate_titles.insert(0, t)
+                        break
 
         # Extract critique block for matched candidate in existing_body if new_body is sparse
         existing_critique = []
@@ -374,8 +464,19 @@ class GreyService:
 
             formatted_entry = f">> {summary_title}\n{body_content}\n"
 
+        if wants_raw:
+            if formatted_entry.startswith(">>") or formatted_entry.startswith("->"):
+                fe_lines = formatted_entry.splitlines()
+                if len(fe_lines) > 1:
+                    formatted_entry = "\n".join(fe_lines[1:]).strip()
+                else:
+                    formatted_entry = re.sub(r"^(?:>>|->)\s*", "", formatted_entry).strip()
+
         if not existing_text:
             return formatted_entry
+
+        if not formatted_entry:
+            return existing_text
 
         if not matched_cand:
             if mode == "append":
@@ -386,19 +487,30 @@ class GreyService:
         lines = existing_text.splitlines()
         cand_pattern = rf"\b{re.escape(matched_cand)}\b"
 
-        bare_bullet_idx = None
+        target_entry_idx = None
         for idx, line in enumerate(lines):
             stripped = line.strip()
-            if (stripped.startswith("•") or stripped.startswith("-") or stripped.startswith("*")) and re.search(cand_pattern, stripped, re.IGNORECASE):
-                bare_bullet_idx = idx
-                if wants_toggle and formatted_entry.startswith(">> "):
+            is_entry_start = (
+                stripped.startswith("•")
+                or stripped.startswith("-")
+                or stripped.startswith("*")
+                or stripped.startswith(">>")
+                or stripped.startswith("->")
+                or stripped.startswith("▶")
+                or stripped.startswith("▸")
+                or stripped.startswith("#")
+                or bool(re.match(r"^\d+\.\s+", stripped))
+            )
+            if is_entry_start and re.search(cand_pattern, stripped, re.IGNORECASE):
+                target_entry_idx = idx
+                if wants_toggle and formatted_entry.startswith(">> ") and (stripped.startswith("•") or stripped.startswith("-") or stripped.startswith("*")):
                     rich_summary = re.sub(r"^[•\-*]\s*", "", stripped).strip()
                     lines_f = formatted_entry.splitlines()
                     body_rest = "\n".join(lines_f[1:])
                     formatted_entry = f">> {rich_summary}\n{body_rest}\n"
                 break
 
-        if bare_bullet_idx is not None:
+        if target_entry_idx is not None:
             new_lines = []
             replaced = False
             skip_following_critique = False
@@ -406,20 +518,32 @@ class GreyService:
             for idx, line in enumerate(lines):
                 stripped = line.strip()
 
-                if idx == bare_bullet_idx:
+                if idx == target_entry_idx:
                     new_lines.append(formatted_entry.rstrip())
                     new_lines.append("")
                     new_lines.append("")
                     replaced = True
+                    skip_following_critique = True
                     continue
 
-                if re.search(cand_pattern, stripped, re.IGNORECASE):
-                    if replaced:
-                        skip_following_critique = True
-                        continue
+                if re.search(cand_pattern, stripped, re.IGNORECASE) and replaced:
+                    skip_following_critique = True
+                    continue
 
                 if skip_following_critique:
-                    if stripped.startswith("•") or stripped.startswith("-") or stripped.startswith("*") or stripped.startswith(">>") or stripped.startswith("#") or stripped.startswith("<details"):
+                    is_next_item = (
+                        stripped.startswith("•")
+                        or stripped.startswith("-")
+                        or stripped.startswith("*")
+                        or stripped.startswith(">>")
+                        or stripped.startswith("->")
+                        or stripped.startswith("▶")
+                        or stripped.startswith("▸")
+                        or stripped.startswith("#")
+                        or stripped.startswith("<details")
+                        or bool(re.match(r"^\d+\.\s+", stripped))
+                    )
+                    if is_next_item:
                         skip_following_critique = False
                         new_lines.append(line)
                     elif not stripped:
@@ -448,6 +572,7 @@ class GreyService:
         active_person: dict[str, Any] | None = None,
         visible_movies: list[dict[str, Any]] | None = None,
         notes_shelf_filter: str | None = None,
+        live_movie_notes: str | None = None,
         history: list[dict[str, str]] | None = None,
         model_mode: str = "auto",
         active_skill_key: str | None = None,
@@ -503,10 +628,10 @@ class GreyService:
             lq = user_query.lower()
             if any(p in lq for p in ["related movie", "related titles", "worth my attention", "worth my time", "any of these good", "which related"]):
                 active_skill_key = "related"
-            elif any(p in lq for p in ["make a watchlist", "create a watchlist", "draft a watchlist", "toggle watchlist", "compile watchlist", "watchlist note", "watchlist toggles", "watchlist draft"]):
-                active_skill_key = "watchlist"
             elif any(p in lq for p in ["add the yes movies", "add all yes", "batch add", "batch move"]):
                 active_skill_key = "batch"
+            elif any(p in lq for p in ["save this chat", "save this conversation", "save as research", "save research", "add to my research", "add this to research", "append to research", "research session", "research index", "show research index", "what research do i have"]):
+                active_skill_key = "research"
 
         active_skill = SKILLS_REGISTRY.get(active_skill_key) if active_skill_key else None
         if active_skill and not user_query:
@@ -546,7 +671,8 @@ class GreyService:
                     if row:
                         inspected_title = row['title']
                         year_str = f" ({(row['release_date'] or '')[:4]})" if row['release_date'] else ""
-                        inspected_info = f"{row['title']}{year_str} (TMDB ID: {inspected_movie_id}), TMDB Rating {row['vote_average']} | Status: {row['status'] or 'unseen'} | User Verdict: {row['verdict'] or 'None'} | User Notes: {row['notes'] or 'None'} | Overview: {row['overview'][:200]}..."
+                        effective_notes = (live_movie_notes.strip() if live_movie_notes and live_movie_notes.strip() else None) or row['notes']
+                        inspected_info = f"{row['title']}{year_str} (TMDB ID: {inspected_movie_id}), TMDB Rating {row['vote_average']} | Status: {row['status'] or 'unseen'} | User Verdict: {row['verdict'] or 'None'} | User Notes: {effective_notes or 'None'} | Overview: {row['overview'][:200]}..."
                 else:
                     # Search if user mentioned a specific movie title in their message
                     rows = conn.execute(
@@ -555,13 +681,26 @@ class GreyService:
                         FROM movies m
                         LEFT JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
                         WHERE u.status IS NOT NULL
-                        ORDER BY u.updated_at DESC
-                        LIMIT 100
+                        ORDER BY (u.notes IS NOT NULL AND trim(u.notes) != '') DESC, u.updated_at DESC
+                        LIMIT 200
                         """
                     ).fetchall()
+                    msg_words = [w for w in re.findall(r"\b[a-zA-Z0-9]{4,}\b", lower_msg) if w not in ("find", "movie", "notes", "note", "from", "library", "then", "this", "that", "with", "have")]
                     for r in rows:
-                        t = (r["title"] or "").lower()
-                        if len(t) > 3 and t in lower_msg:
+                        t = (r["title"] or "").lower().strip()
+                        t_norm = re.sub(r"^(?:the|a|an)\s+", "", t).strip()
+                        t_stem = t_norm.rstrip("s")
+                        matched = False
+                        if len(t) >= 3 and t in lower_msg:
+                            matched = True
+                        elif len(t_norm) >= 3 and t_norm in lower_msg:
+                            matched = True
+                        elif len(t_stem) >= 4 and t_stem in lower_msg:
+                            matched = True
+                        elif any(w == t or w == t_norm or w == t_stem or (len(w) >= 4 and w in t_norm) for w in msg_words):
+                            matched = True
+
+                        if matched:
                             inspected_movie_id = r['tmdb_id']
                             inspected_title = r['title']
                             year_str = f" ({(r['release_date'] or '')[:4]})" if r['release_date'] else ""
@@ -714,6 +853,10 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
 """
 
         # Dynamic Skill Module Routing
+        active_rf_stems = [f.stem.lower() for f in self.research_dir.glob("*.md")] if self.research_dir.exists() else []
+        last_turn_text = (history[-1].get("text") or "").lower() if history else ""
+        is_research_followup = any(w in lower_msg for w in ["try again", "what about", "tell me more", "show it", "what is in", "what's in", "read", "check again"]) and any(stem in last_turn_text for stem in active_rf_stems)
+
         skill_filename = "library_ops.md"
         if active_skill_key == "related":
             skill_filename = "related_curator.md"
@@ -721,6 +864,14 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
             skill_filename = "watchlist_builder.md"
         elif active_skill_key == "batch":
             skill_filename = "library_ops.md"
+        elif active_skill_key == "research":
+            skill_filename = "research_partner.md"
+        elif any(w in lower_msg for w in [
+            "research file", "research files", "save this chat", "save as research",
+            "save to research", "create research", "new research", "research session",
+            "research index", "add to my research", "append to research", "what research do i have"
+        ]) or any(stem in lower_msg for stem in active_rf_stems if len(stem) >= 4) or is_research_followup:
+            skill_filename = "research_partner.md"
         elif (
             current_view in ("movie-notes", "notes")
             or inspected_note_id
@@ -734,8 +885,6 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
             skill_filename = "filmography_explorer.md"
         elif any(w in lower_msg for w in ["related", "similar to this", "worth my attention", "recommend from these"]):
             skill_filename = "related_curator.md"
-        elif any(w in lower_msg for w in ["make a watchlist", "create a watchlist", "draft a watchlist", "compile watchlist"]):
-            skill_filename = "watchlist_builder.md"
         else:
             skill_filename = "library_ops.md"
 
@@ -755,6 +904,9 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
         if not skill_directive_text:
             skill_directive_text = "None"
 
+        research_files_index_str = self.get_research_files_index()
+        reactions_index_str = self.get_reactions_index()
+
         system_instruction = (
             system_template
             .replace("{{ACTIVE_SKILL_DIRECTIVE}}", skill_directive_text)
@@ -767,6 +919,8 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
             .replace("{{INSPECTED_NOTE_ID}}", str(inspected_note_id or "None"))
             .replace("{{ACTIVE_PERSON_INFO}}", active_person_info)
             .replace("{{VISIBLE_MOVIES_LIST}}", visible_movies_str)
+            .replace("{{RESEARCH_FILES_INDEX}}", research_files_index_str)
+            .replace("{{AVAILABLE_REACTIONS}}", reactions_index_str)
             .replace("{{FAVORITES_JSON}}", json.dumps(dossier["high_rated"][:8]))
             .replace("{{WATCHLIST_JSON}}", json.dumps(dossier["watchlist"][:16]))
             .replace("{{DISCARDED_COUNT}}", str(dossier["discarded_count"]))
@@ -783,7 +937,7 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
 
         contents = []
         if history:
-            for item in history[-6:]:
+            for item in history[-16:]:
                 role = "user" if item.get("role") == "user" else "model"
                 contents.append({"role": role, "parts": [{"text": item.get("text", "")}]})
 
@@ -799,6 +953,8 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
         if inspected_title:
             id_info = f" (TMDB ID: {inspected_movie_id})" if inspected_movie_id else ""
             screen_contexts.append(f"Currently viewing movie on screen: {inspected_title}{id_info}")
+            if live_movie_notes and live_movie_notes.strip():
+                screen_contexts.append(f"Active movie Personal Memory on screen: {live_movie_notes.strip()[:300]}")
         if inspected_note_title:
             screen_contexts.append(f"Currently viewing note on screen: {inspected_note_title}")
 
@@ -988,7 +1144,6 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
                 try:
                     from app.movie_service import MovieService
                     from app.user_movie_repository import UserMovieRepository
-                    import re
                     movie_svc = MovieService()
                     user_repo = UserMovieRepository()
                     params = action.get("params") or {}
@@ -1102,7 +1257,6 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
                 if is_post_mention:
                     # User intended a note/post operation, not a library shelf status change!
                     logger.info("Intercepted set_movie_status with post/note mention; converting to update_entry.")
-                    import re
                     t_id = action.get("params", {}).get("tmdb_id") or inspected_movie_id
                     t_title = action.get("params", {}).get("title") or inspected_title or "Movie"
                     m_year = ""
@@ -1164,7 +1318,6 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
                 else:
                     try:
                         from app.movie_service import MovieService
-                        import re
                         movie_svc = MovieService()
                         params = action.get("params") or {}
                         param_tmdb_id = params.get("tmdb_id")
@@ -1225,7 +1378,6 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
             if action and action.get("type") == "update_entry":
                 try:
                     from app.general_entry_repository import GeneralEntryRepository
-                    import re
                     repo = GeneralEntryRepository()
                     params = action.get("params") or {}
                     target_id = params.get("entry_id") or inspected_note_id
@@ -1350,9 +1502,93 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
                 except Exception as update_err:
                     logger.error(f"Failed to update entry: {update_err}")
 
+            if action and action.get("type") == "save_research_file":
+                try:
+                    params = action.get("params") or {}
+                    raw_fname = (params.get("filename") or params.get("title") or "research").strip()
+                    if not raw_fname.endswith(".md"):
+                        raw_fname += ".md"
+                    clean_fname = re.sub(r"[^\w\.\-]", "_", raw_fname).lower()
+                    if not clean_fname.endswith(".md"):
+                        clean_fname += ".md"
+                    file_path = self.research_dir / clean_fname
+                    content = (params.get("content") or "").strip()
+                    if not content and data.get("text"):
+                        content = f"# {params.get('title') or clean_fname[:-3].replace('_', ' ').title()}\n\n{data['text']}"
+                    file_path.write_text(content + "\n", encoding="utf-8")
+                    if not isinstance(action.get("params"), dict):
+                        action["params"] = {}
+                    action["params"]["filename"] = clean_fname
+                    action["params"]["filepath"] = str(file_path)
+                except Exception as r_save_err:
+                    logger.error(f"Failed to save research file: {r_save_err}")
+
+            elif action and action.get("type") == "append_research_file":
+                try:
+                    params = action.get("params") or {}
+                    target_query = params.get("filename") or params.get("title") or ""
+                    entry_text = (params.get("entry") or params.get("text") or "").strip()
+                    matched_file = self.resolve_research_file(target_query)
+                    if not matched_file:
+                        raw_fname = (target_query or "research.md").strip()
+                        clean_fname = re.sub(r"[^\w\.\-]", "_", raw_fname).lower()
+                        if not clean_fname.endswith(".md"):
+                            clean_fname += ".md"
+                        matched_file = self.research_dir / clean_fname
+                        matched_file.write_text(f"# {target_query.replace('_', ' ').title()}\n\n", encoding="utf-8")
+
+                    with open(matched_file, "a", encoding="utf-8") as af:
+                        af.write(f"\n{entry_text}\n")
+
+                    if not isinstance(action.get("params"), dict):
+                        action["params"] = {}
+                    action["params"]["filename"] = matched_file.name
+                    action["params"]["filepath"] = str(matched_file)
+                except Exception as r_app_err:
+                    logger.error(f"Failed to append to research file: {r_app_err}")
+
+            elif action and action.get("type") == "delete_research_file":
+                try:
+                    params = action.get("params") or {}
+                    target_query = params.get("filename") or params.get("title") or ""
+                    matched_file = self.resolve_research_file(target_query)
+                    if matched_file and matched_file.exists():
+                        matched_file.unlink()
+                        if not isinstance(action.get("params"), dict):
+                            action["params"] = {}
+                        action["params"]["filename"] = matched_file.name
+                except Exception as r_del_err:
+                    logger.error(f"Failed to delete research file: {r_del_err}")
+
+            reaction = data.get("reaction")
+            valid_reaction = None
+            if reaction and isinstance(reaction, str):
+                reaction_filename = Path(reaction).name
+                reaction_path = self.reactions_dir / reaction_filename
+                if reaction_path.exists() and reaction_path.is_file():
+                    valid_reaction = reaction_filename
+
+            # Filter out unsolicited shelf categorization pills (e.g. "+ Add to Watchlist", "✨ New Discovery")
+            sanitized_pills = []
+            for p in (pills or []):
+                if not isinstance(p, dict):
+                    continue
+                lbl = (p.get("label") or "").lower()
+                act = p.get("action")
+                payload_st = str((p.get("payload") or {}).get("status", "")).lower()
+                is_status_pill = (
+                    act == "set_movie_status"
+                    or payload_st in ("watch_later", "new_discovery", "watched", "rewatch", "excluded")
+                    or any(s in lbl for s in ["watchlist", "new discovery", "add to shelf", "mark as"])
+                )
+                if not is_status_pill:
+                    sanitized_pills.append(p)
+            pills = sanitized_pills
+
             return {
                 "text": data.get("text", "Here are the matching titles from your library."),
                 "action": action,
+                "reaction": valid_reaction,
                 "pills": pills,
                 "model_used": model_label,
                 "active_skill": active_skill_key,

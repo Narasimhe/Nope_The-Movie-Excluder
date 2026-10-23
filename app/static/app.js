@@ -154,6 +154,10 @@ const elements = {
   kicker: document.querySelector("#library-kicker"),
   title: document.querySelector("#library-title"),
   shelfCount: document.querySelector("#shelf-count"),
+  shelfViewToggle: document.querySelector("#shelf-view-toggle"),
+  viewModePaged: document.querySelector("#view-mode-paged"),
+  viewModeContinuous: document.querySelector("#view-mode-continuous"),
+  backToTopBtn: document.querySelector("#back-to-top-btn"),
   description: document.querySelector("#library-description"),
   count: document.querySelector("#result-count"),
   navLinks: [...document.querySelectorAll("[data-view]")],
@@ -233,10 +237,6 @@ const elements = {
   dialogKeywords: document.querySelector("#dialog-keywords"),
   dialogDirectors: document.querySelector("#dialog-directors"),
   dialogActors: document.querySelector("#dialog-actors"),
-  customKeywordForm: document.querySelector("#custom-keyword-form"),
-  customKeyword: document.querySelector("#custom-keyword"),
-  showCustomKeyword: document.querySelector("#show-custom-keyword"),
-  keywordFeedback: document.querySelector("#keyword-feedback"),
   statusSelect: document.querySelector("#status-select"),
   saveStatus: document.querySelector("#save-status"),
   statusFeedback: document.querySelector("#status-feedback"),
@@ -245,7 +245,7 @@ const elements = {
   clearVerdict: document.querySelector("#clear-verdict"),
   verdictFeedback: document.querySelector("#verdict-feedback"),
   notes: document.querySelector("#movie-notes"),
-  saveNotes: document.querySelector("#save-notes"),
+  saveNotes: null,
   notesFeedback: document.querySelector("#notes-feedback"),
   notesPanel: document.querySelector("#notes-panel"),
   relatedPanel: document.querySelector("#related-panel"),
@@ -263,9 +263,14 @@ const elements = {
   entryYearFilter: document.querySelector("#entry-year-filter"),
   entryMonthFilter: document.querySelector("#entry-month-filter"),
   clearEntryFilters: document.querySelector("#clear-entry-filters"),
+  notesViewSwitcher: document.querySelector("#notes-view-switcher"),
+  notesViewListBtn: document.querySelector("#notes-view-list"),
+  notesViewCardsBtn: document.querySelector("#notes-view-cards"),
+  entryActiveFilters: document.querySelector("#entry-active-filters"),
   newEntry: document.querySelector("#new-entry"),
   entryReader: document.querySelector("#entry-reader"),
   entryReaderBack: document.querySelector("#entry-reader-back"),
+  entryReaderEditBack: document.querySelector("#entry-reader-edit-back"),
   entryReaderPublish: document.querySelector("#entry-reader-publish"),
   entryReaderEdit: document.querySelector("#entry-reader-edit"),
   entryReaderPrevious: document.querySelector("#entry-reader-previous"),
@@ -299,7 +304,13 @@ const elements = {
   readerTagSuggestions: document.querySelector("#reader-tag-suggestions"),
   readerBodyInput: document.querySelector("#reader-body-input"),
   readerCancel: document.querySelector("#reader-cancel"),
+  readerSaveStatus: document.querySelector("#reader-save-status"),
+  readerViewSaveStatus: document.querySelector("#reader-view-save-status"),
+  readerSaveSplit: document.querySelector("#reader-save-split"),
+  readerSaveMenuToggle: document.querySelector("#reader-save-menu-toggle"),
+  readerSaveDropdown: document.querySelector("#reader-save-dropdown"),
   readerSaveDraft: document.querySelector("#reader-save-draft"),
+  readerSaveDraftLabel: document.querySelector("#reader-save-draft-label"),
   readerSavePublish: document.querySelector("#reader-save-publish"),
   readerWordCount: document.querySelector("#reader-word-count"),
   readerReadTime: document.querySelector("#reader-read-time"),
@@ -374,6 +385,9 @@ const state = {
   lastNormalShelf: "favorites",
   mode: "shelf",
   currentView: "new_discovery",
+  browseMode: "paged",
+  continuousPage: 1,
+  continuousLoading: false,
   selectedMovie: null,
   requestNumber: 0,
   previousScrollPosition: 0,
@@ -412,6 +426,9 @@ const state = {
   entryTagFilter: "",
   notesCurrentView: "all",
   notesTimelineFilter: null,
+  notesLayoutMode: "list",
+  notesExpandedYears: new Set(),
+  focusedEntryIndex: -1,
   lookingOutPage: 1,
   showRelatedTracked: true,
   detailRelatedMovies: [],
@@ -524,6 +541,9 @@ function setActiveView(view) {
   const sectionHeadingBlock = document.querySelector("#section-heading-block");
   if (sectionHeadingBlock) {
     sectionHeadingBlock.classList.toggle("is-hidden", isDiscover || state.mode === "filmography");
+  }
+  if (typeof updateBackToTopVisibility === "function") {
+    updateBackToTopVisibility();
   }
 
   if (view in VIEW_COPY) {
@@ -2446,11 +2466,18 @@ function showPosterNotePreview(anchorEl, movie) {
 
   const title = movie.title || movie.original_title || "Untitled movie";
   const yearText = getMovieYear(movie);
+  const rating = getMovieRating(movie);
+  const voteCountStr = formatVoteCount(movie.vote_count);
+
+  let metaHtml = "";
+  if (rating) {
+    metaHtml = `<span class="poster-note-popover-rating">★ ${escapeHTML(rating)}${voteCountStr ? ` <span class="poster-note-popover-votes">(${escapeHTML(voteCountStr)})</span>` : ""}</span>`;
+  }
 
   pop.innerHTML = `
     <div class="poster-note-popover-header">
-      <span class="poster-note-popover-badge">📝 Note</span>
       <span class="poster-note-popover-title">${escapeHTML(title)}${yearText ? ` <span class="poster-note-popover-year">(${escapeHTML(String(yearText))})</span>` : ""}</span>
+      ${metaHtml}
     </div>
     <div class="poster-note-popover-body">${formatRichText(rawNotes)}</div>
   `;
@@ -2459,9 +2486,11 @@ function showPosterNotePreview(anchorEl, movie) {
   pop.setAttribute("aria-hidden", "false");
 
   const rect = anchorEl.getBoundingClientRect();
-  const popWidth = 264;
+  const noteLength = rawNotes.length;
+  const targetWidth = noteLength > 200 ? 400 : noteLength > 80 ? 340 : 280;
   const viewportW = window.innerWidth;
   const viewportH = window.innerHeight;
+  const popWidth = Math.min(targetWidth, viewportW - 24);
 
   let left = rect.left + rect.width / 2 - popWidth / 2;
   left = Math.max(12, Math.min(left, viewportW - popWidth - 12));
@@ -2471,10 +2500,10 @@ function showPosterNotePreview(anchorEl, movie) {
 
   const popHeight = pop.offsetHeight || 110;
   let top = rect.top - popHeight - 10;
-  if (top < 12) {
-    top = Math.min(viewportH - popHeight - 12, rect.bottom + 10);
+  if (top < 10) {
+    top = 10;
   }
-  pop.style.top = `${Math.round(Math.max(12, top))}px`;
+  pop.style.top = `${Math.round(Math.max(10, top))}px`;
 
   requestAnimationFrame(() => {
     pop.classList.add("is-visible");
@@ -2505,8 +2534,13 @@ function createMovieCard(movie) {
   posterButton.className = "poster-button";
   posterButton.setAttribute("aria-label", `Open details for ${title}`);
   const yearText = getMovieYear(movie);
+  const voteCountStr = formatVoteCount(movie.vote_count);
   const rawNotes = (movie.user_data?.notes || "").trim();
-  posterButton.title = `${title}${yearText ? ` (${yearText})` : ""}`;
+
+  let tooltip = title;
+  if (yearText) tooltip += ` (${yearText})`;
+  if (voteCountStr) tooltip += ` • (${voteCountStr})`;
+  posterButton.title = tooltip;
   if (status === "excluded" && state.currentView === "discover") {
     article.classList.add("is-noped");
   }
@@ -2564,6 +2598,9 @@ function createMovieCard(movie) {
     const ratingElement = document.createElement("span");
     ratingElement.className = "card-rating";
     ratingElement.textContent = rating;
+    if (voteCountStr) {
+      ratingElement.title = `${rating} (${voteCountStr})`;
+    }
     posterButton.append(ratingElement);
   }
 
@@ -2706,17 +2743,50 @@ function renderPagination(
   page,
   totalPages,
   onPage,
-  { exact = true, hasNext = page < totalPages } = {},
+  { hasNext = page < totalPages } = {},
 ) {
   container.replaceChildren();
-  if ((!exact && page <= 1 && !hasNext) || (exact && totalPages <= 1)) {
+  const safeTotalPages = Math.max(Number(totalPages) || 1, hasNext ? page + 1 : page);
+  if (safeTotalPages <= 1 && page <= 1 && !hasNext) {
     container.classList.add("is-hidden");
     return;
   }
   container.classList.remove("is-hidden");
+
+  const createNavButton = (direction, target, disabled) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `pagination-nav-btn pagination-nav-${direction}`;
+    btn.disabled = disabled;
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("width", "14");
+    svg.setAttribute("height", "14");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", "2.2");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS(svgNS, "path");
+    path.setAttribute("d", direction === "prev" ? "m15 18-6-6 6-6" : "m9 18 6-6-6-6");
+    svg.appendChild(path);
+    const span = document.createElement("span");
+    span.textContent = direction === "prev" ? "Previous" : "Next";
+    if (direction === "prev") {
+      btn.append(svg, span);
+    } else {
+      btn.append(span, svg);
+    }
+    btn.addEventListener("click", () => onPage(target));
+    return btn;
+  };
+
   const addButton = (label, target, disabled = false, current = false) => {
     const button = document.createElement("button");
     button.type = "button";
+    button.className = "pagination-page-btn";
     button.textContent = label;
     button.disabled = disabled;
     button.classList.toggle("is-current", current);
@@ -2724,30 +2794,42 @@ function renderPagination(
     button.addEventListener("click", () => onPage(target));
     container.append(button);
   };
-  addButton("← Previous", page - 1, page <= 1);
-  if (!exact) {
-    const current = document.createElement("span");
-    current.className = "pagination-current-label";
-    current.textContent = `Page ${page}`;
-    container.append(current);
-    addButton("Next →", page + 1, !hasNext);
-    return;
+
+  container.append(createNavButton("prev", page - 1, page <= 1));
+
+  const pages = new Set([1, safeTotalPages]);
+  if (safeTotalPages <= 7) {
+    for (let item = 1; item <= safeTotalPages; item += 1) {
+      pages.add(item);
+    }
+  } else if (page <= 3) {
+    pages.add(2);
+    pages.add(3);
+    pages.add(4);
+  } else if (page >= safeTotalPages - 2) {
+    pages.add(safeTotalPages - 3);
+    pages.add(safeTotalPages - 2);
+    pages.add(safeTotalPages - 1);
+  } else {
+    pages.add(page - 1);
+    pages.add(page);
+    pages.add(page + 1);
   }
-  const pages = new Set([1, totalPages]);
-  for (let item = Math.max(1, page - 2); item <= Math.min(totalPages, page + 2); item += 1) {
-    pages.add(item);
-  }
+
   let previous = 0;
   [...pages].sort((a, b) => a - b).forEach((item) => {
     if (item - previous > 1) {
       const ellipsis = document.createElement("span");
+      ellipsis.className = "pagination-ellipsis";
+      ellipsis.setAttribute("aria-hidden", "true");
       ellipsis.textContent = "…";
       container.append(ellipsis);
     }
     addButton(String(item), item, false, item === page);
     previous = item;
   });
-  addButton("Next →", page + 1, page >= totalPages);
+
+  container.append(createNavButton("next", page + 1, page >= safeTotalPages && !hasNext));
 }
 
 function scrollToResults() {
@@ -2799,6 +2881,9 @@ function setAuxiliaryView(view = null) {
   }
   if (elements.notesSearchContainer) {
     elements.notesSearchContainer.classList.toggle("force-hidden", visible);
+  }
+  if (typeof updateBackToTopVisibility === "function") {
+    updateBackToTopVisibility();
   }
   if (view && history.replaceState) {
     if (view === "entry-reader" && state.entryReaderEntry?.entry_id) {
@@ -2876,6 +2961,42 @@ function buildLibraryWordBoundaryRegex(normTerm) {
   return new RegExp(escapeRegExp(normTerm), "i");
 }
 
+function stemSearchWord(word) {
+  let w = String(word || "").toLowerCase().trim();
+  for (const s of ["ence", "ency", "ent", "ing", "tion", "able", "ible", "ical"]) {
+    if (w.length > 5 && w.endsWith(s)) return w.slice(0, -s.length);
+  }
+  for (const s of ["es", "ed", "er", "ly"]) {
+    if (w.length > 4 && w.endsWith(s)) return w.slice(0, -s.length);
+  }
+  if (w.length > 3 && w.endsWith("s")) return w.slice(0, -1);
+  return w;
+}
+
+function textMatchesTerm(normTerm, normText, regex = null) {
+  if (!normTerm || !normText) return false;
+  if (normText.includes(normTerm)) return true;
+  if (regex && regex.test(normText)) return true;
+  const qTokens = normTerm.match(/[a-z0-9]+/gi);
+  if (!qTokens) return false;
+  const textTokens = normText.match(/[a-z0-9]+/gi);
+  if (!textTokens) return false;
+  if (qTokens.length === 1) {
+    const qStem = stemSearchWord(qTokens[0]);
+    if (qStem.length >= 4) {
+      for (const tt of textTokens) {
+        const tStem = stemSearchWord(tt);
+        if (tStem.length >= 4) {
+          if (qStem === tStem || tStem.startsWith(qStem) || qStem.startsWith(tStem)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
 function computeMovieSearchRank(movie, mode, normTerm, regex) {
   if (!normTerm || !regex) return null;
   const normTitle = normalizeLibrarySearchText(movie.title);
@@ -2902,7 +3023,7 @@ function computeMovieSearchRank(movie, mode, normTerm, regex) {
   }
 
   if (mode === "notes") {
-    if (regex.test(normNotes)) return { tier: 4, subtier: 0 };
+    if (textMatchesTerm(normTerm, normNotes, regex)) return { tier: 4, subtier: 0 };
     return null;
   }
 
@@ -2915,7 +3036,7 @@ function computeMovieSearchRank(movie, mode, normTerm, regex) {
   if (regex.test(normOverview)) {
     return { tier: 3, subtier: 0 };
   }
-  if (regex.test(normNotes)) {
+  if (textMatchesTerm(normTerm, normNotes, regex)) {
     return { tier: 4, subtier: 0 };
   }
   if (normKeywords.some((kw) => kw === normTerm)) {
@@ -2955,6 +3076,132 @@ function getMovieNotesHeadingCopy() {
   return base;
 }
 
+const CONTINUOUS_ELIGIBLE_SHELVES = [
+  "watched",
+  "rewatch",
+  "favorites",
+  "excluded",
+  "new_discovery",
+  "movie-notes",
+];
+
+function isContinuousEligibleView() {
+  return CONTINUOUS_ELIGIBLE_SHELVES.includes(state.currentView);
+}
+
+function updateBackToTopVisibility() {
+  if (!elements.backToTopBtn) return;
+  const detailOpen = Boolean(
+    elements.detailPage && !elements.detailPage.classList.contains("is-hidden")
+  );
+  const isContinuousShelf = Boolean(
+    state.browseMode === "continuous" &&
+    isContinuousEligibleView() &&
+    state.currentView !== "watch_later" &&
+    state.movieNotesShelfFilter !== "watch_later" &&
+    state.currentView !== "discover"
+  );
+  const isNotesView = Boolean(
+    state.currentView === "entries" ||
+    (elements.entriesPage && !elements.entriesPage.classList.contains("is-hidden")) ||
+    (elements.entryReader && !elements.entryReader.classList.contains("is-hidden"))
+  );
+  const shouldShow =
+    !detailOpen && window.scrollY > 380 && (isContinuousShelf || isNotesView);
+  elements.backToTopBtn.classList.toggle("is-hidden", !shouldShow);
+}
+
+function updateShelfViewToggleUI() {
+  if (!elements.shelfViewToggle) return;
+  // Watch Later is strictly excluded by deliberation
+  if (!isContinuousEligibleView() || state.currentView === "watch_later" || state.movieNotesShelfFilter === "watch_later") {
+    elements.shelfViewToggle.classList.add("is-hidden");
+    state.browseMode = "paged";
+    updateBackToTopVisibility();
+    return;
+  }
+  elements.shelfViewToggle.classList.remove("is-hidden");
+  elements.viewModePaged?.classList.toggle("is-active", state.browseMode === "paged");
+  elements.viewModeContinuous?.classList.toggle("is-active", state.browseMode === "continuous");
+  updateBackToTopVisibility();
+}
+
+let continuousScrollObserver = null;
+let continuousSentinelEl = null;
+
+function removeContinuousSentinel() {
+  if (continuousScrollObserver && continuousSentinelEl) {
+    continuousScrollObserver.unobserve(continuousSentinelEl);
+  }
+  if (continuousSentinelEl && continuousSentinelEl.parentNode) {
+    continuousSentinelEl.remove();
+  }
+  continuousSentinelEl = null;
+}
+
+function attachContinuousSentinel() {
+  removeContinuousSentinel();
+  if (state.browseMode !== "continuous" || !isContinuousEligibleView()) return;
+  if (!elements.grid) return;
+
+  continuousSentinelEl = document.createElement("div");
+  continuousSentinelEl.className = "infinite-scroll-sentinel";
+  elements.grid.append(continuousSentinelEl);
+
+  if (!continuousScrollObserver) {
+    continuousScrollObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && !state.continuousLoading) {
+            loadNextContinuousBatch();
+          }
+        });
+      },
+      { rootMargin: "450px 0px" }
+    );
+  }
+  continuousScrollObserver.observe(continuousSentinelEl);
+}
+
+function loadNextContinuousBatch() {
+  if (state.browseMode !== "continuous" || !isContinuousEligibleView()) return;
+  if (state.continuousLoading) return;
+  const list = state.allFilteredMovies || [];
+  const pageSize = 30;
+  const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
+  if (state.continuousPage >= totalPages) {
+    removeContinuousSentinel();
+    return;
+  }
+
+  state.continuousLoading = true;
+  const nextPage = state.continuousPage + 1;
+  const nextBatch = list.slice((nextPage - 1) * pageSize, nextPage * pageSize);
+
+  removeContinuousSentinel();
+
+  if (nextBatch.length > 0) {
+    const divider = document.createElement("div");
+    divider.className = "continuous-batch-divider";
+    divider.setAttribute("role", "separator");
+    divider.setAttribute("aria-hidden", "true");
+    elements.grid.append(divider);
+
+    nextBatch.forEach((movie) => {
+      elements.grid.append(createMovieCard(movie));
+    });
+
+    state.continuousPage = nextPage;
+    state.movies = list.slice(0, nextPage * pageSize);
+  }
+
+  if (nextPage < totalPages) {
+    attachContinuousSentinel();
+  }
+
+  state.continuousLoading = false;
+}
+
 function applyLibraryFilters(targetPage = 1) {
   if (!state.unfilteredShelfMovies) {
     state.unfilteredShelfMovies = [...(state.movies || [])];
@@ -2976,10 +3223,64 @@ function applyLibraryFilters(targetPage = 1) {
   if (state.currentView === "movie-notes" && searchMode === "all") {
     searchMode = "notes";
   }
+
   const normSearchTerm = normalizeLibrarySearchText(searchTerm);
   const searchRegex = buildLibraryWordBoundaryRegex(normSearchTerm);
+  const rawSubterms = searchTerm.split(",").map((t) => t.trim()).filter(Boolean);
+  const isMultiTerm = rawSubterms.length > 1;
 
-  if (normSearchTerm && searchRegex) {
+  if (isMultiTerm) {
+    const subtermPatterns = rawSubterms.map((t) => {
+      const norm = normalizeLibrarySearchText(t);
+      return { norm, regex: buildLibraryWordBoundaryRegex(norm) };
+    }).filter((p) => p.regex);
+
+    if (subtermPatterns.length > 0) {
+      const matched = [];
+      for (const m of list) {
+        const normTitle = normalizeLibrarySearchText(m.title);
+        const normOrig = normalizeLibrarySearchText(m.original_title);
+        const normOverview = normalizeLibrarySearchText(m.overview);
+        const normNotes = normalizeLibrarySearchText(m.user_data?.notes);
+        const movieGenreNames = (m.genres || []).map((g) => normalizeLibrarySearchText(typeof g === "object" ? g.name : g)).filter(Boolean);
+
+        let matchesAll = true;
+        for (const { norm, regex } of subtermPatterns) {
+          let termMatched = false;
+          if (searchMode === "title") {
+            termMatched = Boolean(normTitle === norm || (normOrig && normOrig === norm) || regex.test(normTitle) || (normOrig && regex.test(normOrig)));
+          } else if (searchMode === "plot") {
+            termMatched = regex.test(normOverview);
+          } else if (searchMode === "notes") {
+            termMatched = Boolean(
+              textMatchesTerm(norm, normNotes, regex) ||
+              textMatchesTerm(norm, normTitle, regex) ||
+              (normOrig && textMatchesTerm(norm, normOrig, regex)) ||
+              movieGenreNames.some((g) => textMatchesTerm(norm, g, regex))
+            );
+          } else {
+            termMatched = Boolean(
+              textMatchesTerm(norm, normTitle, regex) ||
+              (normOrig && textMatchesTerm(norm, normOrig, regex)) ||
+              regex.test(normOverview) ||
+              textMatchesTerm(norm, normNotes, regex) ||
+              movieGenreNames.some((g) => textMatchesTerm(norm, g, regex))
+            );
+          }
+          if (!termMatched) {
+            matchesAll = false;
+            break;
+          }
+        }
+        if (matchesAll) {
+          m._rankTier = 4;
+          m._rankSubtier = 0;
+          matched.push(m);
+        }
+      }
+      list = matched;
+    }
+  } else if (normSearchTerm && searchRegex) {
     const matched = [];
     for (const m of list) {
       const rank = computeMovieSearchRank(m, searchMode, normSearchTerm, searchRegex);
@@ -3087,7 +3388,7 @@ function applyLibraryFilters(targetPage = 1) {
     return comp !== 0 ? comp : (a.title || "").localeCompare(b.title || "");
   };
 
-  if (normSearchTerm && searchRegex) {
+  if (isMultiTerm || (normSearchTerm && searchRegex)) {
     list.sort((a, b) => {
       const tierA = a._rankTier ?? a.search_tier ?? 99;
       const tierB = b._rankTier ?? b.search_tier ?? 99;
@@ -3108,45 +3409,62 @@ function applyLibraryFilters(targetPage = 1) {
   const totalMatches = list.length;
   const pageSize = 30;
   const totalPages = Math.max(1, Math.ceil(totalMatches / pageSize));
-  const safePage = Math.min(Math.max(1, targetPage), totalPages);
-  state.searchPage = safePage;
-  state.searchTotalPages = totalPages;
+  updateShelfViewToggleUI();
 
-  const pageResults = list.slice((safePage - 1) * pageSize, safePage * pageSize);
-  state.movies = pageResults;
+  const isContinuous = state.browseMode === "continuous" && isContinuousEligibleView();
+  if (isContinuous) {
+    elements.pagination.classList.add("is-hidden");
+    elements.pagination.classList.add("force-hidden");
+    removeContinuousSentinel();
 
-  renderMovies(state.movies, "library", totalMatches);
+    state.continuousPage = 1;
+    state.searchPage = 1;
+    state.searchTotalPages = totalPages;
 
-  if (hasActiveFilters || state.isSearchingLibrary) {
-    if (state.totalResults && state.totalResults > totalMatches) {
+    const firstBatch = list.slice(0, pageSize);
+    state.movies = firstBatch;
+
+    renderMovies(state.movies, "library", totalMatches);
+    if ((hasActiveFilters || state.isSearchingLibrary) && state.totalResults && state.totalResults > totalMatches) {
       const text = `${totalMatches} of ${state.totalResults} ${state.totalResults === 1 ? "movie" : "movies"}`;
       elements.count.textContent = text;
       if (elements.shelfCount) elements.shelfCount.textContent = text;
-    } else {
-      const text = `${totalMatches} ${totalMatches === 1 ? "movie" : "movies"}`;
+    }
+
+    if (totalPages > 1) {
+      attachContinuousSentinel();
+    }
+  } else {
+    removeContinuousSentinel();
+    const safePage = Math.min(Math.max(1, targetPage), totalPages);
+    state.searchPage = safePage;
+    state.searchTotalPages = totalPages;
+
+    const pageResults = list.slice((safePage - 1) * pageSize, safePage * pageSize);
+    state.movies = pageResults;
+
+    renderMovies(state.movies, "library", totalMatches);
+    if ((hasActiveFilters || state.isSearchingLibrary) && state.totalResults && state.totalResults > totalMatches) {
+      const text = `${totalMatches} of ${state.totalResults} ${state.totalResults === 1 ? "movie" : "movies"}`;
       elements.count.textContent = text;
       if (elements.shelfCount) elements.shelfCount.textContent = text;
     }
-  } else {
-    const text = `${totalMatches} ${totalMatches === 1 ? "movie" : "movies"}`;
-    elements.count.textContent = text;
-    if (elements.shelfCount) elements.shelfCount.textContent = text;
-  }
 
-  if (totalPages > 1) {
-    elements.pagination.classList.remove("is-hidden");
-    elements.pagination.classList.remove("force-hidden");
-    renderPagination(
-      elements.pagination,
-      state.searchPage,
-      state.searchTotalPages,
-      (target) => {
-        applyLibraryFilters(target);
-        scrollToResults();
-      }
-    );
-  } else {
-    elements.pagination.classList.add("is-hidden");
+    if (totalPages > 1) {
+      elements.pagination.classList.remove("is-hidden");
+      elements.pagination.classList.remove("force-hidden");
+      renderPagination(
+        elements.pagination,
+        state.searchPage,
+        state.searchTotalPages,
+        (target) => {
+          applyLibraryFilters(target);
+          scrollToResults();
+        }
+      );
+    } else {
+      elements.pagination.classList.add("is-hidden");
+    }
   }
 }
 
@@ -3392,6 +3710,41 @@ function setupLibraryFilters() {
     elements.resetLibraryFilters.addEventListener("click", () => resetLibraryFilters());
   }
   refreshCompactClouds();
+  setupShelfViewToggle();
+}
+
+function setupShelfViewToggle() {
+  elements.viewModePaged?.addEventListener("click", () => {
+    if (state.browseMode === "paged") return;
+    state.browseMode = "paged";
+    updateShelfViewToggleUI();
+    applyLibraryFilters(1);
+    scrollToResults();
+  });
+
+  elements.viewModeContinuous?.addEventListener("click", () => {
+    if (state.browseMode === "continuous") return;
+    state.browseMode = "continuous";
+    updateShelfViewToggleUI();
+    applyLibraryFilters(1);
+  });
+
+  // Back to top floating circular icon button
+  window.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
+
+  elements.backToTopBtn?.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
+  // Quick keyboard shortcuts: Home or 't'
+  window.addEventListener("keydown", (e) => {
+    if (e.target && /^(?:input|textarea|select)$/i.test(e.target.tagName)) return;
+    if (e.key === "Home" || (e.key.toLowerCase() === "t" && !e.ctrlKey && !e.altKey && !e.metaKey)) {
+      if (!elements.detailPage || elements.detailPage.classList.contains("is-hidden")) {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+  });
 }
 
 async function loadShelf(view, page = 1) {
@@ -3423,6 +3776,10 @@ async function loadShelf(view, page = 1) {
   const requestNumber = ++state.requestNumber;
   state.mode = "shelf";
   state.currentView = view;
+  if (view === "watch_later") {
+    state.browseMode = "paged";
+  }
+  updateShelfViewToggleUI();
   setActiveView(view);
   setModeButton(null);
   elements.simpleControls.classList.add("is-hidden");
@@ -3748,12 +4105,15 @@ async function prefetchDiscoveryPage(spec, page) {
     }
     const combined = rawCombined.slice(0, limit);
 
+    const rawTmdbPages = Number(p1.tmdb_total_pages || p1.raw_tmdb_total_pages || 1);
+    const hasNextPage = Boolean(p3.has_next_page || (basePage + 3 < rawTmdbPages));
+    const estimatedTotalPages = Math.min(166, Math.max(1, Math.ceil(rawTmdbPages / 3)));
     const response = {
       results: combined,
       page: page,
-      tmdb_total_pages: Math.max(1, Math.ceil(Number(p1.tmdb_total_pages || 1) / 3)),
-      tmdb_total_results: Number(p1.tmdb_total_results || rawCombined.length),
-      has_next_page: Boolean(p3.has_next_page || (basePage + 3 < Number(p1.tmdb_total_pages || 1))),
+      tmdb_total_pages: hasNextPage ? Math.max(page + 1, estimatedTotalPages) : page,
+      tmdb_total_results: Number(p1.tmdb_total_results || p1.raw_tmdb_total_results || rawCombined.length),
+      has_next_page: hasNextPage,
       pagination_exact: p1.pagination_exact !== false,
     };
 
@@ -3890,12 +4250,15 @@ async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } =
     }
     const combined = rawCombined.slice(0, limit);
 
+    const rawTmdbPages = Number(p1.tmdb_total_pages || p1.raw_tmdb_total_pages || 1);
+    const hasNextPage = Boolean(p3.has_next_page || (basePage + 3 < rawTmdbPages));
+    const estimatedTotalPages = Math.min(166, Math.max(1, Math.ceil(rawTmdbPages / 3)));
     const response = {
       results: combined,
       page: page,
-      tmdb_total_pages: Math.max(1, Math.ceil(Number(p1.tmdb_total_pages || 1) / 3)),
-      tmdb_total_results: Number(p1.tmdb_total_results || rawCombined.length),
-      has_next_page: Boolean(p3.has_next_page || (basePage + 3 < Number(p1.tmdb_total_pages || 1))),
+      tmdb_total_pages: hasNextPage ? Math.max(page + 1, estimatedTotalPages) : page,
+      tmdb_total_results: Number(p1.tmdb_total_results || p1.raw_tmdb_total_results || rawCombined.length),
+      has_next_page: hasNextPage,
       pagination_exact: p1.pagination_exact !== false,
     };
 
@@ -4354,47 +4717,18 @@ function renderMovieKeywords(tags) {
     return;
   }
 
-  // Deduplicate keywords by name, prioritizing custom keywords
   const seenNames = new Set();
-  const sortedTags = [...tags].sort((a, b) => (b.is_custom ? 1 : 0) - (a.is_custom ? 1 : 0));
-  const uniqueTags = [];
-  for (const tag of sortedTags) {
-    const norm = (tag.name || "").trim().toLowerCase();
+  for (const tag of tags) {
+    const name = (tag.name || "").trim();
+    const norm = name.toLowerCase();
     if (norm && !seenNames.has(norm)) {
       seenNames.add(norm);
-      uniqueTags.push(tag);
+      const chip = document.createElement("span");
+      chip.className = "tag keyword-chip";
+      chip.textContent = name;
+      elements.dialogKeywords.append(chip);
     }
   }
-
-  uniqueTags.forEach((tag) => {
-    const chip = document.createElement("span");
-    chip.className = `tag keyword-chip${tag.is_custom ? " is-custom" : ""}`;
-    if (tag.is_custom) {
-      const search = document.createElement("button");
-      search.type = "button";
-      search.textContent = tag.name;
-      search.title = `Find local movies tagged “${tag.name}”`;
-      search.addEventListener("click", () => {
-        setSearchOriginMovie({
-          id: state.selectedMovie.tmdb_id,
-          title: state.selectedMovie.title || state.selectedMovie.original_title,
-        });
-        closeMovieDetails();
-        searchKeywordMovies(tag.name, 1).catch((error) => showNotice(error.message));
-      });
-      chip.append(search);
-      const remove = document.createElement("button");
-      remove.type = "button";
-      remove.className = "keyword-remove";
-      remove.textContent = "×";
-      remove.setAttribute("aria-label", `Remove ${tag.name} from this movie`);
-      remove.addEventListener("click", () => removeSelectedKeyword(tag));
-      chip.append(remove);
-    } else {
-      chip.textContent = tag.name;
-    }
-    elements.dialogKeywords.append(chip);
-  });
 }
 
 function renderPeople(container, people, entityKey) {
@@ -4698,18 +5032,18 @@ async function searchKeywordMovies(query, page = 1) {
 
 function renderPersonalControls(movie) {
   const userData = movie.user_data || null;
-  const status = userData?.status || "new_discovery";
+  const status = userData?.status || "untracked";
   const canFavorite = status === "watched" || status === "rewatch";
   const isFavorite = Boolean(userData?.is_favorite);
 
   elements.statusSelect.value = status;
   elements.favoriteButton.disabled = !canFavorite;
   elements.favoriteButton.classList.toggle("is-favorite", isFavorite);
-  const favoriteAction = isFavorite ? "Remove from favourites" : "Add to favourites";
+  const favoriteAction = isFavorite ? "Remove from favourites (F)" : "Add to favourites (F)";
   elements.favoriteButton.setAttribute("aria-label", favoriteAction);
   elements.favoriteButton.title = canFavorite
     ? favoriteAction
-    : "Choose Watched or Rewatch before favouriting";
+    : "Choose Watched or Rewatch before favouriting (or press F to mark Watched + Favourite)";
   renderVerdict(userData?.verdict ?? null);
 }
 
@@ -4792,10 +5126,9 @@ function renderMovieDetails(movie) {
   renderLookingOutControl(movie);
   elements.notes.value = movie.user_data?.notes || "";
   elements.notesPanel.open = true;
-  elements.customKeywordForm.classList.add("is-hidden");
-  elements.showCustomKeyword.classList.remove("is-hidden");
-  [elements.statusFeedback, elements.verdictFeedback, elements.notesFeedback,
-    elements.keywordFeedback].forEach((item) => { item.textContent = ""; });
+  [elements.statusFeedback, elements.verdictFeedback, elements.notesFeedback].forEach((item) => {
+    item.textContent = "";
+  });
   updateDetailNavStepper(movie.tmdb_id);
 }
 
@@ -4855,8 +5188,6 @@ function createRelatedMovieCard(movie) {
   let tooltip = title;
   if (yearText) tooltip += ` (${yearText})`;
   if (voteCountStr) tooltip += ` • (${voteCountStr})`;
-  if (notesText) tooltip += `\n📝 ${notesText}`;
-
   button.title = tooltip;
   button.setAttribute("aria-label", `Open details for ${title}`);
   button.append(createPoster(movie));
@@ -4930,16 +5261,26 @@ async function openMovieDetails(
   movieId,
   { trailMode = "root", trailIndex = null } = {},
 ) {
+  if (movieNotesDebounceTimer) {
+    saveSelectedNotes({ silent: true });
+  }
   const enteringDetails = elements.detailPage.classList.contains("is-hidden");
   if (enteringDetails) {
     state.previousScrollPosition = (elements.shell && elements.shell.scrollTop)
       ? elements.shell.scrollTop
       : window.scrollY;
-    state.detailReturnLabel = state.mode === "shelf"
-      ? "Back to movies"
-      : (state.mode === "filmography"
-        ? (state.activeFilmographyPerson ? `Back to ${state.activeFilmographyPerson.name}` : "Back to filmography")
-        : (state.mode === "looking-out" ? "Back to Looking Out For" : "Back to results"));
+    const fromNoteReader = Boolean(
+      state.entryReaderEntry &&
+      elements.entryReader &&
+      !elements.entryReader.classList.contains("is-hidden")
+    );
+    state.detailReturnLabel = fromNoteReader
+      ? "Back to note"
+      : (state.mode === "shelf"
+        ? "Back to movies"
+        : (state.mode === "filmography"
+          ? (state.activeFilmographyPerson ? `Back to ${state.activeFilmographyPerson.name}` : "Back to filmography")
+          : (state.mode === "looking-out" ? "Back to Looking Out For" : "Back to results")));
 
     let activeList = [];
     if (state.currentView === "discover" || state.mode === "search" || state.mode === "discover") {
@@ -5022,6 +5363,9 @@ async function openMovieDetails(
 }
 
 function closeMovieDetails() {
+  if (movieNotesDebounceTimer) {
+    saveSelectedNotes({ silent: true });
+  }
   elements.detailPage.classList.add("is-hidden");
   elements.shell.classList.remove("is-hidden");
   const isGreyOpen = document.body.classList.contains("grey-docked-open");
@@ -5164,17 +5508,28 @@ async function saveSelectedStatus() {
   feedback(elements.statusFeedback, "Saving your choice…", "pending");
 
   try {
-    const response = await fetchJSON(`/movies/${movieId}/status`, {
-      method: "PUT",
-      body: JSON.stringify({ status }),
-    });
-    updateVisibleMovie(response.user_movie_data);
-    clearDiscoveryCache();
-    renderPersonalControls(state.selectedMovie);
-    elements.dialogKicker.textContent = STATUS_LABELS[status];
-    elements.saveStatus.textContent = "✓ Saved";
-    elements.saveStatus.classList.add("save-success");
-    feedback(elements.statusFeedback, `${STATUS_LABELS[status]} saved.`, "success");
+    if (status === "untracked") {
+      await fetchJSON(`/movies/${movieId}/status`, { method: "DELETE" });
+      updateVisibleMovie(null);
+      clearDiscoveryCache();
+      renderPersonalControls(state.selectedMovie);
+      elements.dialogKicker.textContent = "Untracked";
+      elements.saveStatus.textContent = "✓ Saved";
+      elements.saveStatus.classList.add("save-success");
+      feedback(elements.statusFeedback, "Untracked (removed from shelves).", "success");
+    } else {
+      const response = await fetchJSON(`/movies/${movieId}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status }),
+      });
+      updateVisibleMovie(response.user_movie_data);
+      clearDiscoveryCache();
+      renderPersonalControls(state.selectedMovie);
+      elements.dialogKicker.textContent = STATUS_LABELS[status];
+      elements.saveStatus.textContent = "✓ Saved";
+      elements.saveStatus.classList.add("save-success");
+      feedback(elements.statusFeedback, `${STATUS_LABELS[status]} saved.`, "success");
+    }
     window.setTimeout(() => {
       elements.saveStatus.textContent = "Save";
       elements.saveStatus.classList.remove("save-success");
@@ -5243,16 +5598,29 @@ async function toggleLookingOutFor() {
   }
 }
 
-async function saveSelectedNotes() {
-  if (!state.selectedMovie) {
+let movieNotesDebounceTimer = null;
+
+async function saveSelectedNotes({ silent = false } = {}) {
+  if (movieNotesDebounceTimer) {
+    clearTimeout(movieNotesDebounceTimer);
+    movieNotesDebounceTimer = null;
+  }
+  if (!state.selectedMovie || !elements.notes) {
     return;
   }
 
   const movieId = state.selectedMovie.tmdb_id;
   const notes = elements.notes.value.trim() || null;
-  elements.saveNotes.disabled = true;
-  elements.saveNotes.textContent = "Saving…";
-  feedback(elements.notesFeedback, "Saving…", "pending");
+  const currentSaved = (state.selectedMovie.user_data?.notes || "").trim() || null;
+
+  if (notes === currentSaved) {
+    if (elements.notesFeedback) elements.notesFeedback.textContent = "";
+    return;
+  }
+
+  if (elements.notesFeedback && !silent) {
+    feedback(elements.notesFeedback, "Saving…", "pending");
+  }
 
   try {
     const response = await fetchJSON(`/movies/${movieId}/notes`, {
@@ -5261,19 +5629,44 @@ async function saveSelectedNotes() {
     });
     updateVisibleMovie(response.user_movie_data);
     clearDiscoveryCache();
-    elements.saveNotes.textContent = "✓ Saved";
-    elements.saveNotes.classList.add("save-success");
-    feedback(elements.notesFeedback, "Personal memory saved.");
-
-    window.setTimeout(() => {
-      elements.saveNotes.textContent = "Save notes";
-      elements.saveNotes.classList.remove("save-success");
-    }, 1200);
+    if (elements.notesFeedback && !silent) {
+      feedback(elements.notesFeedback, "✓ Saved");
+      window.setTimeout(() => {
+        if (elements.notesFeedback && elements.notesFeedback.textContent === "✓ Saved") {
+          elements.notesFeedback.textContent = "";
+        }
+      }, 1600);
+    }
   } catch (error) {
-    feedback(elements.notesFeedback, error.message, "error");
-    elements.saveNotes.textContent = "Save notes";
-  } finally {
-    elements.saveNotes.disabled = false;
+    if (elements.notesFeedback) {
+      feedback(elements.notesFeedback, error.message, "error");
+    }
+  }
+}
+
+function handleMovieNotesInput() {
+  if (!elements.notes) return;
+  const currentVal = elements.notes.value.trim() || null;
+  const lastSaved = (state.selectedMovie?.user_data?.notes || "").trim() || null;
+
+  if (currentVal !== lastSaved) {
+    if (elements.notesFeedback) {
+      feedback(elements.notesFeedback, "Unsaved changes…", "pending");
+    }
+    if (movieNotesDebounceTimer) {
+      clearTimeout(movieNotesDebounceTimer);
+    }
+    movieNotesDebounceTimer = setTimeout(() => {
+      saveSelectedNotes();
+    }, 750);
+  } else {
+    if (movieNotesDebounceTimer) {
+      clearTimeout(movieNotesDebounceTimer);
+      movieNotesDebounceTimer = null;
+    }
+    if (elements.notesFeedback) {
+      elements.notesFeedback.textContent = "";
+    }
   }
 }
 
@@ -5300,56 +5693,6 @@ async function saveSelectedVerdict(verdict) {
   }
 }
 
-async function addSelectedKeyword(event) {
-  event.preventDefault();
-  if (!state.selectedMovie) return;
-  const name = elements.customKeyword.value.trim();
-  if (!name) {
-    elements.customKeyword.focus();
-    return;
-  }
-  const button = elements.customKeywordForm.querySelector("button");
-  button.disabled = true;
-  button.textContent = "Adding…";
-  feedback(elements.keywordFeedback, "Saving personal keyword…", "pending");
-  try {
-    await fetchJSON(`/movies/${state.selectedMovie.tmdb_id}/keywords/custom`, {
-      method: "POST",
-      body: JSON.stringify({ name }),
-    });
-    const movie = await fetchJSON(`/movies/${state.selectedMovie.tmdb_id}`);
-    state.selectedMovie = movie;
-    renderMovieKeywords(movie.keywords);
-    elements.customKeyword.value = "";
-    elements.customKeywordForm.classList.add("is-hidden");
-    elements.showCustomKeyword.classList.remove("is-hidden");
-    feedback(elements.keywordFeedback, `✓ “${name}” added.`);
-  } catch (error) {
-    feedback(elements.keywordFeedback, error.message, "error");
-  } finally {
-    button.disabled = false;
-    button.textContent = "Add";
-  }
-}
-
-async function removeSelectedKeyword(tag) {
-  if (!state.selectedMovie) return;
-  feedback(elements.keywordFeedback, `Removing “${tag.name}”…`, "pending");
-  try {
-    await fetchJSON(
-      `/movies/${state.selectedMovie.tmdb_id}/keywords/custom/${tag.keyword_id}`,
-      { method: "DELETE" },
-    );
-    state.selectedMovie.keywords = state.selectedMovie.keywords.filter(
-      (item) => item.keyword_id !== tag.keyword_id,
-    );
-    renderMovieKeywords(state.selectedMovie.keywords);
-    feedback(elements.keywordFeedback, `“${tag.name}” removed.`);
-  } catch (error) {
-    feedback(elements.keywordFeedback, error.message, "error");
-  }
-}
-
 function formatRichText(text) {
   if (!text) return "";
   let formatted = String(text)
@@ -5371,11 +5714,104 @@ function formatRichText(text) {
   formatted = formatted.replace(/(^|[^*])\*([^*]+)\*([^*]|$)/g, '$1<em>$2</em>$3');
   formatted = formatted.replace(/(^|[^_])_([^_]+)_([^_]|$)/g, '$1<em>$2</em>$3');
 
+  // @Movie mentions: @Movie Title (YYYY), @"Movie Title", or @Movie Title
+  const filmSvg = '<svg class="note-movie-mention-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M17 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/></svg>';
+  formatted = formatted.replace(
+    /(^|[\s(>*_])@\s*([A-Za-z0-9][^@\n<>()*]{1,65}?)\s*\(((?:19|20)\d{2})\)/g,
+    (_, prefix, title, year) => {
+      const cleanTitle = title.trim();
+      return `${prefix}<button type="button" class="note-movie-mention" data-movie-query="${cleanTitle}" data-movie-year="${year}">${filmSvg}<span>${cleanTitle} (${year})</span></button>`;
+    },
+  );
+  formatted = formatted.replace(
+    /(^|[\s(>*_])@&quot;([^&]+?)&quot;/g,
+    (_, prefix, title) => {
+      const cleanTitle = title.trim();
+      return `${prefix}<button type="button" class="note-movie-mention" data-movie-query="${cleanTitle}">${filmSvg}<span>${cleanTitle}</span></button>`;
+    },
+  );
+  formatted = formatted.replace(
+    /(^|[\s(>*_])@\s*([A-Za-z0-9][A-Za-z0-9'&:\- ]{1,48}?)(?=$|[.,!?;:\n<*)]|\s+(?:or|and)\s+[*_]?@|\s{2,})/g,
+    (_, prefix, title) => {
+      const cleanTitle = title.trim();
+      return `${prefix}<button type="button" class="note-movie-mention" data-movie-query="${cleanTitle}">${filmSvg}<span>${cleanTitle}</span></button>`;
+    },
+  );
+
   // Autolink bare URLs: https://...
   return formatted.replace(
     /(^|[\s(])(https?:\/\/[^\s<)]+)/g,
     '$1<a href="$2" target="_blank" rel="noreferrer noopener" class="note-link">$2</a>',
   );
+}
+
+function tryRenderMarkdownTable(lines, startIndex) {
+  const line = lines[startIndex].trim();
+  if (!line.includes("|") || line.startsWith("#") || line.startsWith(">>") || line.startsWith("->")) {
+    return null;
+  }
+  const nextLine = (startIndex + 1 < lines.length) ? lines[startIndex + 1].trim() : "";
+  const isSeparator = /^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?$/.test(nextLine);
+  if (!isSeparator) return null;
+
+  const parseRowCells = (rowStr) => {
+    let s = rowStr.trim();
+    if (s.startsWith("|")) s = s.slice(1);
+    if (s.endsWith("|")) s = s.slice(0, -1);
+    return s.split("|").map((c) => c.trim());
+  };
+
+  const headerCells = parseRowCells(line);
+  const separatorCells = parseRowCells(nextLine);
+
+  const alignments = separatorCells.map((c) => {
+    if (c.startsWith(":") && c.endsWith(":")) return "center";
+    if (c.endsWith(":")) return "right";
+    if (c.startsWith(":")) return "left";
+    return "";
+  });
+
+  const tableWrap = document.createElement("div");
+  tableWrap.className = "note-table-wrap";
+
+  const table = document.createElement("table");
+  table.className = "note-table";
+
+  const thead = document.createElement("thead");
+  const headTr = document.createElement("tr");
+  headerCells.forEach((hText, colIdx) => {
+    const th = document.createElement("th");
+    th.innerHTML = formatRichText(hText);
+    if (alignments[colIdx]) th.style.textAlign = alignments[colIdx];
+    headTr.append(th);
+  });
+  thead.append(headTr);
+  table.append(thead);
+
+  const tbody = document.createElement("tbody");
+
+  let currentIndex = startIndex + 1; // Skip separator line
+  while (currentIndex + 1 < lines.length) {
+    const peekTrimmed = lines[currentIndex + 1].trim();
+    if (!peekTrimmed || !peekTrimmed.includes("|") || /^\|?\s*:?-+:?\s*(\|\s*:?-+:?\s*)+\|?$/.test(peekTrimmed) || peekTrimmed.startsWith("#") || peekTrimmed.startsWith(">>") || peekTrimmed.startsWith("->")) {
+      break;
+    }
+    currentIndex += 1;
+    const rowCells = parseRowCells(peekTrimmed);
+    const tr = document.createElement("tr");
+    headerCells.forEach((_, colIdx) => {
+      const td = document.createElement("td");
+      const cellVal = rowCells[colIdx] || "";
+      td.innerHTML = formatRichText(cellVal);
+      if (alignments[colIdx]) td.style.textAlign = alignments[colIdx];
+      tr.append(td);
+    });
+    tbody.append(tr);
+  }
+
+  table.append(tbody);
+  tableWrap.append(table);
+  return { el: tableWrap, nextIndex: currentIndex };
 }
 
 function appendEntryBody(container, body) {
@@ -5511,6 +5947,15 @@ function appendEntryBody(container, body) {
       }
     }
 
+    // 6. Markdown Table: | Col 1 | Col 2 |
+    const tableRes = tryRenderMarkdownTable(lines, i);
+    if (tableRes) {
+      ulList = null; olList = null; blockquote = null;
+      getTarget().append(tableRes.el);
+      i = tableRes.nextIndex;
+      continue;
+    }
+
     // Heading 3: ### Heading
     const h3Match = line.match(/^\s*###\s+(.+)/);
     if (h3Match) {
@@ -5582,6 +6027,199 @@ function appendEntryBody(container, body) {
     paragraph.innerHTML = formatRichText(line);
     getTarget().append(paragraph);
   }
+  hydrateNoteMovieMentions(container);
+}
+
+const movieMentionCache = new Map();
+try {
+  const savedMentions = JSON.parse(localStorage.getItem("nope_movie_mentions_v1") || "{}");
+  Object.entries(savedMentions).forEach(([k, v]) => movieMentionCache.set(k, v));
+} catch (_) {}
+
+function cacheMovieMentionData(movie) {
+  if (!movie) return;
+  const id = Number(movie.tmdb_id || movie.id);
+  const title = (movie.title || movie.original_title || "").trim();
+  if (!id || !title) return;
+  const year = String(movie.release_date || "").slice(0, 4);
+  const compact = {
+    tmdb_id: id,
+    title,
+    release_date: movie.release_date || "",
+    poster_path: movie.poster_path || "",
+    vote_average: movie.vote_average || 0,
+    overview: movie.overview || "",
+    user_data: movie.user_data || null,
+  };
+  movieMentionCache.set(title.toLowerCase(), compact);
+  if (year) {
+    movieMentionCache.set(`${title.toLowerCase()} (${year})`, compact);
+  }
+  try {
+    const obj = {};
+    movieMentionCache.forEach((val, key) => { obj[key] = val; });
+    localStorage.setItem("nope_movie_mentions_v1", JSON.stringify(obj));
+  } catch (_) {}
+}
+
+let noteMovieHoverCardEl = null;
+function getNoteMovieHoverCard() {
+  if (!noteMovieHoverCardEl) {
+    noteMovieHoverCardEl = document.createElement("div");
+    noteMovieHoverCardEl.className = "note-movie-hover-card is-hidden";
+    document.body.append(noteMovieHoverCardEl);
+  }
+  return noteMovieHoverCardEl;
+}
+
+function hideNoteMovieHoverCard() {
+  if (noteMovieHoverCardEl) {
+    noteMovieHoverCardEl.classList.add("is-hidden");
+  }
+}
+
+async function resolveMentionedMovie(query, year = "") {
+  const norm = String(query || "").trim().toLowerCase();
+  if (!norm) return null;
+  const keyWithYear = year ? `${norm} (${year})` : norm;
+  if (movieMentionCache.has(keyWithYear)) return movieMentionCache.get(keyWithYear);
+  if (movieMentionCache.has(norm)) return movieMentionCache.get(norm);
+
+  const localPool = [...(state.allFilteredMovies || []), ...(state.movies || [])];
+  const localHit = localPool.find((m) => {
+    const t = String(m.title || m.original_title || "").trim().toLowerCase();
+    const y = String(m.release_date || "").slice(0, 4);
+    return t === norm && (!year || y === String(year));
+  }) || localPool.find((m) => String(m.title || "").trim().toLowerCase() === norm);
+  if (localHit) {
+    cacheMovieMentionData(localHit);
+    return movieMentionCache.get(keyWithYear) || movieMentionCache.get(norm);
+  }
+
+  try {
+    const [libRes, tmdbRes] = await Promise.all([
+      fetchJSON(`/movies/library/search?query=${encodeURIComponent(query)}`).catch(() => ({ results: [] })),
+      fetchJSON(`/movies/search?query=${encodeURIComponent(query)}&page=1`).catch(() => ({ results: [] })),
+    ]);
+    const results = [...(libRes.results || []), ...(tmdbRes.results || [])];
+    const match = results.find((m) => {
+      const t = String(m.title || "").trim().toLowerCase();
+      const y = String(m.release_date || "").slice(0, 4);
+      return t === norm && (!year || y === String(year));
+    }) || results.find((m) => String(m.release_date || "").slice(0, 4) === String(year)) || results[0];
+    if (match) {
+      cacheMovieMentionData(match);
+      movieMentionCache.set(norm, movieMentionCache.get(String(match.title || "").trim().toLowerCase()) || match);
+      return movieMentionCache.get(keyWithYear) || movieMentionCache.get(norm);
+    }
+  } catch (_) {}
+  return null;
+}
+
+function showNoteMovieHoverCard(chipEl, movie) {
+  if (!movie) return;
+  const card = getNoteMovieHoverCard();
+  card.replaceChildren();
+
+  if (movie.poster_path) {
+    const img = document.createElement("img");
+    img.className = "note-movie-hover-poster";
+    img.src = movie.poster_path.startsWith("http")
+      ? movie.poster_path
+      : `https://image.tmdb.org/t/p/w185${movie.poster_path}`;
+    img.alt = movie.title || "";
+    card.append(img);
+  }
+
+  const body = document.createElement("div");
+  body.className = "note-movie-hover-body";
+
+  const titleEl = document.createElement("div");
+  titleEl.className = "note-movie-hover-title";
+  const year = String(movie.release_date || "").slice(0, 4);
+  titleEl.textContent = year ? `${movie.title} (${year})` : movie.title;
+
+  const metaEl = document.createElement("div");
+  metaEl.className = "note-movie-hover-meta";
+  if (movie.vote_average) {
+    const ratingSpan = document.createElement("span");
+    ratingSpan.textContent = `★ ${Number(movie.vote_average).toFixed(1)}`;
+    ratingSpan.style.color = "#f2c94c";
+    ratingSpan.style.fontWeight = "700";
+    metaEl.append(ratingSpan);
+  }
+  const status = movie.user_data?.status;
+  if (status && status !== "new_discovery" && STATUS_LABELS[status]) {
+    const badge = document.createElement("span");
+    badge.className = "mention-popover-status";
+    badge.dataset.status = status;
+    badge.textContent = movie.user_data?.is_favorite ? `♥ ${STATUS_LABELS[status]}` : STATUS_LABELS[status];
+    metaEl.append(badge);
+  }
+
+  const copyEl = document.createElement("div");
+  copyEl.className = "note-movie-hover-Copy";
+  copyEl.textContent = movie.user_data?.notes || movie.overview || "Click to open movie details.";
+
+  body.append(titleEl, metaEl, copyEl);
+  card.append(body);
+  card.classList.remove("is-hidden");
+
+  const rect = chipEl.getBoundingClientRect();
+  const cardWidth = 310;
+  let left = Math.max(12, Math.min(rect.left, window.innerWidth - cardWidth - 16));
+  let top = rect.bottom + 8;
+  if (top + 130 > window.innerHeight) {
+    top = Math.max(12, rect.top - 126);
+  }
+  card.style.left = `${left}px`;
+  card.style.top = `${top}px`;
+}
+
+function hydrateNoteMovieMentions(container) {
+  if (!container) return;
+  const chips = [...container.querySelectorAll(".note-movie-mention")];
+  chips.forEach((chip) => {
+    const query = chip.dataset.movieQuery || "";
+    const year = chip.dataset.movieYear || "";
+    let resolvedMovie = null;
+
+    resolveMentionedMovie(query, year).then((movie) => {
+      if (!movie) return;
+      resolvedMovie = movie;
+      chip.dataset.movieId = String(movie.tmdb_id);
+      const status = movie.user_data?.status;
+      if (status && status !== "new_discovery" && !chip.querySelector(".note-movie-mention-dot")) {
+        const dot = document.createElement("span");
+        dot.className = "note-movie-mention-dot";
+        dot.dataset.status = status;
+        dot.title = STATUS_LABELS[status] || status;
+        chip.append(dot);
+      }
+    });
+
+    chip.addEventListener("mouseenter", async () => {
+      const movie = resolvedMovie || (await resolveMentionedMovie(query, year));
+      if (movie) {
+        resolvedMovie = movie;
+        showNoteMovieHoverCard(chip, movie);
+      }
+    });
+
+    chip.addEventListener("mouseleave", hideNoteMovieHoverCard);
+
+    chip.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      hideNoteMovieHoverCard();
+      const movie = resolvedMovie || (await resolveMentionedMovie(query, year));
+      if (movie && movie.tmdb_id) {
+        openMovieDetails(movie.tmdb_id);
+      } else if (query) {
+        showNotice(`Searching for “${query}”…`);
+      }
+    });
+  });
 }
 
 function getJournalNow() {
@@ -5698,26 +6336,110 @@ function createEntryTag(tag, clickable = true) {
   return chip;
 }
 
-function renderActiveEntryTag() {
-  let button = document.querySelector("#active-entry-tag");
-  if (!state.entryTagFilter) {
-    button?.remove();
-    return;
+function getEntryCalendarParts(value) {
+  const date = new Date(`${String(value || "").replace(" ", "T")}Z`);
+  if (Number.isNaN(date.getTime())) {
+    const { year, month } = getJournalNow();
+    return {
+      year,
+      month,
+      monthName: MONTH_NAMES[month - 1] || "January",
+      shortDate: "",
+    };
   }
-  if (!button) {
-    button = document.createElement("button");
-    button.id = "active-entry-tag";
-    button.type = "button";
-    button.className = "active-entry-tag";
-    elements.entryList.before(button);
-    button.addEventListener("click", () => {
-      state.entryTagFilter = "";
-      updateNotesNavActive();
-      loadEntries(1);
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: JOURNAL_TIME_ZONE,
+    year: "numeric",
+    month: "numeric",
+    day: "2-digit",
+  }).formatToParts(date);
+  const map = Object.fromEntries(
+    parts.filter((p) => p.type !== "literal").map((p) => [p.type, p.value])
+  );
+  const y = Number(map.year) || 2026;
+  const m = Number(map.month) || 1;
+  const shortMonth = (MONTH_NAMES[m - 1] || "Jan").slice(0, 3);
+  return {
+    year: y,
+    month: m,
+    monthName: MONTH_NAMES[m - 1] || `Month ${m}`,
+    shortDate: `${shortMonth} ${map.day || "01"}`,
+  };
+}
+
+function renderActiveEntryTag() {
+  const oldBtn = document.querySelector("#active-entry-tag");
+  if (oldBtn && (!elements.entryActiveFilters || !elements.entryActiveFilters.contains(oldBtn))) {
+    oldBtn.remove();
+  }
+  const bar = elements.entryActiveFilters;
+  if (!bar) return;
+  bar.replaceChildren();
+
+  const chips = [];
+  const totalCount = (state.entryResults || []).length;
+  const countSuffix = ` (${totalCount} ${totalCount === 1 ? "note" : "notes"})`;
+
+  if (state.entryTagFilter) {
+    const label = state.entryTagFilter === "__untagged__" ? "Untagged" : state.entryTagFilter;
+    chips.push({
+      id: "active-entry-tag",
+      text: `🏷️ ${label}${countSuffix}`,
+      onClear: () => {
+        state.entryTagFilter = "";
+        updateNotesNavActive();
+        loadEntries(1);
+      },
     });
   }
-  const label = state.entryTagFilter === "__untagged__" ? "Untagged" : state.entryTagFilter;
-  button.textContent = `Tag: ${label} ×`;
+
+  if (state.notesTimelineFilter && state.notesTimelineFilter.year) {
+    const y = state.notesTimelineFilter.year;
+    const m = state.notesTimelineFilter.month;
+    const mName = m ? `${MONTH_NAMES[Number(m) - 1] || m} ` : "";
+    chips.push({
+      id: "active-entry-timeline",
+      text: `📅 ${mName}${y}${countSuffix}`,
+      onClear: () => {
+        state.notesTimelineFilter = null;
+        updateNotesNavActive();
+        loadEntries(1);
+      },
+    });
+  }
+
+  const queryVal = elements.entryQuery ? elements.entryQuery.value.trim() : "";
+  if (queryVal) {
+    chips.push({
+      id: "active-entry-query",
+      text: `🔍 “${queryVal}”${countSuffix}`,
+      onClear: () => {
+        if (elements.entryQuery) elements.entryQuery.value = "";
+        loadEntries(1);
+      },
+    });
+  }
+
+  if (!chips.length) {
+    bar.classList.add("is-hidden");
+    return;
+  }
+
+  bar.classList.remove("is-hidden");
+  chips.forEach((c) => {
+    const btn = document.createElement("button");
+    btn.id = c.id;
+    btn.type = "button";
+    btn.className = "active-entry-tag";
+    const spanText = document.createElement("span");
+    spanText.textContent = c.text;
+    const spanClose = document.createElement("span");
+    spanClose.className = "active-filter-close";
+    spanClose.textContent = "✕";
+    btn.append(spanText, spanClose);
+    btn.addEventListener("click", c.onClear);
+    bar.append(btn);
+  });
 }
 
 function appendEntryLinks(container, value, onRemove = null) {
@@ -5823,10 +6545,14 @@ function updateNotesNavActive() {
         btn.classList.remove("is-active");
       } else {
         const btnYear = btn.dataset.year;
-        const btnMonth = btn.dataset.month;
+        const btnMonth = btn.dataset.month || "";
+        const filterMonth = state.notesTimelineFilter.month
+          ? String(state.notesTimelineFilter.month).padStart(2, "0")
+          : "";
+        const normBtnMonth = btnMonth ? String(btnMonth).padStart(2, "0") : "";
         const isActive =
           String(state.notesTimelineFilter.year) === String(btnYear) &&
-          String(state.notesTimelineFilter.month).padStart(2, "0") === String(btnMonth).padStart(2, "0");
+          filterMonth === normBtnMonth;
         btn.classList.toggle("is-active", isActive);
       }
     });
@@ -5946,47 +6672,140 @@ async function renderNotesTimeline() {
       "July", "August", "September", "October", "November", "December"
     ];
 
+    const yearsMap = new Map();
     items.forEach((item) => {
-      const year = item.year;
-      const monthNum = parseInt(item.month, 10);
-      const monthName = monthNames[monthNum] || `Month ${item.month}`;
-      const count = item.count;
+      const y = Number(item.year);
+      if (!yearsMap.has(y)) yearsMap.set(y, []);
+      yearsMap.get(y).push({
+        month: Number(item.month),
+        count: Number(item.count || 0),
+      });
+    });
 
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "notes-tag-link";
-      btn.dataset.year = String(year);
-      btn.dataset.month = String(item.month);
+    const sortedYears = [...yearsMap.keys()].sort((a, b) => b - a);
+    if (state.notesExpandedYears.size === 0 && sortedYears.length > 0) {
+      state.notesExpandedYears.add(sortedYears[0]);
+    }
+    if (state.notesTimelineFilter?.year) {
+      state.notesExpandedYears.add(Number(state.notesTimelineFilter.year));
+    }
 
-      const isActive =
+    sortedYears.forEach((year) => {
+      const monthsList = yearsMap.get(year) || [];
+      const yearTotal = monthsList.reduce((sum, m) => sum + m.count, 0);
+      const isExpanded = state.notesExpandedYears.has(year);
+
+      const yearGroup = document.createElement("div");
+      yearGroup.className = "notes-year-group";
+
+      const yearHeaderRow = document.createElement("div");
+      yearHeaderRow.className = "notes-year-header-row";
+
+      const chevronBtn = document.createElement("button");
+      chevronBtn.type = "button";
+      chevronBtn.className = "notes-year-chevron";
+      chevronBtn.setAttribute("aria-label", isExpanded ? `Collapse ${year}` : `Expand ${year}`);
+      chevronBtn.textContent = isExpanded ? "▾" : "▸";
+
+      const yearBtn = document.createElement("button");
+      yearBtn.type = "button";
+      yearBtn.className = "notes-tag-link notes-year-btn";
+      yearBtn.dataset.year = String(year);
+      yearBtn.dataset.month = "";
+
+      const isYearActive =
         state.notesTimelineFilter &&
-        String(state.notesTimelineFilter.year) === String(year) &&
-        String(state.notesTimelineFilter.month).padStart(2, "0") === String(item.month).padStart(2, "0");
-      if (isActive) btn.classList.add("is-active");
+        Number(state.notesTimelineFilter.year) === year &&
+        !state.notesTimelineFilter.month;
+      if (isYearActive) yearBtn.classList.add("is-active");
 
-      const label = document.createElement("span");
-      label.textContent = `${monthName} ${year}`;
-      const countBadge = document.createElement("span");
-      countBadge.className = "notes-tag-count";
-      countBadge.textContent = String(count);
+      const yearLabel = document.createElement("span");
+      yearLabel.textContent = String(year);
+      const yearCountBadge = document.createElement("span");
+      yearCountBadge.className = "notes-tag-count";
+      yearCountBadge.textContent = String(yearTotal);
+      yearBtn.append(yearLabel, yearCountBadge);
 
-      btn.append(label, countBadge);
-      btn.addEventListener("click", () => {
+      const monthsContainer = document.createElement("div");
+      monthsContainer.className = `notes-year-months ${isExpanded ? "" : "is-collapsed"}`;
+
+      chevronBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (state.notesExpandedYears.has(year)) {
+          state.notesExpandedYears.delete(year);
+          monthsContainer.classList.add("is-collapsed");
+          chevronBtn.textContent = "▸";
+        } else {
+          state.notesExpandedYears.add(year);
+          monthsContainer.classList.remove("is-collapsed");
+          chevronBtn.textContent = "▾";
+        }
+      });
+
+      yearBtn.addEventListener("click", () => {
         state.notesCurrentView = "all";
         state.entryTagFilter = "";
         if (
           state.notesTimelineFilter &&
-          String(state.notesTimelineFilter.year) === String(year) &&
-          String(state.notesTimelineFilter.month).padStart(2, "0") === String(item.month).padStart(2, "0")
+          Number(state.notesTimelineFilter.year) === year &&
+          !state.notesTimelineFilter.month
         ) {
           state.notesTimelineFilter = null;
         } else {
-          state.notesTimelineFilter = { year: Number(year), month: monthNum };
+          state.notesTimelineFilter = { year, month: null };
+          state.notesExpandedYears.add(year);
+          monthsContainer.classList.remove("is-collapsed");
+          chevronBtn.textContent = "▾";
         }
         updateNotesNavActive();
         loadEntries(1);
       });
-      elements.notesTimelineList.append(btn);
+
+      yearHeaderRow.append(chevronBtn, yearBtn);
+      yearGroup.append(yearHeaderRow);
+
+      monthsList.forEach((mItem) => {
+        const monthNum = mItem.month;
+        const monthName = monthNames[monthNum] || `Month ${monthNum}`;
+        const mBtn = document.createElement("button");
+        mBtn.type = "button";
+        mBtn.className = "notes-tag-link notes-month-btn";
+        mBtn.dataset.year = String(year);
+        mBtn.dataset.month = String(monthNum);
+
+        const isMonthActive =
+          state.notesTimelineFilter &&
+          Number(state.notesTimelineFilter.year) === year &&
+          Number(state.notesTimelineFilter.month) === monthNum;
+        if (isMonthActive) mBtn.classList.add("is-active");
+
+        const mLabel = document.createElement("span");
+        mLabel.textContent = monthName;
+        const mCount = document.createElement("span");
+        mCount.className = "notes-tag-count";
+        mCount.textContent = String(mItem.count);
+
+        mBtn.append(mLabel, mCount);
+        mBtn.addEventListener("click", () => {
+          state.notesCurrentView = "all";
+          state.entryTagFilter = "";
+          if (
+            state.notesTimelineFilter &&
+            Number(state.notesTimelineFilter.year) === year &&
+            Number(state.notesTimelineFilter.month) === monthNum
+          ) {
+            state.notesTimelineFilter = null;
+          } else {
+            state.notesTimelineFilter = { year, month: monthNum };
+          }
+          updateNotesNavActive();
+          loadEntries(1);
+        });
+        monthsContainer.append(mBtn);
+      });
+
+      yearGroup.append(monthsContainer);
+      elements.notesTimelineList.append(yearGroup);
     });
   } catch {
     // ignore timeline fetch error
@@ -6014,9 +6833,22 @@ async function toggleEntryArchive(entryId, title = "", isCurrentlyArchived = fal
   }
 }
 
+function updateNotesViewSwitcherUI() {
+  const isListMode = state.notesLayoutMode !== "cards";
+  elements.notesViewListBtn?.classList.toggle("is-active", isListMode);
+  elements.notesViewCardsBtn?.classList.toggle("is-active", !isListMode);
+  if (elements.entryList) {
+    elements.entryList.classList.toggle("is-list-mode", isListMode);
+    elements.entryList.classList.toggle("is-cards-mode", !isListMode);
+  }
+}
+
 function renderEntries(entries) {
   elements.entryList.replaceChildren();
+  updateNotesViewSwitcherUI();
+  state.focusedEntryIndex = -1;
   renderActiveEntryTag();
+
   if (!entries.length) {
     const empty = document.createElement("div");
     empty.className = "entry-empty";
@@ -6024,14 +6856,197 @@ function renderEntries(entries) {
       ? "No archived notes."
       : state.notesCurrentView === "drafts"
       ? "No drafts in your notebook. Start writing or ask Grey to draft one for you!"
-      : "No notes or links match this view.";
+      : "No notes match this view.";
     elements.entryList.append(empty);
     return;
   }
+
+  const isListMode = state.notesLayoutMode !== "cards";
+
+  if (isListMode) {
+    const bucketsMap = new Map();
+    entries.forEach((entry) => {
+      const cal = getEntryCalendarParts(entry.created_at || entry.updated_at);
+      const key = `${cal.year}-${String(cal.month).padStart(2, "0")}`;
+      if (!bucketsMap.has(key)) {
+        bucketsMap.set(key, {
+          key,
+          year: cal.year,
+          month: cal.month,
+          monthName: cal.monthName,
+          items: [],
+        });
+      }
+      bucketsMap.get(key).items.push({ entry, cal });
+    });
+
+    const sortedBuckets = [...bucketsMap.values()].sort((a, b) => b.key.localeCompare(a.key));
+    const orderedResults = [];
+
+    sortedBuckets.forEach((bucket) => {
+      bucket.items.sort((a, b) => {
+        const pinDiff = Number(Boolean(b.entry.is_pinned)) - Number(Boolean(a.entry.is_pinned));
+        if (pinDiff !== 0) return pinDiff;
+        return String(b.entry.created_at || "").localeCompare(String(a.entry.created_at || ""));
+      });
+
+      const section = document.createElement("section");
+      section.className = "entry-timeline-section";
+
+      const header = document.createElement("div");
+      header.className = "entry-timeline-header";
+
+      const labelWrap = document.createElement("span");
+      labelWrap.className = "timeline-header-label";
+      const tick = document.createElement("span");
+      tick.className = "timeline-tick";
+      tick.setAttribute("aria-hidden", "true");
+      const labelText = document.createElement("span");
+      labelText.textContent = `${bucket.year} · ${bucket.monthName.toUpperCase()}`;
+      labelWrap.append(tick, labelText);
+
+      const line = document.createElement("span");
+      line.className = "timeline-header-line";
+      line.setAttribute("aria-hidden", "true");
+
+      const countSpan = document.createElement("span");
+      countSpan.className = "timeline-header-count";
+      countSpan.textContent = `(${bucket.items.length} ${bucket.items.length === 1 ? "note" : "notes"})`;
+
+      header.append(labelWrap, line, countSpan);
+      section.append(header);
+
+      const ledgerGroup = document.createElement("div");
+      ledgerGroup.className = "entry-ledger-group";
+
+      bucket.items.forEach(({ entry, cal }) => {
+        const globalIndex = orderedResults.length;
+        orderedResults.push(entry);
+
+        const row = document.createElement("article");
+        row.className = `entry-ledger-row ${entry.is_pinned ? "is-pinned" : ""}`;
+        row.dataset.entryId = String(entry.entry_id);
+        row.dataset.entryIndex = String(globalIndex);
+        row.tabIndex = 0;
+
+        const pinSlot = document.createElement("span");
+        pinSlot.className = "ledger-pin-slot";
+        if (entry.is_pinned) {
+          pinSlot.textContent = "📌";
+          pinSlot.title = "Pinned note";
+        }
+
+        const dateEl = document.createElement("time");
+        dateEl.className = "ledger-date";
+        dateEl.textContent = cal.shortDate;
+        const dateInfoText = entryWasEdited(entry)
+          ? `Created ${formatEntryDate(entry.created_at)} · Updated ${formatEntryDateTime(entry.updated_at)}`
+          : `Created ${formatEntryDateTime(entry.created_at)}`;
+        dateEl.dataset.dateTooltip = dateInfoText;
+        dateEl.title = dateInfoText;
+        dateEl.addEventListener("click", (event) => {
+          event.stopPropagation();
+          const wasOpen = dateEl.classList.contains("is-tooltip-open");
+          document.querySelectorAll(".ledger-date.is-tooltip-open").forEach((el) => el.classList.remove("is-tooltip-open"));
+          if (!wasOpen) {
+            dateEl.classList.add("is-tooltip-open");
+          }
+        });
+
+        const dotEl = document.createElement("span");
+        dotEl.className = "ledger-dot";
+        dotEl.setAttribute("aria-hidden", "true");
+        dotEl.textContent = "•";
+
+        const titleWrap = document.createElement("div");
+        titleWrap.className = "ledger-title-wrap";
+
+        const titleEl = document.createElement("h3");
+        titleEl.className = "ledger-title";
+        titleEl.textContent = entry.title;
+        titleWrap.append(titleEl);
+
+        if (entry.status === "draft") {
+          const draftBadge = document.createElement("span");
+          draftBadge.className = "entry-draft-badge";
+          draftBadge.textContent = "Draft";
+          titleWrap.append(draftBadge);
+        }
+
+        const rightWrap = document.createElement("div");
+        rightWrap.className = "ledger-right";
+
+        const entryTags = entry.tags || [];
+        if (entryTags.length) {
+          const tagsBox = document.createElement("div");
+          tagsBox.className = "ledger-tags";
+          entryTags.slice(0, 3).forEach((tag) => {
+            const pill = createEntryTag(tag);
+            tagsBox.append(pill);
+          });
+          rightWrap.append(tagsBox);
+        }
+
+        const actions = document.createElement("div");
+        actions.className = "ledger-actions";
+
+        const pinBtn = document.createElement("button");
+        pinBtn.type = "button";
+        pinBtn.className = `card-action-btn ${entry.is_pinned ? "is-active" : ""}`;
+        pinBtn.title = entry.is_pinned ? "Unpin note" : "Pin note";
+        pinBtn.textContent = "📌";
+        pinBtn.addEventListener("click", async (event) => {
+          event.stopPropagation();
+          await toggleEntryPin(entry.entry_id);
+        });
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.className = "card-action-btn";
+        editBtn.title = "Edit note";
+        editBtn.textContent = "✎";
+        editBtn.addEventListener("click", (event) => {
+          event.stopPropagation();
+          openEntryReader(entry, globalIndex);
+          setReaderEditMode(true);
+        });
+
+        const archiveBtn = document.createElement("button");
+        archiveBtn.type = "button";
+        archiveBtn.className = `card-action-btn ${entry.is_archived ? "is-active" : ""}`;
+        archiveBtn.title = entry.is_archived ? "Restore to active notes" : "Archive note";
+        archiveBtn.textContent = entry.is_archived ? "📤" : "📥";
+        archiveBtn.addEventListener("click", async (event) => {
+          event.stopPropagation();
+          await toggleEntryArchive(entry.entry_id, entry.title, entry.is_archived);
+        });
+
+        actions.append(pinBtn, editBtn, archiveBtn);
+        rightWrap.append(actions);
+
+        row.append(pinSlot, dateEl, dotEl, titleWrap, rightWrap);
+        row.addEventListener("click", (event) => {
+          if (!event.target.closest("button, a")) {
+            openEntryReader(entry, globalIndex);
+          }
+        });
+
+        ledgerGroup.append(row);
+      });
+
+      section.append(ledgerGroup);
+      elements.entryList.append(section);
+    });
+
+    state.entryResults = orderedResults;
+    return;
+  }
+
   entries.forEach((entry, index) => {
     const article = document.createElement("article");
     article.className = `entry-card ${entry.is_pinned ? "is-pinned" : ""}`;
     article.dataset.entryId = entry.entry_id;
+    article.dataset.entryIndex = String(index);
 
     const header = document.createElement("header");
     const metaRow = document.createElement("div");
@@ -6128,7 +7143,14 @@ function renderEntries(entries) {
 }
 
 function buildEntryParameters(page) {
-  const parameters = new URLSearchParams({ page: String(page) });
+  const isListMode = state.notesLayoutMode !== "cards";
+  const parameters = new URLSearchParams({
+    page: isListMode ? "1" : String(page),
+    date_field: "created_at",
+  });
+  if (isListMode) {
+    parameters.set("per_page", "500");
+  }
   const query = elements.entryQuery ? elements.entryQuery.value.trim() : "";
   if (query) parameters.set("query", query);
   if (elements.entryTypeFilter && elements.entryTypeFilter.value) {
@@ -6178,12 +7200,16 @@ async function loadEntries(page = 1) {
     renderEntries(state.entryResults);
     renderNotesTags().catch(() => {});
     renderNotesTimeline().catch(() => {});
-    renderPagination(
-      elements.entryPagination,
-      Number(response.page || page),
-      Number(response.total_pages || 1),
-      async (target) => { await loadEntries(target); elements.entriesPage.scrollIntoView({ behavior: "smooth" }); },
-    );
+    if (state.notesLayoutMode !== "cards") {
+      elements.entryPagination.classList.add("is-hidden");
+    } else {
+      renderPagination(
+        elements.entryPagination,
+        Number(response.page || page),
+        Number(response.total_pages || 1),
+        async (target) => { await loadEntries(target); elements.entriesPage.scrollIntoView({ behavior: "smooth" }); },
+      );
+    }
   } catch (error) {
     elements.entryList.replaceChildren();
     showNotice(error.message);
@@ -6202,9 +7228,11 @@ function openEntryReader(entry, index = null, { preserveScroll = false } = {}) {
     sessionStorage.setItem("nope_open_entry_id", String(entry.entry_id));
   } catch (_) {}
   setAuxiliaryView("entry-reader");
-  elements.entryReaderBack.textContent = entry.entry_type === "link"
-    ? "← Links"
-    : "← Notes";
+  const backLabelText = entry.entry_type === "link" ? "Links" : "Notes";
+  const viewBackLabel = elements.entryReaderBack?.querySelector(".reader-back-label");
+  if (viewBackLabel) viewBackLabel.textContent = backLabelText;
+  const editBackLabel = elements.entryReaderEditBack?.querySelector(".reader-back-label");
+  if (editBackLabel) editBackLabel.textContent = backLabelText;
   const isDraft = entry.status === "draft";
   elements.entryReaderType.textContent = isDraft
     ? `Draft ${entry.entry_type === "link" ? "Link" : "Note"}`
@@ -6213,9 +7241,10 @@ function openEntryReader(entry, index = null, { preserveScroll = false } = {}) {
     elements.entryReaderPublish.classList.toggle("is-hidden", !isDraft);
   }
   elements.entryReaderTitle.textContent = entry.title;
-  elements.entryReaderDate.textContent = entryWasEdited(entry)
+  elements.entryReaderDate.textContent = formatEntryDateTime(entry.created_at || entry.updated_at);
+  elements.entryReaderDate.title = entryWasEdited(entry)
     ? `Updated ${formatEntryDateTime(entry.updated_at)}`
-    : formatEntryDateTime(entry.created_at);
+    : `Created ${formatEntryDateTime(entry.created_at)}`;
   elements.entryReaderTags.replaceChildren();
   (entry.tags || []).forEach((tag) => {
     elements.entryReaderTags.append(createEntryTag(tag));
@@ -6467,7 +7496,7 @@ async function loadStorage() {
       [summary.personal_movies, "Movies with personal status/data"],
       [summary.looking_out_for_movies, "Looking Out For"],
       [summary.old_unprotected_cache_movies, "Disposable cache older than 90 days"],
-      [summary.soft_deleted_entries, "Deleted Notes & Links retained"],
+      [summary.soft_deleted_entries, "Deleted Notes retained"],
     ];
     elements.storageSummary.replaceChildren();
     stats.forEach(([value, label]) => {
@@ -6514,6 +7543,7 @@ function renderReaderTagChips() {
       e.stopPropagation();
       state.readerTags.splice(idx, 1);
       renderReaderTagChips();
+      scheduleReaderAutoSave();
     });
     chip.append(text, removeBtn);
     elements.readerTagsChips.append(chip);
@@ -6526,6 +7556,7 @@ function addTagToReader(tagName) {
   if (!state.readerTags.some((t) => t.toLowerCase() === clean.toLowerCase())) {
     state.readerTags.push(clean);
     renderReaderTagChips();
+    scheduleReaderAutoSave();
   }
 }
 
@@ -6661,7 +7692,7 @@ function autoResizeReaderBody() {
 async function uploadBannerFile(file) {
   if (!file) return;
   try {
-    showNotice("Uploading 16:9 banner…");
+    setReaderSaveStatus("Uploading banner…", "pending", 0);
     const response = await fetch("/entries/upload-banner", {
       method: "POST",
       headers: {
@@ -6677,10 +7708,46 @@ async function uploadBannerFile(file) {
     const data = await response.json();
     state.readerBannerUrl = data.url;
     renderReaderBannerEditor();
-    showNotice("Banner image uploaded.");
+    setReaderSaveStatus("✓ Banner uploaded", "saved", 2200);
+    scheduleReaderAutoSave();
   } catch (err) {
+    setReaderSaveStatus("", "saved", 0);
     showNotice(err.message);
   }
+}
+
+let readerAutoSaveTimer = null;
+let readerSaveStatusClearTimer = null;
+let readerIsAutoSaving = false;
+
+function setReaderSaveStatus(text, kind = "saved", autoHideMs = 2200) {
+  clearTimeout(readerSaveStatusClearTimer);
+  [elements.readerSaveStatus, elements.readerViewSaveStatus].forEach((el) => {
+    if (!el) return;
+    el.textContent = text;
+    el.dataset.kind = kind;
+  });
+  if (text && autoHideMs > 0) {
+    readerSaveStatusClearTimer = setTimeout(() => {
+      [elements.readerSaveStatus, elements.readerViewSaveStatus].forEach((el) => {
+        if (el) el.textContent = "";
+      });
+    }, autoHideMs);
+  }
+}
+
+function scheduleReaderAutoSave() {
+  if (!state.readerEditing) return;
+  clearTimeout(readerAutoSaveTimer);
+  const titleVal = elements.readerTitleInput?.value?.trim() || "";
+  if (!titleVal) return;
+  setReaderSaveStatus("Saving…", "pending", 0);
+  readerAutoSaveTimer = setTimeout(() => {
+    saveReaderEntry(state.editingEntryStatus || "published", {
+      exitEditMode: false,
+      isAutoSave: true,
+    });
+  }, 750);
 }
 
 function openEntryReaderForNew() {
@@ -6692,6 +7759,20 @@ function openEntryReaderForNew() {
   updateGreyContext();
 }
 
+function updateReaderDraftToggleUI() {
+  const isDraft = state.editingEntryStatus === "draft";
+  const draftLabel = elements.readerSaveDraftLabel || elements.readerSaveDraft;
+  if (draftLabel) {
+    draftLabel.textContent = isDraft ? "📝 Draft" : "Move to Drafts";
+  }
+  elements.readerSaveDraft?.classList.toggle("is-draft-active", isDraft);
+  if (elements.readerSaveDraft) {
+    elements.readerSaveDraft.title = isDraft
+      ? "Currently in Drafts — click to move to All Notes"
+      : "Move this note to Drafts";
+  }
+}
+
 function setReaderEditMode(isEditing, isNew = false) {
   state.readerEditing = isEditing;
   const savedScroll = window.scrollY;
@@ -6699,34 +7780,20 @@ function setReaderEditMode(isEditing, isNew = false) {
 
   if (isEditing) {
     state.editingEntryId = isNew ? null : (state.entryReaderEntry?.entry_id || null);
-    state.editingEntryStatus = isNew ? "draft" : (state.entryReaderEntry?.status || "published");
+    state.editingEntryStatus = isNew ? "published" : (state.entryReaderEntry?.status || "published");
     state.readerBannerUrl = isNew ? null : (state.entryReaderEntry?.image_url || null);
     elements.readerTitleInput.value = isNew ? "" : (state.entryReaderEntry?.title || "");
     elements.readerBodyInput.value = isNew ? "" : (state.entryReaderEntry?.body || "");
     elements.readerEditDate.textContent = isNew
-      ? "New Draft"
-      : (state.entryReaderEntry?.status === "draft"
-        ? "Draft"
-        : (entryWasEdited(state.entryReaderEntry)
-          ? `Updated ${formatEntryDateTime(state.entryReaderEntry.updated_at)}`
-          : formatEntryDateTime(state.entryReaderEntry.created_at)));
+      ? formatEntryDateTime(new Date().toISOString())
+      : formatEntryDateTime(state.entryReaderEntry?.created_at || state.entryReaderEntry?.updated_at);
 
     state.readerTags = (state.entryReaderEntry?.tags || []).map((t) => typeof t === "string" ? t : t.name);
     renderReaderTagChips();
     renderReaderBannerEditor();
     updateReaderBlogStats();
     autoResizeReaderBody();
-
-    if (elements.readerSaveDraft) {
-      elements.readerSaveDraft.textContent = (!isNew && state.editingEntryStatus === "published")
-        ? "Save as draft"
-        : "Save draft";
-    }
-    if (elements.readerSavePublish) {
-      elements.readerSavePublish.textContent = (!isNew && state.editingEntryStatus === "published")
-        ? "Save changes"
-        : "Publish to Journal";
-    }
+    updateReaderDraftToggleUI();
 
     if (isNew) {
       setTimeout(() => {
@@ -6755,21 +7822,29 @@ function setReaderEditMode(isEditing, isNew = false) {
   updateGreyContext();
 }
 
-async function saveReaderEntry(targetStatus = "published") {
+async function saveReaderEntry(
+  targetStatus = "published",
+  { exitEditMode = true, isAutoSave = false } = {},
+) {
+  clearTimeout(readerAutoSaveTimer);
+  readerAutoSaveTimer = null;
   const title = elements.readerTitleInput.value.trim();
   if (!title) {
-    showNotice("Please enter a title for your note.");
-    elements.readerTitleInput.focus();
+    if (!isAutoSave) {
+      setReaderSaveStatus("Enter a title first", "error", 2500);
+      elements.readerTitleInput.focus();
+    }
     return;
   }
+  if (readerIsAutoSaving && isAutoSave) return;
+  readerIsAutoSaving = true;
   const body = elements.readerBodyInput.value.trim();
   const editing = Boolean(state.editingEntryId);
   const isSavingDraft = targetStatus === "draft";
   const activeBtn = isSavingDraft ? elements.readerSaveDraft : elements.readerSavePublish;
-  const originalText = activeBtn ? activeBtn.textContent : "";
-  if (activeBtn) {
+  setReaderSaveStatus("Saving…", "pending", 0);
+  if (!isAutoSave && activeBtn) {
     activeBtn.disabled = true;
-    activeBtn.textContent = isSavingDraft ? "Saving draft…" : "Publishing…";
   }
   try {
     const existingUrl = state.editingEntryId && state.entryReaderEntry ? (state.entryReaderEntry.url || null) : null;
@@ -6795,23 +7870,29 @@ async function saveReaderEntry(targetStatus = "published") {
     state.editingEntryId = updated.entry_id;
     state.editingEntryStatus = updated.status;
     state.readerBannerUrl = updated.image_url || null;
-    showNotice(isSavingDraft ? "Draft saved." : (editing ? "Note updated." : "Note published to Journal."));
+    setReaderSaveStatus(isSavingDraft ? "✓ Draft saved" : "✓ Saved", "saved", 2200);
     renderNotesTags().catch(() => {});
     renderNotesTimeline().catch(() => {});
-    if (editing) {
-      const idx = state.entryResults.findIndex((e) => e.entry_id === updated.entry_id);
-      if (idx >= 0) state.entryResults[idx] = updated;
+    const idx = state.entryResults.findIndex((e) => e.entry_id === updated.entry_id);
+    if (idx >= 0) {
+      state.entryResults[idx] = updated;
     } else {
-      await loadEntries(1);
+      state.entryResults.unshift(updated);
+      state.entryReaderIndex = 0;
     }
-    setReaderEditMode(false);
+    if (exitEditMode) {
+      setReaderEditMode(false);
+    } else {
+      updateReaderDraftToggleUI();
+    }
     updateGreyContext();
   } catch (error) {
+    setReaderSaveStatus("Save failed", "error", 3000);
     showNotice(error.message);
   } finally {
+    readerIsAutoSaving = false;
     if (activeBtn) {
       activeBtn.disabled = false;
-      activeBtn.textContent = originalText;
     }
   }
 }
@@ -6844,9 +7925,85 @@ if (elements.nopeUndoCounter) {
 }
 
 window.addEventListener("keydown", (event) => {
+  if ((event.ctrlKey || event.metaKey) && (event.key === "s" || event.key === "S")) {
+    if (!event.defaultPrevented) {
+      if (state.readerEditing && !elements.entryReader?.classList.contains("is-hidden")) {
+        event.preventDefault();
+        const targetStatus = state.editingEntryStatus === "draft" ? "draft" : "published";
+        saveReaderEntry(targetStatus);
+        return;
+      }
+      if (document.activeElement === elements.notes) {
+        event.preventDefault();
+        saveSelectedNotes();
+        return;
+      }
+    }
+  }
+
+  if ((event.ctrlKey || event.metaKey) && (event.key === "e" || event.key === "E")) {
+    if (!event.defaultPrevented) {
+      if (!elements.entryReader?.classList.contains("is-hidden")) {
+        event.preventDefault();
+        if (state.readerEditing) {
+          closeReaderMovieMentionPopover();
+          elements.readerSavePublish?.click();
+        } else if (state.entryReaderEntry) {
+          setReaderEditMode(true);
+        }
+        return;
+      }
+      if (elements.detailPage && !elements.detailPage.classList.contains("is-hidden") && !state.readerEditing) {
+        event.preventDefault();
+        if (elements.notesPanel) elements.notesPanel.open = true;
+        elements.notes?.focus();
+        return;
+      }
+    }
+  }
+
   const activeTag = document.activeElement?.tagName?.toLowerCase();
   const isInput = activeTag === "input" || activeTag === "textarea" || activeTag === "select" || document.activeElement?.isContentEditable;
+
+  if (elements.detailPage && !elements.detailPage.classList.contains("is-hidden") && !isInput) {
+    const isScrollKey = ["ArrowDown", "ArrowUp", "PageDown", "PageUp", " ", "Home", "End"].includes(event.key);
+    if (isScrollKey) {
+      event.preventDefault();
+      const step = 80;
+      const pageStep = Math.round(window.innerHeight * 0.75);
+      const targets = [elements.detailPage, document.documentElement, document.body];
+      if (event.key === "ArrowDown") {
+        targets.forEach((t) => { if (t) t.scrollTop += step; });
+        window.scrollBy({ top: step });
+      } else if (event.key === "ArrowUp") {
+        targets.forEach((t) => { if (t) t.scrollTop -= step; });
+        window.scrollBy({ top: -step });
+      } else if (event.key === "PageDown" || event.key === " ") {
+        targets.forEach((t) => { if (t) t.scrollTop += pageStep; });
+        window.scrollBy({ top: pageStep });
+      } else if (event.key === "PageUp") {
+        targets.forEach((t) => { if (t) t.scrollTop -= pageStep; });
+        window.scrollBy({ top: -pageStep });
+      } else if (event.key === "Home") {
+        targets.forEach((t) => { if (t) t.scrollTop = 0; });
+        window.scrollTo({ top: 0 });
+      } else if (event.key === "End") {
+        targets.forEach((t) => { if (t) t.scrollTop = t.scrollHeight; });
+        window.scrollTo({ top: document.body.scrollHeight });
+      }
+      return;
+    }
+  }
+
   const isModalOpen = Boolean(elements.profileDialog?.open || !elements.detailPage?.classList.contains("is-hidden") || state.readerEditing);
+
+  if (!isInput && !isModalOpen && (event.key === "e" || event.key === "E") && !event.ctrlKey && !event.metaKey && !event.altKey) {
+    if (state.entryReaderEntry && !elements.entryReader?.classList.contains("is-hidden") && !state.readerEditing) {
+      event.preventDefault();
+      setReaderEditMode(true);
+      return;
+    }
+  }
 
   if (!isInput && !isModalOpen && (event.key === "n" || event.key === "N") && !event.ctrlKey && !event.metaKey && !event.altKey) {
     if (state.currentView === "discover") {
@@ -7047,14 +8204,23 @@ elements.dialogClose.addEventListener("click", () => {
 });
 
 elements.detailPrevBtn?.addEventListener("click", () => {
+  if (movieNotesDebounceTimer) {
+    saveSelectedNotes({ silent: true });
+  }
   navigatePrevMovie();
 });
 
 elements.detailNextBtn?.addEventListener("click", () => {
+  if (movieNotesDebounceTimer) {
+    saveSelectedNotes({ silent: true });
+  }
   navigateNextMovie();
 });
 
 elements.returnToOrigin.addEventListener("click", () => {
+  if (movieNotesDebounceTimer) {
+    saveSelectedNotes({ silent: true });
+  }
   if (state.savedSearchSnapshot) {
     restoreSearchSnapshot();
     return;
@@ -7073,14 +8239,14 @@ elements.relatedFamiliarToggle.addEventListener("click", () => {
   state.showRelatedTracked = state.showRelatedTracked === false ? true : false;
   loadRelatedMovies(state.selectedMovie.tmdb_id);
 });
-elements.saveNotes.addEventListener("click", saveSelectedNotes);
-elements.clearVerdict.addEventListener("click", () => saveSelectedVerdict(null));
-elements.customKeywordForm.addEventListener("submit", addSelectedKeyword);
-elements.showCustomKeyword.addEventListener("click", () => {
-  elements.showCustomKeyword.classList.add("is-hidden");
-  elements.customKeywordForm.classList.remove("is-hidden");
-  elements.customKeyword.focus();
+elements.notes?.addEventListener("input", handleMovieNotesInput);
+elements.notes?.addEventListener("keydown", (event) => {
+  if ((event.ctrlKey || event.metaKey) && (event.key === "s" || event.key === "S")) {
+    event.preventDefault();
+    saveSelectedNotes();
+  }
 });
+elements.clearVerdict.addEventListener("click", () => saveSelectedVerdict(null));
 elements.workspaceCollapse.addEventListener("click", () => {
   setWorkspaceCollapsed(!state.filtersCollapsed);
 });
@@ -7088,6 +8254,9 @@ elements.notes.addEventListener("focus", () => {
   elements.notes.placeholder = "";
 });
 elements.notes.addEventListener("blur", () => {
+  if (movieNotesDebounceTimer) {
+    saveSelectedNotes();
+  }
   if (!elements.notes.value) {
     elements.notes.placeholder = "Private thoughts, observations, or anything worth remembering...";
   }
@@ -7099,18 +8268,302 @@ elements.notesPanel.addEventListener("toggle", () => {
 
 elements.newEntry.addEventListener("click", () => openEntryReaderForNew());
 elements.entryReaderBack.addEventListener("click", () => closeEntryReader());
+elements.entryReaderEditBack?.addEventListener("click", async () => {
+  if (readerAutoSaveTimer) {
+    await saveReaderEntry(state.editingEntryStatus || "published", {
+      exitEditMode: false,
+      isAutoSave: true,
+    });
+  }
+  closeEntryReader();
+});
 elements.readerCancel.addEventListener("click", () => {
+  clearTimeout(readerAutoSaveTimer);
+  readerAutoSaveTimer = null;
   if (!state.editingEntryId) {
     closeEntryReader();
   } else {
     setReaderEditMode(false);
   }
 });
-elements.readerSaveDraft.addEventListener("click", () => saveReaderEntry("draft"));
-elements.readerSavePublish.addEventListener("click", () => saveReaderEntry("published"));
+elements.readerSaveDraft.addEventListener("click", () => {
+  const nextStatus = state.editingEntryStatus === "draft" ? "published" : "draft";
+  state.editingEntryStatus = nextStatus;
+  updateReaderDraftToggleUI();
+  saveReaderEntry(nextStatus, { exitEditMode: false });
+});
+elements.readerSavePublish.addEventListener("click", async () => {
+  const titleVal = elements.readerTitleInput?.value?.trim() || "";
+  const bodyVal = elements.readerBodyInput?.value?.trim() || "";
+  if (!titleVal && !bodyVal && !state.editingEntryId) {
+    closeEntryReader();
+    return;
+  }
+  if (titleVal) {
+    await saveReaderEntry(state.editingEntryStatus || "published", { exitEditMode: true });
+  } else {
+    setReaderEditMode(false);
+  }
+});
+elements.readerTitleInput?.addEventListener("input", () => {
+  scheduleReaderAutoSave();
+});
+
+let mentionSearchTimer = null;
+let mentionActiveItems = [];
+let mentionSelectedIndex = 0;
+let mentionTriggerRange = null;
+
+function closeReaderMovieMentionPopover() {
+  const pop = document.querySelector("#reader-movie-mention-popover");
+  if (pop) pop.classList.add("is-hidden");
+  mentionActiveItems = [];
+  mentionSelectedIndex = 0;
+  mentionTriggerRange = null;
+}
+
+function insertReaderMovieMention(movie) {
+  const textarea = elements.readerBodyInput;
+  if (!textarea || !mentionTriggerRange || !movie) return;
+  cacheMovieMentionData(movie);
+  const title = (movie.title || movie.original_title || "").trim();
+  const year = String(movie.release_date || "").slice(0, 4);
+  const val = textarea.value;
+  const before = val.slice(0, mentionTriggerRange.start);
+  const after = val.slice(mentionTriggerRange.end);
+  const nextChar = after.charAt(0);
+  const needsTrailingSpace = !nextChar || !/[\s*_,.;:!?)"]/.test(nextChar);
+  const token = (year ? `@${title} (${year})` : `@"${title}"`) + (needsTrailingSpace ? " " : "");
+  textarea.value = before + token + after;
+  const nextCaret = before.length + token.length;
+  textarea.focus();
+  textarea.setSelectionRange(nextCaret, nextCaret);
+  closeReaderMovieMentionPopover();
+  autoResizeReaderBody();
+  updateReaderBlogStats();
+  scheduleReaderAutoSave();
+}
+
+function renderReaderMovieMentionPopover(movies, queryText) {
+  const pop = document.querySelector("#reader-movie-mention-popover");
+  const textarea = elements.readerBodyInput;
+  if (!pop || !textarea) return;
+  if (!movies || !movies.length) {
+    closeReaderMovieMentionPopover();
+    return;
+  }
+  mentionActiveItems = movies.slice(0, 6);
+  mentionSelectedIndex = 0;
+  pop.replaceChildren();
+
+  const header = document.createElement("div");
+  header.className = "mention-popover-header";
+  header.innerHTML = `<span>Link movie: “${queryText}”</span><span>↵ Select</span>`;
+  pop.append(header);
+
+  mentionActiveItems.forEach((movie, idx) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = `mention-popover-item${idx === 0 ? " is-active" : ""}`;
+    if (movie.poster_path) {
+      const img = document.createElement("img");
+      img.className = "mention-popover-poster";
+      img.src = movie.poster_path.startsWith("http")
+        ? movie.poster_path
+        : `https://image.tmdb.org/t/p/w92${movie.poster_path}`;
+      img.alt = "";
+      btn.append(img);
+    } else {
+      const ph = document.createElement("div");
+      ph.className = "mention-popover-poster";
+      btn.append(ph);
+    }
+    const meta = document.createElement("div");
+    meta.className = "mention-popover-meta";
+    const t = document.createElement("div");
+    t.className = "mention-popover-title";
+    t.textContent = movie.title || movie.original_title || "Untitled";
+    const sub = document.createElement("div");
+    sub.className = "mention-popover-sub";
+    const year = String(movie.release_date || "").slice(0, 4);
+    const ySpan = document.createElement("span");
+    ySpan.textContent = year || "—";
+    sub.append(ySpan);
+    if (movie.vote_average) {
+      const rSpan = document.createElement("span");
+      rSpan.textContent = `★ ${Number(movie.vote_average).toFixed(1)}`;
+      sub.append(rSpan);
+    }
+    const status = movie.user_data?.status;
+    if (status && status !== "new_discovery" && STATUS_LABELS[status]) {
+      const badge = document.createElement("span");
+      badge.className = "mention-popover-status";
+      badge.dataset.status = status;
+      badge.textContent = STATUS_LABELS[status];
+      sub.append(badge);
+    }
+    meta.append(t, sub);
+    btn.append(meta);
+    btn.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      insertReaderMovieMention(movie);
+    });
+    pop.append(btn);
+  });
+
+  const rect = textarea.getBoundingClientRect();
+  const caret = textarea.selectionStart || 0;
+  const linesBeforeCaret = textarea.value.slice(0, caret).split("\n").length;
+  const approxLineHeight = 29;
+  const cursorY = rect.top + Math.min(textarea.clientHeight, linesBeforeCaret * approxLineHeight);
+  const topPos = Math.min(window.innerHeight - 300, Math.max(72, cursorY + 8));
+  const leftPos = Math.max(16, Math.min(rect.left + 12, window.innerWidth - 380));
+  pop.style.top = `${topPos}px`;
+  pop.style.left = `${leftPos}px`;
+  pop.classList.remove("is-hidden");
+}
+
+function checkReaderMovieMentionTrigger() {
+  const textarea = elements.readerBodyInput;
+  if (!textarea || !state.readerEditing) {
+    closeReaderMovieMentionPopover();
+    return;
+  }
+  const caret = textarea.selectionStart || 0;
+  const fullVal = textarea.value;
+  const lineStart = fullVal.lastIndexOf("\n", Math.max(0, caret - 1)) + 1;
+  const nextNewline = fullVal.indexOf("\n", caret);
+  const lineEnd = nextNewline === -1 ? fullVal.length : nextNewline;
+  const currentLineBefore = fullVal.slice(lineStart, caret);
+  const currentLineAfter = fullVal.slice(caret, lineEnd);
+
+  // Case 1: Typing @query before the cursor (allowing *, _, ", (, space, or start of line before @)
+  let fullToken = "";
+  let rawQuery = "";
+  let tokenStart = 0;
+  let tokenEnd = caret;
+
+  const beforeMatch = currentLineBefore.match(/(?:^|[\s(>"'*_\-[—–])(@\s*([a-zA-Z0-9'&:\-., ]{0,42}))$/);
+  if (!beforeMatch) {
+    closeReaderMovieMentionPopover();
+    return;
+  }
+
+  const typedAfterAt = beforeMatch[2];
+  const atIndexInLine = currentLineBefore.length - beforeMatch[1].length;
+  tokenStart = lineStart + atIndexInLine;
+
+  // If the user typed @ right in front of an existing title on the line (e.g. *@|The King of Comedy*)
+  const lookaheadMatch = currentLineAfter.match(/^([a-zA-Z0-9'&:\- ]{1,42}?)(?=$|[*_".,!?;:)]|\s+(?:or|and)\s+)/);
+  if (typedAfterAt.trim().length >= 2) {
+    // Also include any remaining characters of the current word/italic span right after the cursor
+    const tailWord = lookaheadMatch && typedAfterAt.trim().length < 4 ? lookaheadMatch[1] : "";
+    rawQuery = (typedAfterAt + tailWord).trim();
+    tokenEnd = caret + tailWord.length;
+    fullToken = fullVal.slice(tokenStart, tokenEnd);
+  } else if (lookaheadMatch && (typedAfterAt + lookaheadMatch[1]).trim().length >= 2) {
+    rawQuery = (typedAfterAt + lookaheadMatch[1]).trim();
+    tokenEnd = caret + lookaheadMatch[1].length;
+    fullToken = fullVal.slice(tokenStart, tokenEnd);
+  } else {
+    closeReaderMovieMentionPopover();
+    return;
+  }
+
+  if (!rawQuery || /\(\d{4}\)\s*$/.test(fullToken)) {
+    closeReaderMovieMentionPopover();
+    return;
+  }
+  mentionTriggerRange = { start: tokenStart, end: tokenEnd };
+
+  clearTimeout(mentionSearchTimer);
+  mentionSearchTimer = setTimeout(async () => {
+    const qLower = rawQuery.toLowerCase();
+    const localPool = [...(state.allFilteredMovies || []), ...(state.movies || [])];
+    const seenIds = new Set();
+    const localMatches = [];
+    localPool.forEach((m) => {
+      const id = Number(m.tmdb_id || m.id);
+      if (!id || seenIds.has(id)) return;
+      const title = String(m.title || m.original_title || "").toLowerCase();
+      if (title.includes(qLower)) {
+        seenIds.add(id);
+        localMatches.push(m);
+      }
+    });
+    if (localMatches.length) {
+      renderReaderMovieMentionPopover(localMatches, rawQuery);
+    }
+    try {
+      const [libRes, tmdbRes] = await Promise.all([
+        fetchJSON(`/movies/library/search?query=${encodeURIComponent(rawQuery)}`).catch(() => ({ results: [] })),
+        fetchJSON(`/movies/search?query=${encodeURIComponent(rawQuery)}&page=1`).catch(() => ({ results: [] })),
+      ]);
+      const merged = [...localMatches];
+      [...(libRes.results || []), ...(tmdbRes.results || [])].forEach((m) => {
+        const id = Number(m.tmdb_id || m.id);
+        if (id && !seenIds.has(id)) {
+          seenIds.add(id);
+          merged.push(m);
+        }
+      });
+      renderReaderMovieMentionPopover(merged, rawQuery);
+    } catch (_) {}
+  }, 150);
+}
+
 elements.readerBodyInput.addEventListener("input", () => {
   autoResizeReaderBody();
   updateReaderBlogStats();
+  scheduleReaderAutoSave();
+  checkReaderMovieMentionTrigger();
+});
+
+elements.readerBodyInput.addEventListener("keydown", (event) => {
+  // If text is highlighted in the note editor and user presses '@', prepend '@' without erasing the highlighted movie title!
+  if (event.key === "@" && elements.readerBodyInput.selectionStart !== elements.readerBodyInput.selectionEnd) {
+    event.preventDefault();
+    const ta = elements.readerBodyInput;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const selectedText = ta.value.slice(start, end);
+    ta.value = ta.value.slice(0, start) + "@" + selectedText + ta.value.slice(end);
+    const nextPos = start + 1 + selectedText.length;
+    ta.setSelectionRange(nextPos, nextPos);
+    scheduleReaderAutoSave();
+    checkReaderMovieMentionTrigger();
+    return;
+  }
+
+  const pop = document.querySelector("#reader-movie-mention-popover");
+  if (!pop || pop.classList.contains("is-hidden") || !mentionActiveItems.length) {
+    if (event.key === "Escape" && state.readerEditing) {
+      event.preventDefault();
+      elements.readerSavePublish?.click();
+    }
+    return;
+  }
+  const items = [...pop.querySelectorAll(".mention-popover-item")];
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    mentionSelectedIndex = (mentionSelectedIndex + 1) % mentionActiveItems.length;
+    items.forEach((el, idx) => el.classList.toggle("is-active", idx === mentionSelectedIndex));
+  } else if (event.key === "ArrowUp") {
+    event.preventDefault();
+    mentionSelectedIndex = (mentionSelectedIndex - 1 + mentionActiveItems.length) % mentionActiveItems.length;
+    items.forEach((el, idx) => el.classList.toggle("is-active", idx === mentionSelectedIndex));
+  } else if (event.key === "Enter" || event.key === "Tab") {
+    event.preventDefault();
+    insertReaderMovieMention(mentionActiveItems[mentionSelectedIndex]);
+  } else if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    closeReaderMovieMentionPopover();
+  }
+});
+
+elements.readerBodyInput.addEventListener("blur", () => {
+  setTimeout(closeReaderMovieMentionPopover, 180);
 });
 window.addEventListener("resize", autoResizeReaderBody);
 
@@ -7163,6 +8616,7 @@ elements.readerUrlBannerBtn?.addEventListener("click", () => {
     const trimmed = input.trim();
     state.readerBannerUrl = trimmed || null;
     renderReaderBannerEditor();
+    scheduleReaderAutoSave();
   }
 });
 elements.readerChangeBannerBtn?.addEventListener("click", () => {
@@ -7171,13 +8625,27 @@ elements.readerChangeBannerBtn?.addEventListener("click", () => {
 elements.readerRemoveBannerBtn?.addEventListener("click", () => {
   state.readerBannerUrl = null;
   renderReaderBannerEditor();
+  scheduleReaderAutoSave();
 });
 
-[elements.readerTitleInput, elements.readerBodyInput].forEach((el) => {
+[elements.readerTitleInput, elements.readerBodyInput, elements.readerTagInput].forEach((el) => {
   el?.addEventListener("keydown", (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    if ((event.ctrlKey || event.metaKey) && (event.key === "s" || event.key === "S")) {
       event.preventDefault();
-      saveReaderEntry("published");
+      if (event.shiftKey) {
+        const nextStatus = state.editingEntryStatus === "draft" ? "published" : "draft";
+        state.editingEntryStatus = nextStatus;
+        updateReaderDraftToggleUI();
+        saveReaderEntry(nextStatus, { exitEditMode: false });
+      } else {
+        saveReaderEntry(state.editingEntryStatus || "published", { exitEditMode: false });
+      }
+    } else if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      event.preventDefault();
+      saveReaderEntry(state.editingEntryStatus || "published", { exitEditMode: true });
+    } else if (event.key === "Escape" && el !== elements.readerTagInput) {
+      event.preventDefault();
+      elements.readerSavePublish?.click();
     }
   });
 });
@@ -7235,6 +8703,105 @@ if (elements.notesViewArchive) {
   });
 }
 
+elements.notesViewListBtn?.addEventListener("click", () => {
+  if (state.notesLayoutMode === "list") return;
+  state.notesLayoutMode = "list";
+  updateNotesViewSwitcherUI();
+  loadEntries(1);
+});
+
+elements.notesViewCardsBtn?.addEventListener("click", () => {
+  if (state.notesLayoutMode === "cards") return;
+  state.notesLayoutMode = "cards";
+  updateNotesViewSwitcherUI();
+  loadEntries(1);
+});
+
+function highlightFocusedNoteRow(index) {
+  if (!elements.entryList) return;
+  const rows = [...elements.entryList.querySelectorAll(".entry-ledger-row, .entry-card")];
+  rows.forEach((r, idx) => {
+    r.classList.toggle("is-keyboard-focused", idx === index);
+  });
+  if (index >= 0 && index < rows.length) {
+    rows[index].scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+}
+
+window.addEventListener("keydown", (event) => {
+  if (state.currentView !== "entries") return;
+  if (event.target && /^(?:input|textarea|select)$/i.test(event.target.tagName)) {
+    if (event.key === "Escape" && event.target === elements.entryQuery) {
+      elements.entryQuery.value = "";
+      elements.entryQuery.blur();
+      loadEntries(1);
+    }
+    return;
+  }
+  if (event.ctrlKey || event.altKey || event.metaKey) return;
+
+  const isReaderOpen = elements.entryReader && !elements.entryReader.classList.contains("is-hidden");
+  if (isReaderOpen) {
+    if (!state.readerEditing) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeEntryReader();
+      } else if (event.key === "ArrowLeft" && elements.entryReaderPrevious && !elements.entryReaderPrevious.disabled) {
+        event.preventDefault();
+        navigateEntryReader(-1).catch((error) => showNotice(error.message));
+      } else if (event.key === "ArrowRight" && elements.entryReaderNext && !elements.entryReaderNext.disabled) {
+        event.preventDefault();
+        navigateEntryReader(1).catch((error) => showNotice(error.message));
+      }
+    }
+    return;
+  }
+
+  const isListVisible = elements.entriesPage && !elements.entriesPage.classList.contains("is-hidden");
+  if (!isListVisible) return;
+
+  if (event.key === "n" || event.key === "N") {
+    event.preventDefault();
+    openEntryReaderForNew();
+    return;
+  }
+
+  if (event.key === "Escape") {
+    const hasFilter =
+      Boolean(state.entryTagFilter) ||
+      Boolean(state.notesTimelineFilter) ||
+      Boolean(elements.entryQuery && elements.entryQuery.value.trim());
+    if (hasFilter) {
+      event.preventDefault();
+      state.entryTagFilter = "";
+      state.notesTimelineFilter = null;
+      if (elements.entryQuery) elements.entryQuery.value = "";
+      updateNotesNavActive();
+      loadEntries(1);
+      return;
+    }
+  }
+
+  const rows = elements.entryList ? [...elements.entryList.querySelectorAll(".entry-ledger-row, .entry-card")] : [];
+  if (!rows.length) return;
+
+  if (event.key === "j" || event.key === "ArrowDown") {
+    event.preventDefault();
+    state.focusedEntryIndex = Math.min(rows.length - 1, state.focusedEntryIndex + 1);
+    highlightFocusedNoteRow(state.focusedEntryIndex);
+  } else if (event.key === "k" || event.key === "ArrowUp") {
+    event.preventDefault();
+    state.focusedEntryIndex = state.focusedEntryIndex <= 0 ? 0 : state.focusedEntryIndex - 1;
+    highlightFocusedNoteRow(state.focusedEntryIndex);
+  } else if (event.key === "Enter" && state.focusedEntryIndex >= 0 && state.focusedEntryIndex < rows.length) {
+    event.preventDefault();
+    const entry = state.entryResults[state.focusedEntryIndex];
+    if (entry) {
+      openEntryReader(entry, state.focusedEntryIndex);
+    }
+  }
+});
+
 elements.entryReaderBack.addEventListener("click", closeEntryReader);
 if (elements.entryReaderPublish) {
   elements.entryReaderPublish.addEventListener("click", async () => {
@@ -7247,14 +8814,14 @@ if (elements.entryReaderPublish) {
       });
       const published = response.entry;
       state.entryReaderEntry = published;
-      showNotice("Published note to Journal!");
       renderNotesTags().catch(() => {});
       openEntryReader(published, state.entryReaderIndex, { preserveScroll: true });
+      setReaderSaveStatus("✓ Published", "saved", 2200);
     } catch (err) {
       showNotice(err.message);
     } finally {
       elements.entryReaderPublish.disabled = false;
-      elements.entryReaderPublish.textContent = "Publish to Journal";
+      elements.entryReaderPublish.textContent = "Publish";
     }
   });
 }
@@ -7299,7 +8866,7 @@ elements.cleanupCache.addEventListener("click", async () => {
 });
 
 elements.purgeDeletedEntries.addEventListener("click", async () => {
-  if (!window.confirm("Permanently remove deleted Notes & Links? This cannot be undone.")) return;
+  if (!window.confirm("Permanently delete removed notes? This cannot be undone.")) return;
   elements.purgeDeletedEntries.disabled = true;
   try {
     const result = await fetchJSON("/storage/deleted-entries", { method: "DELETE" });
@@ -7309,6 +8876,66 @@ elements.purgeDeletedEntries.addEventListener("click", async () => {
     feedback(elements.storageFeedback, error.message, "error");
   } finally {
     elements.purgeDeletedEntries.disabled = false;
+  }
+});
+
+const exportNotesMdBtn = document.querySelector("#export-notes-md");
+exportNotesMdBtn?.addEventListener("click", async () => {
+  exportNotesMdBtn.disabled = true;
+  try {
+    const res = await fetchJSON("/entries?page=1&per_page=500&date_field=created_at");
+    const entries = Array.isArray(res.results) ? res.results : [];
+    const lines = ["# NOPE — Notes & Film Essays Export", ""];
+    entries.forEach((entry) => {
+      const dateStr = formatEntryDateTime(entry.created_at || entry.updated_at);
+      const tagsStr = (entry.tags || []).map((t) => `#${t.name}`).join(" ");
+      lines.push(`## ${entry.title || "Untitled"}`);
+      lines.push(`*${dateStr}*${tagsStr ? ` · ${tagsStr}` : ""}`);
+      lines.push("");
+      if (entry.body) lines.push(entry.body);
+      if (entry.url) lines.push(`\nLinks:\n${entry.url}`);
+      lines.push("\n---\n");
+    });
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `nope-notes-${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    feedback(elements.storageFeedback, `Exported ${entries.length} notes to Markdown.`);
+  } catch (error) {
+    feedback(elements.storageFeedback, error.message, "error");
+  } finally {
+    exportNotesMdBtn.disabled = false;
+  }
+});
+
+const exportLibraryJsonBtn = document.querySelector("#export-library-json");
+exportLibraryJsonBtn?.addEventListener("click", async () => {
+  exportLibraryJsonBtn.disabled = true;
+  try {
+    const [entriesRes, shelvesRes] = await Promise.all([
+      fetchJSON("/entries?page=1&per_page=500&date_field=created_at"),
+      fetchJSON("/movies/personal?page=1&per_page=5000"),
+    ]);
+    const payload = {
+      exported_at: new Date().toISOString(),
+      personal_movies: shelvesRes.results || [],
+      notes: entriesRes.results || [],
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `nope-library-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    feedback(elements.storageFeedback, "Exported full library & notes JSON snapshot.");
+  } catch (error) {
+    feedback(elements.storageFeedback, error.message, "error");
+  } finally {
+    exportLibraryJsonBtn.disabled = false;
   }
 });
 
@@ -7378,17 +9005,17 @@ function updateGreyContext() {
   const view = state.currentView || "discover";
   if (view === "discover") {
     elements.greyContextView.textContent = "Discover";
-    elements.greyContextDetail.textContent = "Browsing new titles";
+    elements.greyContextDetail.textContent = "";
     if (elements.greyStatusText) elements.greyStatusText.textContent = "Perched in Discovery";
   } else if (view === "entries") {
     elements.greyContextView.textContent = "Notes";
-    elements.greyContextDetail.textContent = state.entryTagFilter ? `Tag: ${state.entryTagFilter}` : "Personal observations";
+    elements.greyContextDetail.textContent = state.entryTagFilter ? `Tag: ${state.entryTagFilter}` : "";
     if (elements.greyStatusText) elements.greyStatusText.textContent = "Browsing journal notes";
   } else if (view === "movie-notes") {
     elements.greyContextView.textContent = "Movie Notes";
     const paired = state.movieNotesShelfFilter
       ? `Shelf: ${STATUS_LABELS[state.movieNotesShelfFilter] || state.movieNotesShelfFilter}`
-      : "All shelves";
+      : "";
     elements.greyContextDetail.textContent = paired;
     if (elements.greyStatusText) elements.greyStatusText.textContent = "Browsing personal movie notes";
   } else {
@@ -7463,11 +9090,14 @@ function saveGreyDailySession() {
         const isBot = msgEl.classList.contains("grey-msg-bot");
         const p = msgEl.querySelector(".grey-bubble > p");
         const sub = msgEl.querySelector(".grey-subtext");
+        const reactionImg = msgEl.querySelector(".grey-reaction-media");
+        const reaction = reactionImg ? reactionImg.getAttribute("alt") : null;
         if (p) {
           sessionData.messages.push({
             role: isBot ? "bot" : "user",
             text: p.textContent,
             subtext: sub ? sub.textContent : null,
+            reaction: reaction,
           });
         }
       });
@@ -7481,8 +9111,7 @@ function loadGreyDailySession() {
     const raw = localStorage.getItem("nope_grey_daily_session");
     if (!raw) return false;
     const sessionData = JSON.parse(raw);
-    const today = getTodaySessionDate();
-    if (sessionData.date !== today || !Array.isArray(sessionData.messages) || sessionData.messages.length <= 1) {
+    if (!Array.isArray(sessionData.messages) || sessionData.messages.length <= 1) {
       localStorage.removeItem("nope_grey_daily_session");
       return false;
     }
@@ -7490,7 +9119,7 @@ function loadGreyDailySession() {
     if (elements.greyMessages && sessionData.messages.length > 0) {
       elements.greyMessages.replaceChildren();
       sessionData.messages.forEach((m) => {
-        appendGreyMessage(m.role, m.text, m.subtext, null, { skipSave: true });
+        appendGreyMessage(m.role, m.text, m.subtext, null, { skipSave: true, reaction: m.reaction });
       });
       return true;
     }
@@ -7498,7 +9127,7 @@ function loadGreyDailySession() {
   return false;
 }
 
-function appendGreyMessage(role, text, subtext, pills, { skipSave = false, skillTag = null } = {}) {
+function appendGreyMessage(role, text, subtext, pills, { skipSave = false, skillTag = null, reaction = null } = {}) {
   if (!elements.greyMessages) return;
   const msgEl = document.createElement("div");
   msgEl.className = `grey-msg grey-msg-${role}`;
@@ -7523,16 +9152,39 @@ function appendGreyMessage(role, text, subtext, pills, { skipSave = false, skill
     paragraphs.forEach((para) => {
       const trimmedPara = para.trim();
       if (!trimmedPara) return;
-      const p = document.createElement("p");
-      const formattedLines = trimmedPara.split(/\r?\n/).map((line) => {
-        let formatted = formatRichText(line);
-        formatted = formatted.replace(/\bVerdict:\s*<strong>NOPE<\/strong>/gi, 'Verdict: <strong class="grey-verdict-nope">NOPE</strong>');
-        formatted = formatted.replace(/\bVerdict:\s*<strong>YES<\/strong>/gi, 'Verdict: <strong class="grey-verdict-yes">YES</strong>');
-        return formatted;
-      });
-      p.innerHTML = formattedLines.join("<br>");
-      bubble.append(p);
+      const paraLines = trimmedPara.split(/\r?\n/);
+      let pLineIdx = 0;
+      while (pLineIdx < paraLines.length) {
+        const tableRes = tryRenderMarkdownTable(paraLines, pLineIdx);
+        if (tableRes) {
+          bubble.append(tableRes.el);
+          pLineIdx = tableRes.nextIndex + 1;
+          continue;
+        }
+        const line = paraLines[pLineIdx];
+        if (line.trim()) {
+          const p = document.createElement("p");
+          let formatted = formatRichText(line);
+          formatted = formatted.replace(/\bVerdict:\s*<strong>NOPE<\/strong>/gi, 'Verdict: <strong class="grey-verdict-nope">NOPE</strong>');
+          formatted = formatted.replace(/\bVerdict:\s*<strong>YES<\/strong>/gi, 'Verdict: <strong class="grey-verdict-yes">YES</strong>');
+          p.innerHTML = formatted;
+          bubble.append(p);
+        }
+        pLineIdx += 1;
+      }
     });
+  }
+
+  if (reaction) {
+    const reactionWrap = document.createElement("div");
+    reactionWrap.className = "grey-reaction-wrap";
+    const img = document.createElement("img");
+    img.className = "grey-reaction-media";
+    img.src = `/assets/gifs_n_media/${encodeURIComponent(reaction)}`;
+    img.alt = reaction;
+    img.loading = "lazy";
+    reactionWrap.append(img);
+    bubble.append(reactionWrap);
   }
 
   if (subtext) {
@@ -7559,6 +9211,8 @@ function appendGreyMessage(role, text, subtext, pills, { skipSave = false, skill
           openMovieDetails(pill.payload.tmdb_id);
         } else if (pill.action === "save_shelf" && pill.payload?.name) {
           handleGreySaveShelf(pill.payload.name);
+        } else if (pill.action === "save_movie_notes") {
+          saveGreyToMovieNotes(pill.payload?.critique);
         } else if ((pill.action === "open_entry" || pill.action === "open_note") || (pill.payload?.entry_id || pill.payload?.id)) {
           if (elements.detailPage && !elements.detailPage.classList.contains("is-hidden")) {
             closeMovieDetails();
@@ -7690,8 +9344,96 @@ function updateGreyModelUI(activeModelUsed) {
   }
 }
 
+async function saveGreyToMovieNotes(providedCritique = null) {
+  if (!state.selectedMovie) {
+    appendGreyMessage("bot", "Please open a movie's page first so I know which film's critique to save.");
+    return;
+  }
+
+  let critique = (providedCritique || "").trim();
+  if (!critique) {
+    for (let i = greyChatHistory.length - 1; i >= 0; i--) {
+      const msg = greyChatHistory[i];
+      if (msg.role === "model" && msg.text) {
+        critique = msg.text.trim();
+        break;
+      }
+    }
+  }
+
+  critique = critique.replace(/^\*\*[^\n\*]+\*\*\s*\n*/i, "").trim();
+
+  if (!critique) {
+    appendGreyMessage("bot", "I haven't shared a critique for this movie yet. Ask me what I think of it first!");
+    return;
+  }
+
+  const movie = state.selectedMovie;
+  const genres = (movie.genres || []).map((g) => typeof g === "object" ? g.name : g).filter(Boolean);
+  const genreStr = genres.length > 0 ? ` [${genres.join(", ")}]` : "";
+  const releaseYear = (movie.release_date || "").slice(0, 4);
+  const yearStr = releaseYear ? ` (${releaseYear})` : "";
+  const movieLine = `${movie.title || "Movie"}${yearStr}${genreStr}`;
+
+  const formattedBlock = `Grey says:\n${movieLine}\n${critique}`;
+
+  const existingNotes = (elements.notes ? elements.notes.value : (movie.user_data?.notes || "")).trim();
+  const fullNotes = existingNotes ? `${existingNotes}\n\n${formattedBlock}` : formattedBlock;
+
+  if (elements.notes) {
+    elements.notes.value = fullNotes;
+    if (elements.notesPanel) elements.notesPanel.open = true;
+  }
+
+  try {
+    const response = await fetchJSON(`/movies/${movie.tmdb_id}/notes`, {
+      method: "PUT",
+      body: JSON.stringify({ notes: fullNotes }),
+    });
+    if (!movie.user_data) movie.user_data = {};
+    movie.user_data.notes = fullNotes;
+    updateVisibleMovie(response.user_movie_data);
+    clearDiscoveryCache();
+    feedback(elements.notesFeedback, "Note saved", "success");
+    appendGreyMessage("bot", "Greyed it.");
+  } catch (err) {
+    appendGreyMessage("bot", `Failed to save notes: ${err.message}`);
+  }
+}
+
 async function sendGreyMessage(query) {
   if (!query) return;
+
+  const trimmedQ = query.trim();
+
+  const isSaveCritiqueTrigger = /^(?:grey\s+says|g\s+says|grey\s+it)[\:\!\.]*$/i.test(trimmedQ);
+  if (isSaveCritiqueTrigger) {
+    appendGreyMessage("user", query);
+    if (elements.greyInput) elements.greyInput.value = "";
+    await saveGreyToMovieNotes();
+    return;
+  }
+
+  const isQuietCommand = /^(?:no\s+gifs?(?:\s+this\s+session)?|quiet\s+mode|\/quiet|\/focus|silence\s+reactions)$/i.test(trimmedQ);
+  if (isQuietCommand) {
+    state.greyQuietMode = true;
+    appendGreyMessage("user", query);
+    if (elements.greyInput) elements.greyInput.value = "";
+    appendGreyMessage("bot", "Quiet mode enabled for this session. Reactions silenced.");
+    return;
+  }
+
+  const isResetCommand = /^(?:gifs?\s+ok|allow\s+gifs?|unmute\s+gifs?|reset\s+session|\/normal)$/i.test(trimmedQ);
+  if (isResetCommand) {
+    state.greyQuietMode = false;
+    state.greyTurnsSinceReaction = 4;
+    appendGreyMessage("user", query);
+    if (elements.greyInput) elements.greyInput.value = "";
+    appendGreyMessage("bot", "Reactions re-enabled.");
+    return;
+  }
+
+  state.greyTurnsSinceReaction = (state.greyTurnsSinceReaction || 0) + 1;
 
   appendGreyMessage("user", query);
   if (elements.greyInput) elements.greyInput.value = "";
@@ -7758,10 +9500,18 @@ async function sendGreyMessage(query) {
         }))
       : [];
 
+    if (state.selectedMovie && elements.notes) {
+      saveSelectedNotes({ silent: true });
+    }
+    const liveMovieNotes = (state.selectedMovie && elements.notes)
+      ? (elements.notes.value.trim() || null)
+      : null;
+
     const payload = {
       message: query,
       current_view: state.mode === "filmography" ? "filmography" : (state.currentView || "library"),
       inspected_movie_id: state.selectedMovie?.tmdb_id || null,
+      live_movie_notes: liveMovieNotes,
       inspected_note: inspectedNote,
       active_person: activePerson,
       visible_movies: visibleMovies,
@@ -7774,7 +9524,7 @@ async function sendGreyMessage(query) {
         status: m.user_data?.status || "unseen",
         verdict: m.user_data?.verdict || null,
       })) : null,
-      history: greyChatHistory.slice(-6),
+      history: greyChatHistory.slice(-16),
       model_mode: state.greyModelMode || "auto",
     };
 
@@ -7789,8 +9539,28 @@ async function sendGreyMessage(query) {
       updateGreyModelUI(res.model_used);
     }
 
+    let reactionToShow = res.reaction;
+    if (state.greyQuietMode) {
+      reactionToShow = null;
+    } else if (reactionToShow) {
+      if ((state.greyTurnsSinceReaction || 0) < 4) {
+        reactionToShow = null;
+      } else {
+        state.greyTurnsSinceReaction = 0;
+      }
+    }
+
+    let pills = Array.isArray(res.pills) ? [...res.pills] : [];
+    if (state.selectedMovie && res.text && !res.action && !pills.some((p) => p.action === "save_movie_notes")) {
+      pills.push({
+        label: "📝 Save to Movie Notes",
+        action: "save_movie_notes",
+        payload: { critique: res.text },
+      });
+    }
+
     const skillBadge = res.active_skill ? `⚡ /${res.active_skill}` : null;
-    appendGreyMessage("bot", res.text, null, res.pills, { skillTag: skillBadge });
+    appendGreyMessage("bot", res.text, null, pills, { skillTag: skillBadge, reaction: reactionToShow });
 
     greyChatHistory.push({ role: "user", text: query });
     greyChatHistory.push({ role: "model", text: res.text });
@@ -7887,6 +9657,8 @@ function initGreyCompanion() {
   if (!elements.greyToggle) return;
 
   loadGreyDailySession();
+  state.greyTurnsSinceReaction = 5;
+  state.greyQuietMode = false;
 
   try {
     state.greyModelMode = localStorage.getItem("nope_grey_model_mode") || "auto";
@@ -7938,6 +9710,8 @@ function initGreyCompanion() {
     hideSlashMenu();
     if (cmd === "/related") {
       sendGreyMessage("/related");
+    } else if (cmd === "/research") {
+      sendGreyMessage("/research");
     } else {
       if (elements.greyInput) {
         elements.greyInput.value = `${cmd} `;
@@ -8038,9 +9812,9 @@ function initGreyCompanion() {
     const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
     const isInputFocused = activeTag === "input" || activeTag === "textarea" || activeTag === "select" || document.activeElement?.isContentEditable;
 
-    // Left / Right Arrow keys for Prev / Next movie when details page is open
+    // Left / Right Arrow keys & Quick Shelf Triage (W, L, R, X, F) when details page is open
     if (elements.detailPage && !elements.detailPage.classList.contains("is-hidden")) {
-      if (!isInputFocused) {
+      if (!isInputFocused && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (e.key === "ArrowLeft") {
           e.preventDefault();
           navigatePrevMovie();
@@ -8048,6 +9822,32 @@ function initGreyCompanion() {
         } else if (e.key === "ArrowRight") {
           e.preventDefault();
           navigateNextMovie();
+          return;
+        }
+        const k = e.key.toLowerCase();
+        const keyStatusMap = {
+          u: "untracked",
+          d: "new_discovery",
+          w: "watched",
+          l: "watch_later",
+          r: "rewatch",
+          x: "excluded",
+        };
+        if (keyStatusMap[k] && state.selectedMovie && elements.statusSelect) {
+          e.preventDefault();
+          elements.statusSelect.value = keyStatusMap[k];
+          saveSelectedStatus();
+          return;
+        }
+        if (k === "f" && state.selectedMovie) {
+          e.preventDefault();
+          const curStatus = state.selectedMovie.user_data?.status || "new_discovery";
+          if (curStatus !== "watched" && curStatus !== "rewatch") {
+            elements.statusSelect.value = "watched";
+            saveSelectedStatus().then(() => toggleSelectedFavorite());
+          } else {
+            toggleSelectedFavorite();
+          }
           return;
         }
       }

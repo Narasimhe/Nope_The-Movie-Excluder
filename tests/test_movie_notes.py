@@ -97,6 +97,23 @@ class MovieNotesTests(unittest.TestCase):
             [101],
         )
 
+    def test_notes_search_comma_separated_multiple_terms(self) -> None:
+        matches = self.user_repository.search_notes("cold, streets")
+        self.assertEqual(
+            [match["tmdb_id"] for match in matches],
+            [101],
+        )
+
+    def test_notes_search_matches_genre_and_notes(self) -> None:
+        self.metadata_repository.replace_movie_genres(
+            101, [{"id": 27, "name": "Horror"}]
+        )
+        matches = self.user_repository.search_notes("streets, Horror")
+        self.assertEqual(
+            [match["tmdb_id"] for match in matches],
+            [101],
+        )
+
     def test_notes_search_treats_wildcards_as_text(self) -> None:
         matches = self.user_repository.search_notes("%")
 
@@ -220,6 +237,20 @@ class MovieNotesTests(unittest.TestCase):
 
         notes_only = self.movie_repository.search_user_library("notes: american")
         self.assertEqual([m["tmdb_id"] for m in notes_only], [504])
+
+        multi_term_notes = self.movie_repository.search_user_library("classic, road", status="movie-notes")
+        self.assertEqual([m["tmdb_id"] for m in multi_term_notes], [504])
+
+        self.movie_repository.save_movie(
+            {"id": 506, "title": "Zero Dark Thirty", "overview": "Military procedural drama."}
+        )
+        self.user_repository.set_status(506, MovieStatus.WATCHED)
+        self.user_repository.set_notes(
+            506,
+            "Grey says:\nZero Dark Thirty (2012) [Drama, Thriller]\nA cold, intensely methodical procedural thriller that relies on rigorous intelligence craft rather than Hollywood sensationalism.",
+        )
+        zdt_matches = self.movie_repository.search_user_library("grey, zero, intelligent", status="movie-notes")
+        self.assertEqual([m["tmdb_id"] for m in zdt_matches], [506])
 
     def test_movie_notes_shelf_double_select_status_filter(self) -> None:
         watched_notes = self.movie_repository.search_user_library("", status="movie-notes:watched")

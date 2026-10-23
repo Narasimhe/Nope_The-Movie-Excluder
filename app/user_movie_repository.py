@@ -246,36 +246,59 @@ class UserMovieRepository:
         if not isinstance(query, str):
             raise ValueError("Notes search query must be text.")
 
-        cleaned_query = " ".join(query.split())
-
-        if not cleaned_query:
+        raw_terms = [t.strip() for t in query.split(",") if t.strip()]
+        if not raw_terms:
             raise ValueError("Notes search query cannot be empty.")
 
-        escaped_query = (
-            cleaned_query
-            .replace("!", "!!")
-            .replace("%", "!%")
-            .replace("_", "!_")
-        )
+        conditions = []
+        params = []
+        for term in raw_terms:
+            cleaned_term = " ".join(term.split())
+            if not cleaned_term:
+                continue
+            escaped_term = (
+                cleaned_term
+                .replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_")
+            )
+            conditions.append(
+                """(
+                    u.notes LIKE ? ESCAPE '!' COLLATE NOCASE
+                    OR m.title LIKE ? ESCAPE '!' COLLATE NOCASE
+                    OR EXISTS (
+                        SELECT 1
+                        FROM movie_genres mg
+                        JOIN genres g ON mg.tmdb_genre_id = g.tmdb_genre_id
+                        WHERE mg.tmdb_id = u.tmdb_id
+                          AND g.name LIKE ? ESCAPE '!' COLLATE NOCASE
+                    )
+                )"""
+            )
+            term_wildcard = f"%{escaped_term}%"
+            params.extend([term_wildcard, term_wildcard, term_wildcard])
+
+        if not conditions:
+            raise ValueError("Notes search query cannot be empty.")
+
+        sql = f"""
+            SELECT
+                u.tmdb_id,
+                u.status,
+                u.verdict,
+                u.notes,
+                u.is_favorite,
+                u.updated_at
+            FROM user_movie_data u
+            JOIN movies m ON u.tmdb_id = m.tmdb_id
+            WHERE u.notes IS NOT NULL
+              AND TRIM(u.notes) <> ''
+              AND {" AND ".join(conditions)}
+            ORDER BY u.updated_at DESC, u.tmdb_id
+        """
 
         with get_connection() as connection:
-            rows = connection.execute(
-                """
-                SELECT
-                    tmdb_id,
-                    status,
-                    verdict,
-                    notes,
-                    is_favorite,
-                    updated_at
-                FROM user_movie_data
-                WHERE notes IS NOT NULL
-                  AND TRIM(notes) <> ''
-                  AND notes LIKE ? ESCAPE '!' COLLATE NOCASE
-                ORDER BY updated_at DESC, tmdb_id
-                """,
-                (f"%{escaped_query}%",),
-            ).fetchall()
+            rows = connection.execute(sql, tuple(params)).fetchall()
 
         results = []
 

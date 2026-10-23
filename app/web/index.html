@@ -10,8 +10,8 @@
   >
   <title>NOPE</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/styles.css?v=20261022_notion_toggle_bullet_content_30">
-  <script src="/static/app.js?v=20261022_notion_toggle_bullet_content_30" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261022_clean_grey_32">
+  <script src="/static/app.js?v=20261022_clean_grey_32" defer></script>
 </head>
 <body>
   <div class="site-shell" id="app-shell">
@@ -673,6 +673,14 @@
             <p id="library-description" class="is-hidden" style="display:none !important;">Movies waiting for your decision.</p>
           </div>
           <div class="section-heading-meta">
+            <div class="shelf-view-toggle is-hidden" id="shelf-view-toggle" role="group" aria-label="Browse mode">
+              <button type="button" class="view-toggle-btn is-active" id="view-mode-paged" data-mode="paged" title="Paginated view">
+                <span>Pages</span>
+              </button>
+              <button type="button" class="view-toggle-btn" id="view-mode-continuous" data-mode="continuous" title="Continuous scroll view">
+                <span>Continuous</span>
+              </button>
+            </div>
             <span class="shelf-movie-count" id="shelf-count"></span>
           </div>
         </div>
@@ -712,43 +720,88 @@
               </select>
               <button id="clear-entry-filters" type="button" class="is-hidden" style="display:none !important;">Clear</button>
             </form>
-            <button class="primary-action entries-new-btn" id="new-entry" type="button">+ New note</button>
+            <div class="entries-toolbar-actions">
+              <div class="notes-view-switcher" id="notes-view-switcher" role="group" aria-label="Notes layout mode">
+                <button type="button" class="notes-view-btn is-active" id="notes-view-list" data-layout="list" title="Compact Index List">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                  <span>List</span>
+                </button>
+                <span class="notes-view-sep" aria-hidden="true"></span>
+                <button type="button" class="notes-view-btn" id="notes-view-cards" data-layout="cards" title="Magazine Cards">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+                  <span>Cards</span>
+                </button>
+              </div>
+              <button class="primary-action entries-new-btn" id="new-entry" type="button">+ New note</button>
+            </div>
           </div>
+          <div class="entry-active-filters is-hidden" id="entry-active-filters"></div>
           <h2 id="entries-title" class="sr-only">Notes</h2>
-          <div class="entry-list" id="entry-list"></div>
-          <nav class="pagination is-hidden" id="entry-pagination" aria-label="Notes and links pages"></nav>
+          <div class="entry-list is-list-mode" id="entry-list"></div>
+          <nav class="pagination is-hidden" id="entry-pagination" aria-label="Notes pages"></nav>
         </section>
 
         <article class="entry-reader is-hidden" id="entry-reader" aria-labelledby="entry-reader-title">
           <!-- View mode toolbar -->
           <nav class="entry-reader-toolbar entry-reader-view-toolbar" id="entry-reader-view-toolbar" aria-label="Entry reader controls">
-            <button id="entry-reader-back" type="button">← Notes</button>
+            <button id="entry-reader-back" class="reader-back-btn" type="button">
+              <svg class="reader-back-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+              <span class="reader-back-label">Notes</span>
+            </button>
             <div class="reader-toolbar-actions">
-              <button class="primary-action publish-action is-hidden" id="entry-reader-publish" type="button">Publish to Journal</button>
-              <button id="entry-reader-edit" type="button">✎ Edit</button>
-              <button id="entry-reader-previous" type="button">← Previous</button>
-              <button id="entry-reader-next" type="button">Next →</button>
-              <button class="danger-button" id="entry-reader-delete" type="button" aria-label="Delete entry">Delete</button>
+              <span class="reader-save-status" id="reader-view-save-status" aria-live="polite"></span>
+              <button class="primary-action publish-action is-hidden" id="entry-reader-publish" type="button">Publish</button>
+              <div class="reader-view-control-bar" role="group" aria-label="Note actions and navigation">
+                <button id="entry-reader-edit" class="reader-bar-btn reader-edit-btn" type="button" title="Edit post (Ctrl+E)">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                  <span>Edit</span>
+                </button>
+                <span class="reader-bar-sep" aria-hidden="true"></span>
+                <button id="entry-reader-previous" class="reader-bar-btn reader-step-btn" type="button" title="Previous note (←)">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+                  <span>Previous</span>
+                </button>
+                <span class="reader-bar-sep reader-bar-sep-subtle" aria-hidden="true"></span>
+                <button id="entry-reader-next" class="reader-bar-btn reader-step-btn" type="button" title="Next note (→)">
+                  <span>Next</span>
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+                <span class="reader-bar-sep reader-bar-sep-danger" aria-hidden="true"></span>
+                <button class="danger-button reader-bar-btn reader-delete-btn" id="entry-reader-delete" type="button" aria-label="Delete entry" title="Move note to trash">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                  <span>Delete</span>
+                </button>
+              </div>
             </div>
           </nav>
 
           <!-- Edit mode toolbar -->
           <nav class="entry-reader-toolbar entry-reader-edit-toolbar" id="entry-reader-edit-toolbar" aria-label="Entry editor controls">
-            <div class="editor-stats" id="reader-editor-stats">
+            <button id="entry-reader-edit-back" class="reader-back-btn" type="button">
+              <svg class="reader-back-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+              <span class="reader-back-label">Notes</span>
+            </button>
+            <div class="editor-stats is-hidden" id="reader-editor-stats" aria-hidden="true">
               <span id="reader-word-count">0 words</span>
               <span class="stats-sep">•</span>
               <span id="reader-read-time">1 min read</span>
             </div>
-            <div class="reader-toolbar-actions">
-              <button type="button" id="reader-cancel" class="cancel-action">Cancel</button>
-              <button type="button" class="secondary-action" id="reader-save-draft">Save draft</button>
-              <button type="button" class="primary-action" id="reader-save-publish">Publish to Journal</button>
+            <div class="reader-toolbar-actions reader-edit-actions-cluster">
+              <span class="reader-save-status" id="reader-save-status" aria-live="polite"></span>
+              <button type="button" id="reader-cancel" class="cancel-action reader-cancel-btn is-hidden" style="display:none !important;">Cancel</button>
+              <button type="button" class="secondary-action reader-draft-toggle-btn" id="reader-save-draft" title="Toggle Draft status (Ctrl+Shift+S)">
+                <span id="reader-save-draft-label">Move to Drafts</span>
+              </button>
+              <button type="button" class="reader-bar-btn reader-done-btn" id="reader-save-publish" title="Return to reading view (Ctrl+E or Esc)">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Done</span>
+              </button>
             </div>
           </nav>
 
           <!-- View mode header -->
           <header class="entry-reader-header entry-reader-view-header" id="entry-reader-view-header">
-            <p class="entry-type" id="entry-reader-type">Note</p>
+            <p class="entry-type is-hidden" id="entry-reader-type">Note</p>
             <h1 id="entry-reader-title"></h1>
             <div class="entry-reader-meta">
               <time id="entry-reader-date"></time>
@@ -769,7 +822,10 @@
                   <input type="hidden" id="entry-tags">
                 </div>
               </div>
-              <button type="button" id="reader-add-banner-btn" class="reader-add-banner-btn" aria-label="Add banner image">🖼️ Add banner</button>
+              <button type="button" id="reader-add-banner-btn" class="reader-add-banner-btn" aria-label="Add banner image">
+                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                <span>Banner</span>
+              </button>
             </div>
           </header>
 
@@ -815,8 +871,8 @@
           <div class="entry-reader-edit-body" id="entry-reader-edit-body">
             <textarea id="reader-body-input" class="reader-body-textarea" placeholder="Start writing freely...
 
-Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or paste links."></textarea>
-            <div class="editor-shortcut-hint">Tip: Press <kbd>Ctrl</kbd> + <kbd>Enter</kbd> to save</div>
+Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists."></textarea>
+            <div class="reader-movie-mention-popover is-hidden" id="reader-movie-mention-popover" role="listbox" aria-label="Movie suggestions"></div>
           </div>
         </article>
 
@@ -847,8 +903,10 @@ Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or past
           </div>
           <div class="storage-summary" id="storage-summary"></div>
           <div class="storage-actions">
+            <button id="export-notes-md" class="storage-export-btn" type="button">Export Notes (.md)</button>
+            <button id="export-library-json" class="storage-export-btn" type="button">Export Library Snapshot (.json)</button>
             <button id="cleanup-cache" type="button">Clear TMDB-only cache older than 90 days</button>
-            <button class="danger-button" id="purge-deleted-entries" type="button">Permanently clear deleted Notes &amp; Links</button>
+            <button class="danger-button" id="purge-deleted-entries" type="button">Permanently delete notes</button>
           </div>
           <p class="inline-feedback" id="storage-feedback" aria-live="polite"></p>
         </section>
@@ -861,9 +919,6 @@ Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or past
         <span>your private movie memory</span>
       </div>
       <nav class="footer-nav" aria-label="Personal memory pages">
-        <button type="button" data-footer-view="notes">Notes</button>
-        <button type="button" data-footer-view="links" class="is-hidden" style="display:none !important;">Links</button>
-        <button type="button" data-footer-view="movie-notes">Movie Notes</button>
         <button type="button" data-footer-view="looking-out">
           Looking Out For <span class="footer-alert-badge is-hidden" id="release-alert-badge"></span>
         </button>
@@ -890,7 +945,7 @@ Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or past
   </dialog>
 
 
-  <section class="movie-detail-page is-hidden" id="movie-detail-page">
+  <section class="movie-detail-page is-hidden" id="movie-detail-page" tabindex="-1">
     <header class="detail-page-header">
       <div class="detail-header-left">
         <button class="detail-back" id="dialog-close" type="button">
@@ -922,12 +977,6 @@ Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or past
         <div class="detail-poster-column">
           <div class="dialog-poster-wrap" id="dialog-poster-wrap"></div>
           <div class="tag-list poster-keywords" id="dialog-keywords"></div>
-          <button class="keyword-add-toggle" id="show-custom-keyword" type="button" aria-label="Add a personal keyword" title="Add a personal keyword">+</button>
-          <form class="custom-keyword-form is-hidden" id="custom-keyword-form">
-            <input id="custom-keyword" maxlength="80" placeholder="Add personal keyword">
-            <button type="submit">Add</button>
-          </form>
-          <p class="inline-feedback" id="keyword-feedback" aria-live="polite"></p>
         </div>
 
         <div class="dialog-body">
@@ -945,17 +994,18 @@ Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or past
 
           <div class="personal-panel">
             <div class="status-control">
-              <label for="status-select">Status</label>
+              <label for="status-select" title="Shortcuts: U Untracked · D New Discovery · L Watch Later · W Watched · R Rewatch · X Nope · F Favourite">Status</label>
               <div class="select-row">
-                <select id="status-select">
-                  <option value="new_discovery">New discovery</option>
-                  <option value="watch_later">Watch later</option>
-                  <option value="watched">Watched</option>
-                  <option value="rewatch">Rewatch</option>
-                  <option value="excluded">Nope</option>
+                <select id="status-select" title="Shortcuts: U (Untracked), D (New discovery), L (Watch later), W (Watched), R (Rewatch), X (Nope)">
+                  <option value="untracked">Untracked (U)</option>
+                  <option value="new_discovery">New discovery (D)</option>
+                  <option value="watch_later">Watch later (L)</option>
+                  <option value="watched">Watched (W)</option>
+                  <option value="rewatch">Rewatch (R)</option>
+                  <option value="excluded">Nope (X)</option>
                 </select>
                 <button id="save-status" type="button">Save</button>
-                <button class="favorite-button" id="favorite-button" type="button" aria-label="Add to favourites" title="Add to favourites">
+                <button class="favorite-button" id="favorite-button" type="button" aria-label="Add to favourites" title="Toggle Favourite (F)">
                   <span aria-hidden="true">♥</span>
                 </button>
               </div>
@@ -974,15 +1024,19 @@ Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or past
           </section>
 
           <details class="notes-panel detail-notes" id="notes-panel" open>
-            <summary><span>Personal Memory</span><span class="summary-action">Minimize</span></summary>
+            <summary>
+              <span>Personal Memory</span>
+              <span class="notes-header-actions">
+                <span class="notes-status-indicator" id="notes-feedback" aria-live="polite"></span>
+                <span class="summary-action">Minimize</span>
+              </span>
+            </summary>
             <label class="sr-only" for="movie-notes">Movie notes</label>
             <textarea
               id="movie-notes"
               rows="6"
               placeholder="Private thoughts, observations, or anything worth remembering..."
             ></textarea>
-            <button id="save-notes" type="button">Save notes</button>
-            <p class="inline-feedback" id="notes-feedback" aria-live="polite"></p>
           </details>
 
           <section class="related-panel" id="related-panel">
@@ -1000,10 +1054,15 @@ Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or past
     </main>
   </section>
 
+  <!-- Floating Back to Top Button -->
+  <button id="back-to-top-btn" class="back-to-top-pill is-hidden" type="button" aria-label="Back to top" title="Back to top (or press Home)">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+  </button>
+
   <!-- Grey: In-App Cinema Companion Drawer -->
   <div id="grey-container" class="grey-container">
     <button id="grey-toggle" class="grey-pill" type="button" aria-expanded="false" aria-controls="grey-drawer" title="Open Grey (Cinema Companion)">
-      <span class="grey-pill-icon">🐾</span>
+      <span class="grey-pill-icon"><svg class="grey-cat-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5L5.5 3.5L10 6.5C10.65 6.35 11.32 6.25 12 6.25C12.68 6.25 13.35 6.35 14 6.5L18.5 3.5L20.5 8.5C21.45 10.3 21.75 12 21.75 13.5C21.75 18.5 17.5 21 12 21C6.5 21 2.25 18.5 2.25 13.5C2.25 12 2.55 10.3 3.5 8.5Z"/><circle cx="8.5" cy="13" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="13" r="1.2" fill="currentColor" stroke="none"/><path d="M11.25 15.5H12.75L12 16.5L11.25 15.5Z" fill="currentColor" stroke="none"/><path d="M4 14.5L7.5 15.2M4 16.8L7.5 16.5M20 14.5L16.5 15.2M20 16.8L16.5 16.5"/></svg></span>
       <span class="grey-pill-label">Grey</span>
       <span class="grey-pill-dot" id="grey-status-dot" title="Ready"></span>
     </button>
@@ -1011,7 +1070,7 @@ Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or past
     <aside id="grey-drawer" class="grey-drawer is-collapsed" aria-hidden="true" role="dialog" aria-label="Grey Cinema Companion">
       <div class="grey-header">
         <div class="grey-brand">
-          <span class="grey-avatar">🐾</span>
+          <span class="grey-avatar"><svg class="grey-cat-icon" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 8.5L5.5 3.5L10 6.5C10.65 6.35 11.32 6.25 12 6.25C12.68 6.25 13.35 6.35 14 6.5L18.5 3.5L20.5 8.5C21.45 10.3 21.75 12 21.75 13.5C21.75 18.5 17.5 21 12 21C6.5 21 2.25 18.5 2.25 13.5C2.25 12 2.55 10.3 3.5 8.5Z"/><circle cx="8.5" cy="13" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.5" cy="13" r="1.2" fill="currentColor" stroke="none"/><path d="M11.25 15.5H12.75L12 16.5L11.25 15.5Z" fill="currentColor" stroke="none"/><path d="M4 14.5L7.5 15.2M4 16.8L7.5 16.5M20 14.5L16.5 15.2M20 16.8L16.5 16.5"/></svg></span>
           <h2 class="grey-title">Grey</h2>
         </div>
         <div class="grey-actions">
@@ -1043,13 +1102,13 @@ Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or past
 
       <!-- Slash Commands Autocomplete Menu -->
       <div class="grey-slash-menu is-hidden" id="grey-slash-menu" role="listbox" aria-label="Available Skills">
+        <button type="button" class="grey-slash-item" data-cmd="/research">
+          <span class="grey-slash-cmd">/research</span>
+          <span class="grey-slash-desc">Show research index or freeze topic</span>
+        </button>
         <button type="button" class="grey-slash-item" data-cmd="/related">
           <span class="grey-slash-cmd">/related</span>
           <span class="grey-slash-desc">Reality check on related movies (YES/NOPE verdicts)</span>
-        </button>
-        <button type="button" class="grey-slash-item" data-cmd="/watchlist">
-          <span class="grey-slash-cmd">/watchlist</span>
-          <span class="grey-slash-desc">Build an expandable toggle note in your notebook</span>
         </button>
         <button type="button" class="grey-slash-item" data-cmd="/batch">
           <span class="grey-slash-cmd">/batch</span>
@@ -1060,7 +1119,6 @@ Use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists, or past
       <!-- Quick Skills Bar -->
       <div class="grey-skills-bar" id="grey-skills-bar">
         <button type="button" class="grey-skill-chip" data-cmd="/related">⚡ /related</button>
-        <button type="button" class="grey-skill-chip" data-cmd="/watchlist">📝 /watchlist</button>
       </div>
 
       <!-- Input Card Container -->

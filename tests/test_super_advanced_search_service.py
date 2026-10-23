@@ -246,6 +246,22 @@ class SuperAdvancedSearchServiceTests(unittest.TestCase):
         )
         self.assertEqual(self.tmdb_client.detail_calls, [202])
 
+    def test_notes_query_comma_separated_matches_multi_terms(self) -> None:
+        result = self.service.search(
+            notes_query="cold, Movie 202",
+        )
+
+        self.assertEqual(
+            [movie["id"] for movie in result["results"]],
+            [202],
+        )
+
+    def test_notes_query_comma_only_is_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            self.service.search(notes_query="  ,   , ")
+
+        self.assertFalse(self.tmdb_client.discover_called)
+
     def test_notes_query_can_include_a_hidden_status(self) -> None:
         result = self.service.search(
             included_statuses=[MovieStatus.WATCHED],
