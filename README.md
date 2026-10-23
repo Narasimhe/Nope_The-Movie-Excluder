@@ -15,7 +15,7 @@ A lightweight, local-first movie library and discovery app. Mark movies you don'
 - **Advanced Search**: Filter by genres, release year, origin country, keywords, actors, and directors. Save custom search presets to quick-access chips.
 - **Filmography Explorer**: Browse full timelines for directors and actors with role tabs and personal watch badges.
 - **Notes & Journal**: Write personal movie notes and watchlists with collapsible Notion-style (`>>`) toggles and markdown support.
-- **Grey (AI Assistant)**: Context-aware assistant powered by Gemini that answers film questions, evaluates scripts/pacing, and updates your notes directly.
+- **Grey (AI Assistant)**: Context-aware assistant powered by Gemini that answers film questions, evaluates scripts/pacing, directly changes movie statuses (*Watched*, *Watch Later*, *Nope*) and ratings, and updates notes right from chat.
 - **Local-First & Offline**: Uses a local SQLite database and caches movie posters locally. Runs fast and works offline for saved titles.
 
 ---
