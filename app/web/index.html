@@ -11,8 +11,8 @@
   >
   <title>NOPE</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/styles.css?v=20261025_zen_146">
-  <script src="/static/app.js?v=20261025_zen_146" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261026_zen_151">
+  <script src="/static/app.js?v=20261026_zen_151" defer></script>
 </head>
 <body data-active-view="discover">
   <div class="site-shell" id="app-shell">
@@ -683,11 +683,11 @@
               </svg>
             </button>
 
-            <span class="shelf-favorites-btn is-passive" id="shelf-favorites-btn" title="Favourites" aria-hidden="true">
+            <button type="button" class="nav-link shelf-favorites-btn" id="shelf-favorites-btn" data-view="favorites" title="Favourites (Click to toggle favourites; click again to return)" aria-label="Favourites">
               <svg class="shelf-heart-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
               </svg>
-            </span>
+            </button>
 
             <!-- Parked Browse Mode Toggle (Dormant until location decided) -->
             <div class="shelf-view-toggle is-hidden" id="shelf-view-toggle" style="display:none !important;" aria-hidden="true">
@@ -1081,6 +1081,7 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
           <!-- Zen Notes Canvas -->
           <div class="detail-notes-card" id="notes-panel">
             <div class="detail-notes-header">
+              <h2>Personal Memory</h2>
               <span class="notes-status-indicator" id="notes-feedback" aria-live="polite"></span>
             </div>
             <label class="sr-only" for="movie-notes">Movie notes</label>

@@ -405,6 +405,7 @@ const elements = {
 };
 
 const state = {
+  previousFavReturnShelf: null,
   greyModelMode: "auto",
   movies: [],
   unfilteredShelfMovies: [],
@@ -2718,14 +2719,7 @@ function createMovieCard(movie) {
 
 
 
-  if (rawNotes) {
-    const noteMark = document.createElement("span");
-    noteMark.className = "card-note-mark";
-    noteMark.setAttribute("aria-label", "Has note");
-    noteMark.title = "Personal note attached (hover to preview)";
-    noteMark.innerHTML = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#f2c94c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
-    posterButton.append(noteMark);
-  }
+  // Note icon removed from library movie posters per user directive
 
   if (status && status !== "untracked") {
     const statusBadge = getStatusBadgeElement(status);
@@ -8149,6 +8143,35 @@ elements.navLinks.forEach((button) => {
       "excluded",
       "new_discovery",
     ];
+
+    if (clickedView === "favorites") {
+      if (state.currentView === "favorites") {
+        const exitTarget = state.previousFavReturnShelf || state.lastNormalShelf || "watched";
+        state.previousFavReturnShelf = null;
+        loadShelf(exitTarget);
+        return;
+      }
+      const normalShelves = [
+        "watched",
+        "watch_later",
+        "rewatch",
+        "excluded",
+        "new_discovery",
+        "discover",
+      ];
+      if (normalShelves.includes(state.currentView)) {
+        state.previousFavReturnShelf = state.currentView;
+        state.lastNormalShelf = state.currentView;
+      } else {
+        state.previousFavReturnShelf = state.lastNormalShelf || "watched";
+      }
+      loadShelf("favorites");
+      return;
+    }
+
+    if (clickedView !== "movie-notes") {
+      state.previousFavReturnShelf = null;
+    }
 
     if (clickedView === "movie-notes") {
       if (state.currentView === "movie-notes") {

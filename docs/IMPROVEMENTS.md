@@ -16,6 +16,26 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Full Responsiveness when Grey Cinema Companion is Docked Open**
+  * **Fluid Adaptive Widths**: Converted fixed layout constraints on both the single movie page and main library/discover shell to fluid responsive grids when Grey is open (`calc(100vw - 420px)`), preventing blowout, truncation, or unresponsive lockup.
+  * **Sidebar & Movie Grid Adaptation**: Slims sidebar to 240px below 1400px and collapses cleanly below 1140px; wraps movie posters using `repeat(auto-fill, minmax(95px, 105px))` so content remains fully accessible without horizontal clipping.
+- [x] **Faded Secondary Section Headings (Personal Memory & Related Movies)**
+  * **Muted Visual Hierarchy**: Reduced heading styles on `.detail-notes-header h2` and `.related-heading h2` from stark `#FFFFFF` (weight 700) to quiet, secondary `#8E8B97` (weight 500, `0.95rem`), eliminating visual distraction from primary movie details.
+- [x] **Movie Detail Page Canvas Alignment & Original Poster Proportions**
+  * **Original Poster Scale**: Restored the poster to its exact original dimensions (`240px` by `360px`, `10px` border radius).
+  * **Eliminated Space Between Poster and Main Text**: Pushed the poster to the right edge of the 310px column (`margin-left: auto; align-items: flex-end`), creating a tight, standard 20px gap between the poster and the 670px main body.
+  * **670px Body & 6-Column Related Movies**: Constrained the movie body, action cockpit, personal memory, and related movies to 670px, exactly matching the Discover/Library search bar and 6-column movie grid (`repeat(6, minmax(0, 105px))`).
+- [x] **Movie Detail Page Canvas Alignment (Poster in Place of Sidebar)**
+  * **2-Column Structural Parity**: Positioned the movie poster in the 310px first column (directly replacing the 310px sidebar from Discover/Library), and placed the movie body details in the second column (matching the library canvas start). The back button aligns directly above the poster in column 1, and the stepper aligns to the right.
+  * **Main Canvas Parity**: Aligned the single movie detail page (`.detail-page-content` and `.detail-page-header`) to start at the exact same horizontal coordinate as the Discover and Library main canvas (`padding-left: 330px`, matching the 310px sidebar + 20px library gutter). Navigation between Discover/Library and the movie detail page produces seamless visual continuity without horizontal layout jumping.
+  * **Responsive Collapsing**: Automatically collapses the 330px offset on viewports <= 860px to standard 16px padding.
+- [x] **Favourites Heart Button - Reversible 2-Way Toggle**
+  * **Interactive Reversible Toggle**: Restored the Hall of Fame Heart button in the shelf ribbon (`#shelf-favorites-btn`) as a clickable 2-way toggle.
+  * **Memory Return**: 1st click remembers the previous shelf (e.g. `Watched` or `Watch later`), illuminates the Heart in crimson/gold, and loads Favourites. 2nd click un-highlights the Heart and immediately returns to the previous shelf.
+- [x] **Personal Memory Label Heading for Movie Notes**
+  * **Cohesive Section Heading**: Added a clear, styled `<h2>Personal Memory</h2>` heading to `.detail-notes-header` inside the movie notes card, visually matching the `<h2>Related Movies</h2>` styling (`1.15rem`, weight 700, `#FFFFFF`, clean line height) with status feedback on the right.
+- [x] **Removed Note Icon from Library Movie Posters**
+  * **Clean Poster Surface**: Eradicated the small note icon badge (`.card-note-mark`) from movie posters across the library and discover grids, creating an uncluttered poster presentation.
 - [x] **Movie Detail Unified Typography Hierarchy & Standalone Unboxed Heart**
   * **Unified Typography Hierarchy**: Standardized all typography across the movie detail cockpit under --font-ui (Plus Jakarta Sans) with balanced font scaling (Title: ~30px 700, Overview: 14.5px 1.65 line-height, Credits: 13.5px with clean non-underlined links, Meta: 13px, Badges/Tags: 11px, Notes: 13.5px), eradicating size and font inconsistencies.
   * **Standalone Unboxed Heart**: Removed the enclosing circle, borders, and backgrounds from the detail page Heart button (#favorite-button), leaving a crisp, floating standalone heart icon beside the title that fills with solid red when favorited.

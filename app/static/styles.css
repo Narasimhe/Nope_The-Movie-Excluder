@@ -2741,8 +2741,8 @@ footer span {
   justify-content: center !important;
   box-sizing: border-box !important;
   border-radius: 0 !important;
-  cursor: default !important;
-  pointer-events: none !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
   user-select: none !important;
   transition: all 140ms ease !important;
   background: transparent !important;
@@ -2784,9 +2784,13 @@ footer span {
   height: 16px !important;
 }
 
-.shelf-favorites-btn:hover svg,
 .shelf-notes-lens-btn:hover svg {
   stroke: #F3F4F6 !important;
+}
+
+.shelf-favorites-btn:hover svg {
+  stroke: #ff656a !important;
+  transform: scale(1.14) !important;
 }
 
 .shelf-notes-lens-btn.is-active {
@@ -2806,8 +2810,9 @@ footer span {
 }
 
 .shelf-favorites-btn.is-active svg {
-  stroke: #E05252 !important;
-  fill: #E05252 !important;
+  stroke: #f04f55 !important;
+  fill: #f04f55 !important;
+  filter: drop-shadow(0 0 6px rgba(240, 79, 85, 0.45)) !important;
 }
 
 .result-count,
@@ -8790,38 +8795,76 @@ footer {
 /* 1. Full Canvas Geometry: Match Library and Discover */
 .detail-page-header,
 .movie-detail-page .detail-page-header {
-  width: 100% !important;
+  width: min(100% - 32px, 1536px) !important;
   max-width: 1536px !important;
   margin: 0 auto !important;
-  padding-left: max(32px, calc((100vw - 1536px) / 2 + 16px)) !important;
-  padding-right: max(32px, calc((100vw - 1536px) / 2 + 16px)) !important;
+  padding: 10px 16px !important;
   box-sizing: border-box !important;
   min-height: 64px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.detail-header-left {
+  width: 310px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
 }
 
 .movie-detail-page .detail-page-content {
   width: min(100% - 32px, 1536px) !important;
   max-width: 1536px !important;
   margin: 0 auto !important;
-  padding: 24px 16px 72px !important;
+  padding: 24px 16px 72px 16px !important;
   box-sizing: border-box !important;
 }
 
-/* 2. Hero Layout & Proportions */
+/* 2. Hero Layout & Proportions: Poster in place of 310px sidebar, Body in Main Canvas */
 .detail-hero {
   display: grid !important;
-  grid-template-columns: 240px minmax(0, 1fr) !important;
-  gap: 36px !important;
+  grid-template-columns: 310px 670px !important;
+  gap: 20px !important;
   align-items: start !important;
+  justify-content: start !important;
+}
+
+.detail-poster-column {
+  width: 310px !important;
+  min-width: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
 }
 
 .movie-detail-page .dialog-poster-wrap {
   width: 240px !important;
+  max-width: 240px !important;
   height: 360px !important;
-  max-height: none !important;
-  border-radius: 12px !important;
+  max-height: 360px !important;
+  aspect-ratio: 2 / 3 !important;
+  border-radius: 10px !important;
   overflow: hidden !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+  margin-left: auto !important;
+}
+
+.poster-keywords {
+  width: 240px !important;
+  max-width: 240px !important;
+  margin-left: auto !important;
+  justify-content: flex-end !important;
+}
+
+.movie-detail-page .dialog-body {
+  width: 670px !important;
+  max-width: 670px !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
 }
 
 /* 3. Title & Inline Heart */
@@ -8931,7 +8974,8 @@ footer {
 
 /* 5. Action Cockpit Shelf Pills */
 .movie-detail-page .personal-panel {
-  max-width: 720px !important;
+  max-width: 670px !important;
+  width: 670px !important;
   background: rgba(20, 20, 24, 0.6) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 12px !important;
@@ -9019,12 +9063,14 @@ footer {
 
 /* 6. Notes Card & Overview Width */
 .movie-detail-page .dialog-overview {
-  max-width: 720px !important;
+  max-width: 670px !important;
+  width: 670px !important;
 }
 
 .detail-notes-card,
 .movie-detail-page .detail-notes {
-  max-width: 720px !important;
+  max-width: 670px !important;
+  width: 670px !important;
 }
 
 /* ============================================================
@@ -9194,7 +9240,8 @@ footer {
 
 /* Overview / Plot */
 .movie-detail-page .dialog-overview {
-  max-width: 720px !important;
+  max-width: 670px !important;
+  width: 670px !important;
   margin: 0 0 16px 0 !important;
   font-size: 14.5px !important;
   line-height: 1.65 !important;
@@ -9206,7 +9253,8 @@ footer {
 /* Credits Lines (Director & Actors) */
 .credits-lines,
 .movie-detail-page .credits-lines {
-  max-width: 720px !important;
+  max-width: 670px !important;
+  width: 670px !important;
   margin: 0 0 18px 0 !important;
   font-size: 13.5px !important;
   line-height: 1.6 !important;
@@ -9260,11 +9308,34 @@ footer {
   line-height: 1 !important;
 }
 
+/* Suppress note icon on movie posters */
+.card-note-mark {
+  display: none !important;
+}
+
 /* Notes & Grey Review Card */
 .detail-notes-card,
 .movie-detail-page .detail-notes {
-  max-width: 720px !important;
-  margin-top: 14px !important;
+  max-width: 670px !important;
+  width: 670px !important;
+  margin-top: 20px !important;
+}
+
+.detail-notes-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin: 0 0 10px 0 !important;
+}
+
+.detail-notes-header h2 {
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+  color: #8E8B97 !important;
+  letter-spacing: 0.01em !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.2 !important;
 }
 
 #movie-notes,
@@ -9292,14 +9363,238 @@ footer {
 /* Related Movies Header */
 .related-heading,
 .related-panel h2 {
-  font-size: 1.15rem !important;
-  font-weight: 700 !important;
-  color: #FFFFFF !important;
-  letter-spacing: -0.01em !important;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+  color: #8E8B97 !important;
+  letter-spacing: 0.01em !important;
 }
 
 .related-familiar-toggle {
   font-size: 11px !important;
   font-weight: 500 !important;
   color: #9CA3AF !important;
+}
+
+/* Responsive alignment for Single Movie Page */
+@media (max-width: 860px) {
+  .movie-detail-page .detail-page-content {
+    padding: 16px !important;
+  }
+  .detail-page-header,
+  .movie-detail-page .detail-page-header {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  .detail-hero {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+  .detail-poster-column {
+    width: 100% !important;
+  }
+  .movie-detail-page .dialog-poster-wrap {
+    max-width: 240px !important;
+  }
+}
+
+/* Related Movies: Exactly matches 6-column 670px Discover/Library grid */
+.related-panel {
+  width: 670px !important;
+  max-width: 670px !important;
+  box-sizing: border-box !important;
+}
+
+.related-movies {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(0, 105px)) !important;
+  gap: 10px 8px !important;
+  width: 670px !important;
+  max-width: 670px !important;
+  box-sizing: border-box !important;
+}
+
+.related-card {
+  width: 100% !important;
+  max-width: 105px !important;
+  aspect-ratio: 2 / 3 !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+}
+
+.related-card > img,
+.related-card > .poster-fallback {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: 2 / 3 !important;
+  object-fit: cover !important;
+}
+
+/* ==========================================================================
+   Full Responsiveness when Grey Cinema Companion is Docked Open (Width -420px)
+   ========================================================================== */
+
+/* 1. Shell & Main Layout Responsiveness */
+body.grey-docked-open .app-layout {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 0 16px !important;
+  box-sizing: border-box !important;
+}
+
+/* On medium screens when Grey is open: slim sidebar to 240px */
+@media (max-width: 1400px) {
+  body.grey-docked-open .app-layout {
+    grid-template-columns: 240px minmax(0, 1fr) !important;
+  }
+  body.grey-docked-open #app-sidebar,
+  body.grey-docked-open .sidebar {
+    width: 240px !important;
+    min-width: 220px !important;
+    max-width: 240px !important;
+  }
+}
+
+/* On compact screens when Grey is open: collapse sidebar and flow cleanly */
+@media (max-width: 1140px) {
+  body.grey-docked-open .app-layout {
+    grid-template-columns: 1fr !important;
+  }
+  body.grey-docked-open #app-sidebar,
+  body.grey-docked-open .sidebar {
+    display: none !important;
+  }
+}
+
+/* Discover / Library clusters & movie grid when Grey is open */
+body.grey-docked-open .discover-search-cluster,
+body.grey-docked-open .library-search-cluster,
+body.grey-docked-open .toolbar-search,
+body.grey-docked-open .shelf-ribbon-wrapper {
+  width: 100% !important;
+  max-width: 670px !important;
+}
+
+body.grey-docked-open .movie-grid,
+body.grey-docked-open .movie-grid.is-compact {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(95px, 105px)) !important;
+  gap: 10px 8px !important;
+  width: 100% !important;
+  max-width: 670px !important;
+}
+
+/* 2. Single Movie Detail Page when Grey is Docked Open */
+body.grey-docked-open .movie-detail-page {
+  padding: 0 0 3.5rem !important;
+  overflow-x: hidden !important;
+}
+
+body.grey-docked-open .detail-page-header,
+body.grey-docked-open .movie-detail-page .detail-page-header {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 10px 24px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+body.grey-docked-open .detail-header-left {
+  width: auto !important;
+  justify-content: flex-start !important;
+}
+
+body.grey-docked-open .movie-detail-page .detail-page-content {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 20px 24px 64px !important;
+  box-sizing: border-box !important;
+}
+
+body.grey-docked-open .detail-hero,
+body.grey-docked-open .movie-detail-page .detail-hero {
+  display: grid !important;
+  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr) !important;
+  gap: 24px !important;
+  align-items: start !important;
+  justify-content: start !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+body.grey-docked-open .detail-poster-column {
+  width: 100% !important;
+  max-width: 240px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+}
+
+body.grey-docked-open .movie-detail-page .dialog-poster-wrap {
+  width: 100% !important;
+  max-width: 240px !important;
+  height: auto !important;
+  max-height: 360px !important;
+  aspect-ratio: 2 / 3 !important;
+  margin-left: 0 !important;
+}
+
+body.grey-docked-open .poster-keywords {
+  width: 100% !important;
+  max-width: 240px !important;
+  margin-left: 0 !important;
+  justify-content: flex-start !important;
+}
+
+body.grey-docked-open .movie-detail-page .dialog-body {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+}
+
+body.grey-docked-open .movie-detail-page .dialog-overview,
+body.grey-docked-open .movie-detail-page .credits-lines,
+body.grey-docked-open .movie-detail-page .personal-panel,
+body.grey-docked-open .movie-detail-page .detail-notes-card,
+body.grey-docked-open .movie-detail-page .detail-notes,
+body.grey-docked-open .movie-detail-page .related-panel {
+  width: 100% !important;
+  max-width: 670px !important;
+  box-sizing: border-box !important;
+}
+
+body.grey-docked-open .related-movies {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(95px, 105px)) !important;
+  gap: 10px 8px !important;
+  width: 100% !important;
+  max-width: 670px !important;
+  box-sizing: border-box !important;
+}
+
+body.grey-docked-open .related-card {
+  width: 100% !important;
+  max-width: 105px !important;
+  aspect-ratio: 2 / 3 !important;
+}
+
+/* Stack vertically if screen is narrower when Grey is open */
+@media (max-width: 1180px) {
+  body.grey-docked-open .detail-hero,
+  body.grey-docked-open .movie-detail-page .detail-hero {
+    grid-template-columns: 1fr !important;
+    gap: 18px !important;
+  }
+  body.grey-docked-open .detail-poster-column {
+    max-width: 220px !important;
+  }
+  body.grey-docked-open .movie-detail-page .dialog-poster-wrap {
+    max-width: 220px !important;
+  }
 }
