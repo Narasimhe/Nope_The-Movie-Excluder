@@ -2709,28 +2709,36 @@ footer span {
 
 .shelf-favorites-btn,
 .shelf-notes-lens-btn {
-  padding: 0 8px !important;
-  min-width: 28px !important;
-  width: 28px !important;
+  padding: 0 4px !important;
+  min-width: 26px !important;
+  width: 26px !important;
   height: 28px !important;
   min-height: 28px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   box-sizing: border-box !important;
-  border-radius: 8px !important;
+  border-radius: 0 !important;
   cursor: pointer !important;
   transition: all 140ms ease !important;
-  background: rgba(255, 255, 255, 0.02) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: transparent !important;
+  border: none !important;
   box-shadow: none !important;
+  outline: none !important;
 }
 
 .shelf-favorites-btn:hover,
 .shelf-notes-lens-btn:hover {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.16) !important;
-  color: #E5E7EB !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.shelf-favorites-btn:focus-visible,
+.shelf-notes-lens-btn:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.2) !important;
+  outline-offset: 2px !important;
 }
 
 .shelf-favorites-btn svg,
@@ -2738,19 +2746,28 @@ footer span {
   display: block !important;
   flex: 0 0 auto !important;
   margin: 0 !important;
-  stroke: #6B7280 !important;
-  transition: stroke 140ms ease !important;
+  stroke: #71717A !important;
+  transition: stroke 140ms ease, fill 140ms ease, transform 140ms ease !important;
+}
+
+.shelf-note-icon {
+  width: 18px !important;
+  height: 18px !important;
+}
+
+.shelf-heart-icon {
+  width: 16px !important;
+  height: 16px !important;
 }
 
 .shelf-favorites-btn:hover svg,
 .shelf-notes-lens-btn:hover svg {
-  stroke: #E5E7EB !important;
+  stroke: #F3F4F6 !important;
 }
 
 .shelf-notes-lens-btn.is-active {
-  background: rgba(212, 175, 55, 0.05) !important;
-  border-color: rgba(212, 175, 55, 0.28) !important;
-  color: #DEC68B !important;
+  background: transparent !important;
+  border: none !important;
   box-shadow: none !important;
 }
 
@@ -2759,9 +2776,8 @@ footer span {
 }
 
 .shelf-favorites-btn.is-active {
-  background: rgba(224, 82, 82, 0.08) !important;
-  border-color: rgba(224, 82, 82, 0.35) !important;
-  color: #E05252 !important;
+  background: transparent !important;
+  border: none !important;
   box-shadow: none !important;
 }
 

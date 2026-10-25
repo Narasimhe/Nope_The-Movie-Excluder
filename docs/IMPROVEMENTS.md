@@ -16,6 +16,10 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Unboxed Personal Action Lenses (Notes & Heart) with Balanced Proportions**
+  * **Unenclosed Floating Icons**: Removed squircle box containers, borders, and backgrounds from the Personal Notes (#shelf-notes-lens-btn) and Favourites Heart (.shelf-favorites-btn) action lenses in the library shelf ribbon row, rendering them as borderless, transparent standalone icons.
+  * **Optical Mass & Proportion Balance**: Increased Personal Notes icon SVG size to 18px to optically balance the 16px Heart icon.
+  * **Active States Preserved**: Retained cinema gold stroke (#DEC68B) for active Notes lens and solid red stroke/fill (#E05252) for active Favourites Heart.
 - [x] **Right-Aligned Personal Action Lenses (Notes & Heart)**
   * **Negative Space Demarcation**: Applied `margin-left: auto` to `.shelf-ribbon-divider`, anchoring the divider, Notes lens (`📄`), and Favourites Heart (`♡`) buttons flush against the right edge of the 670px shelf ribbon row.
   * **Visual Separation**: Established open negative space between the 5 shelf status chips on the left and the 2 personal archive lenses on the right, perfectly matching the 670px search bar alignment above.
