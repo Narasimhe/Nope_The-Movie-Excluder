@@ -99,6 +99,45 @@ const STATUS_LABELS = {
   excluded: "Nope",
 };
 
+const STATUS_GLYPH_NAMES = {
+  new_discovery: "auto_awesome",
+  watched: "check",
+  watch_later: "schedule",
+  rewatch: "replay",
+  excluded: "block",
+};
+
+function getStatusBadgeElement(status) {
+  if (!status || status === "untracked" || !STATUS_GLYPH_NAMES[status]) {
+    return null;
+  }
+  const badge = document.createElement("span");
+  badge.className = "status-badge";
+  badge.dataset.status = status;
+  badge.title = STATUS_LABELS[status] || status;
+  badge.setAttribute("aria-label", STATUS_LABELS[status] || status);
+  badge.innerHTML = `<span class="material-symbols-outlined status-badge-glyph" aria-hidden="true">${STATUS_GLYPH_NAMES[status]}</span>`;
+  return badge;
+}
+
+function updateCardStatusBadge(container, status) {
+  const existing = container.querySelector(".status-badge");
+  if (!status || status === "untracked" || !STATUS_GLYPH_NAMES[status]) {
+    existing?.remove();
+    return;
+  }
+  if (existing) {
+    existing.dataset.status = status;
+    existing.title = STATUS_LABELS[status] || status;
+    existing.setAttribute("aria-label", STATUS_LABELS[status] || status);
+    existing.innerHTML = `<span class="material-symbols-outlined status-badge-glyph" aria-hidden="true">${STATUS_GLYPH_NAMES[status]}</span>`;
+  } else {
+    const badge = getStatusBadgeElement(status);
+    if (badge) container.append(badge);
+  }
+}
+
+
 const VIEW_COPY = {
   discover: {
     kicker: "Movie discovery",
@@ -474,6 +513,9 @@ function setSectionCopy({ kicker, title, description }) {
 
 function setActiveView(view) {
   state.currentView = view;
+  if (view) {
+    document.body.dataset.activeView = view;
+  }
   const normalLibraryShelves = ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery"];
   if (view && normalLibraryShelves.includes(view)) {
     state.lastNormalShelf = view;
@@ -632,9 +674,9 @@ async function handleLiberateMovie(movie, article) {
 
   // Optimistic DOM update
   article.classList.remove("is-noped");
-  if (badge) {
-    badge.dataset.status = priorStatus;
-    badge.textContent = priorStatus === "untracked" ? "Untracked" : (STATUS_LABELS[priorStatus] || priorStatus);
+  const liberatePosterBtn = article.querySelector(".poster-button");
+  if (liberatePosterBtn) {
+    updateCardStatusBadge(liberatePosterBtn, priorStatus);
   }
 
   try {
@@ -653,9 +695,9 @@ async function handleLiberateMovie(movie, article) {
   } catch (error) {
     // Rollback on failure
     article.classList.add("is-noped");
-    if (badge) {
-      badge.dataset.status = "excluded";
-      badge.textContent = STATUS_LABELS.excluded;
+    const rollbackLiberatePosterBtn = article.querySelector(".poster-button");
+    if (rollbackLiberatePosterBtn) {
+      updateCardStatusBadge(rollbackLiberatePosterBtn, "excluded");
     }
     if (!movie.user_data) movie.user_data = {};
     movie.user_data.status = "excluded";
@@ -694,16 +736,9 @@ async function handleQuickNope(movie, article) {
 
   // Optimistic UI update
   article.classList.add("is-noped");
-  let badge = article.querySelector(".status-badge");
-  if (!badge) {
-    badge = document.createElement("span");
-    badge.className = "status-badge";
-    const posterBtn = article.querySelector(".poster-button");
-    if (posterBtn) posterBtn.append(badge);
-  }
-  if (badge) {
-    badge.dataset.status = "excluded";
-    badge.textContent = STATUS_LABELS.excluded;
+  const excludePosterBtn = article.querySelector(".poster-button");
+  if (excludePosterBtn) {
+    updateCardStatusBadge(excludePosterBtn, "excluded");
   }
   if (!movie.user_data) {
     movie.user_data = {};
@@ -720,9 +755,9 @@ async function handleQuickNope(movie, article) {
   } catch (error) {
     // Rollback on failure
     article.classList.remove("is-noped");
-    if (badge) {
-      badge.dataset.status = priorStatus;
-      badge.textContent = priorStatus === "untracked" ? "Untracked" : STATUS_LABELS[priorStatus];
+    const rollbackExcludePosterBtn = article.querySelector(".poster-button");
+    if (rollbackExcludePosterBtn) {
+      updateCardStatusBadge(rollbackExcludePosterBtn, priorStatus);
     }
     movie.user_data.status = priorStatus;
     state.nopeUndoStack = state.nopeUndoStack.filter((item) => item.movieId !== movieId);
@@ -779,16 +814,11 @@ function updateMovieCardDOM(movieId, userData) {
   if (!card) return;
 
   const status = userData?.status;
-  const badge = card.querySelector(".status-badge");
-  if (badge) {
-    badge.dataset.status = status || "untracked";
-    badge.textContent = status ? (STATUS_LABELS[status] || status) : "Untracked";
-  }
-
   const posterBtn = card.querySelector(".poster-button");
   if (posterBtn) {
+    updateCardStatusBadge(posterBtn, status);
     let favMark = posterBtn.querySelector(".favorite-mark");
-    if (userData?.is_favorite) {
+    if (userData?.is_favorite && state.currentView !== "discover") {
       if (!favMark) {
         favMark = document.createElement("span");
         favMark.className = "favorite-mark";
@@ -2686,7 +2716,7 @@ function createMovieCard(movie) {
     posterButton.addEventListener("blur", hidePosterNotePreview);
   }
 
-  if (movie.user_data?.is_favorite) {
+  if (movie.user_data?.is_favorite && state.currentView !== "discover") {
     const favorite = document.createElement("span");
     favorite.className = "favorite-mark";
     favorite.textContent = "♥";
@@ -2704,24 +2734,10 @@ function createMovieCard(movie) {
   }
 
   if (status && status !== "untracked") {
-    const statusBadge = document.createElement("span");
-    statusBadge.className = "status-badge";
-    statusBadge.dataset.status = status;
-    statusBadge.title = STATUS_LABELS[status] || status;
-    statusBadge.setAttribute("aria-label", STATUS_LABELS[status] || status);
-
-    if (status === "new_discovery") {
-      statusBadge.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" stroke="none" aria-hidden="true"><path d="M12 2l2.4 7.2h7.6l-6.1 4.5 2.3 7.3-6.2-4.6-6.2 4.6 2.3-7.3-6.1-4.5h7.6z"/></svg>';
-    } else if (status === "watched") {
-      statusBadge.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
-    } else if (status === "watch_later") {
-      statusBadge.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
-    } else if (status === "rewatch") {
-      statusBadge.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
-    } else if (status === "excluded") {
-      statusBadge.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>';
+    const statusBadge = getStatusBadgeElement(status);
+    if (statusBadge) {
+      posterButton.append(statusBadge);
     }
-    posterButton.append(statusBadge);
   }
 
   const rating = getMovieRating(movie);
@@ -3934,6 +3950,9 @@ async function loadShelf(view, page = 1) {
   const requestNumber = ++state.requestNumber;
   state.mode = "shelf";
   state.currentView = view;
+  if (view) {
+    document.body.dataset.activeView = view;
+  }
   if (view === "watch_later") {
     state.browseMode = "paged";
   }
@@ -5291,12 +5310,9 @@ function createRelatedMovieCard(movie) {
   button.append(createPoster(movie));
 
   const status = getStatus(movie);
-  if (status) {
-    const badge = document.createElement("span");
-    badge.className = "status-badge";
-    badge.dataset.status = status;
-    badge.textContent = STATUS_LABELS[status];
-    button.append(badge);
+  if (status && status !== "untracked") {
+    const badge = getStatusBadgeElement(status);
+    if (badge) button.append(badge);
 
     if (status === "excluded") {
       button.classList.add("is-noped");

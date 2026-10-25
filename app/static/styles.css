@@ -7899,7 +7899,7 @@ body.grey-docked-open .entry-list.is-list-mode {
   box-shadow: none !important;
 }
 .tri-chip.is-included .tri-chip-icon {
-  color: #D4AF37 !important;
+  color: #DEC68B !important;
   font-weight: 600 !important;
 }
 .tri-chip.is-included .tri-chip-label {
@@ -7926,11 +7926,17 @@ body.grey-docked-open .entry-list.is-list-mode {
 .filter-chip.is-active,
 .filter-chip:has(input:checked),
 .profile-workshop-chip.is-active,
-.status-options label:has(input:checked) {
-  background: rgba(212, 175, 55, 0.06) !important;
-  border: 1px solid rgba(212, 175, 55, 0.32) !important;
-  color: #DEC68B !important;
+.status-options label:has(input:checked),
+.sort-chip.is-active {
+  background: rgba(212, 175, 55, 0.05) !important;
+  border: 1px solid rgba(212, 175, 55, 0.28) !important;
+  color: #E6D5B8 !important;
   box-shadow: none !important;
+}
+
+.status-options label:has(input:checked) span:not(.status-chip-glyph),
+.sort-chip.is-active span:not(.sort-chip-glyph) {
+  color: #E6D5B8 !important;
 }
 
 /* Search Profile Presets: Unified 28px Pills, Inline Pin Star, Thin Delete × on Hover */
@@ -7986,7 +7992,7 @@ body.grey-docked-open .entry-list.is-list-mode {
   transition: color 120ms ease !important;
 }
 .profile-workshop-chip.is-pinned .chip-pin-btn {
-  color: #D4AF37 !important;
+  color: #DEC68B !important;
 }
 .profile-workshop-chip .chip-pin-btn:hover {
   color: #DEC68B !important;
@@ -8065,10 +8071,10 @@ body.grey-docked-open .entry-list.is-list-mode {
 .sort-chip {
   display: inline-flex !important;
   align-items: center !important;
-  justify-content: center !important;
-  gap: 6px !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
   height: 28px !important;
-  padding: 0 10px !important;
+  padding: 0 12px !important;
   border-radius: 999px !important;
   background: rgba(255, 255, 255, 0.02) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -8102,7 +8108,9 @@ body.grey-docked-open .entry-list.is-list-mode {
   padding: 4px 0 !important;
 }
 .status-options label {
-  gap: 6px !important;
+  justify-content: flex-start !important;
+  padding: 0 12px !important;
+  gap: 8px !important;
   box-shadow: none !important;
 }
 
@@ -8117,19 +8125,24 @@ body.grey-docked-open .entry-list.is-list-mode {
   align-items: center !important;
   justify-content: center !important;
   flex-shrink: 0 !important;
-  color: #D4AF37 !important;
-  opacity: 0.82 !important;
+  color: #6B7280 !important;
+  opacity: 0.7 !important;
   transition: color 140ms ease, opacity 140ms ease !important;
 }
 .sort-chip:hover .sort-chip-glyph,
 .status-options label:hover .status-chip-glyph {
-  color: #DEC68B !important;
-  opacity: 1 !important;
+  color: #E5E7EB !important;
+  opacity: 0.9 !important;
 }
 .sort-chip.is-active .sort-chip-glyph,
 .status-options label:has(input:checked) .status-chip-glyph {
-  color: #D4AF37 !important;
+  color: #DEC68B !important;
   opacity: 1 !important;
+}
+
+/* Discover mode: never display favourite hearts on posters */
+body[data-active-view="discover"] .favorite-mark {
+  display: none !important;
 }
 
 /* 6. Clean Keyword & Theme Tag Pills */
@@ -8161,7 +8174,7 @@ body.grey-docked-open .entry-list.is-list-mode {
   transition: all 140ms ease !important;
 }
 .selected-entity .entity-mode-toggle {
-  color: #D4AF37 !important;
+  color: #DEC68B !important;
   font-weight: 600 !important;
 }
 .selected-entity > span:not(.entity-mode-toggle) {
@@ -8291,6 +8304,19 @@ input[type="number"] {
   backdrop-filter: blur(4px) !important;
   border-radius: 6px !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5) !important;
+}
+.status-badge[data-status="untracked"],
+.status-badge:empty {
+  display: none !important;
+}
+.status-badge .status-badge-glyph {
+  font-size: 13px !important;
+  width: 13px !important;
+  height: 13px !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 .status-badge[data-status="new_discovery"] {
   color: #DEC68B !important;

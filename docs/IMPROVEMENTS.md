@@ -16,11 +16,17 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Material Symbols Poster Parity, Favourite Hearts Removal & Unified Pill Harmony**
+  * **Material Symbols on Posters**: Standardized 22px poster corner badges to use the exact same Material Symbols glyphs (uto_awesome, check, schedule, 
+eplay, lock) as the sidebar. Untracked movies receive no badge.
+  * **Eradicated Favourites Hearts from Discover Posters**: Suppressed the uninformative ♥ favorite badge on movie posters in Discover mode while preserving it in Library views.
+  * **Unified Zen Chip Harmony**: Standardized active Library Status and Sort chips to soft warm cream text (#E6D5B8), quiet muted gold border (
+gba(212, 175, 55, 0.28)), and left alignment (justify-content: flex-start, padding: 0 12px, gap: 8px). Inactive glyphs recede in quiet grey (#6B7280), completely eliminating dark yellow chip blocks.
 - [x] **Material Symbols Glyphs, Spacing Harmony & Dismiss Hover Bugfix**
   * **Material Symbols Glyphs**: Integrated self-hosted Material Symbols Outlined variable font (pp/static/fonts/MaterialSymbolsOutlined.woff2) for crisp, standardized typography across Sort Results (	rending_up, star, how_to_vote, schedule, history, sort_by_alpha) and Library Status (uto_awesome, schedule, check, 
 eplay, lock, 
 adio_button_unchecked).
-  * **Unified Muted Gold Brand Color & Gap Spacing**: Applied unified muted gold brand palette (#D4AF37) across all glyphs with 6px breathing room gap between glyph and text label, resolving cramped text-to-icon contact.
+  * **Muted Brand Yellow Everywhere & Left-Aligned Text**: Applied calm, desaturated muted brand yellow (#DEC68B active, #8E8468 inactive) across all chip glyphs, eradicating harsh saturated yellow. Standardized Sort and Library Status 50/50 pills to clean left-aligned layout (justify-content: flex-start, padding: 0 12px, gap: 8px) so all icons and text start at the exact same horizontal position.
   * **Zero Inner Glow Guarantee**: Ensured flat, glare-free aesthetic across all chips, pills, and active filter states (ox-shadow: none !important;).
   * **Hindi Dismiss Hover Bug Fix**: Resolved edge case in 
 efreshCompactCloud where background excluded status prevented Hindi from receiving the chip-unpin (×) dismiss button on hover; all visible language chips now reliably display dismissal triggers.
