@@ -16,6 +16,27 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Passive Unclickable Heart in Library Shelf Ribbon**
+  * **Unclickable Heart**: Converted the ribbon heart (.shelf-favorites-btn) from an interactive button into a passive indicator (<span> with pointer-events: none !important; cursor: default !important; user-select: none !important), disallowing clicks while retaining active reflection when viewing Favourites.
+- [x] **Eradicated Inner Glow & Shading Across Sidebar Filter Chips (Languages, Genres, Countries, Entities)**
+  * **Zero Inner Glow / Shadow**: Removed the colored background fills and inner shading (rgba 6% fills) from active filter chips (.tri-chip.is-included, .tri-chip.is-excluded, .filter-chip.is-active, .selected-entity).
+  * **Clean Transparent Body Parity**: Chips in Languages, Genres, Countries, and Person/Studio entities now remain completely transparent (ackground: transparent !important, ox-shadow: none !important), exactly matching the clean, unshaded look of inactive Country chips while borders and glyphs clearly indicate selection.
+- [x] **Refined 1.25px Inactive & 1.75px Active Ribbon Chip Borders**
+  * **1.25px Inactive Border**: Upgraded the idle chip hairline border from 1px to a crisp 1.25px (rgba(255, 255, 255, 0.16)), eliminating fadedness and providing solid squircle definition across both Discover presets and Library shelves.
+  * **1.75px Active Border**: Elevated selected status-colored chip borders to 1.75px (85% opacity) for a distinct tactile emphasis, while maintaining pure transparent backgrounds (zero inner shades).
+- [x] **Distinct 1.5px Status-Colored Active Chip Borders (No Inner Shades)**
+  * **Thicker Active Border**: Increased selected chip border thickness from 1px to a crisp 1.5px with 80% opacity, providing a clear, tactile badge emphasis over idle 1px chips without layout shifting.
+  * **Zero Inner Shades**: Maintained completely transparent backgrounds and zero box shadows across all states.
+- [x] **Status-Colored Active Chip Borders with Pure Transparent Backgrounds (No Inner Shades)**
+  * **Icon-Matched Active Borders**: Each selected library shelf chip takes the exact semantic color of its icon for its hairline border (Emerald #4ADE80 for Watched, Sky Blue #38BDF8 for Watch Later, Warm Amber #FB923C for Rewatch, Crimson Red #EF4444 for Nope, Soft Gold #DEC68B for New Discovery).
+  * **Zero Inner Shades**: Completely eliminated all background fills and tints across idle, hover, and active states (ackground: transparent !important, ox-shadow: none !important), rendering clean, unshaded squircle outlines with high-contrast white text.
+- [x] **Semantic Status-Colored Library Shelf Icons (Dimmed & Refined)**
+  * **Color-Coded Status Icons**: Applied dimmed semantic status tints (at 75% opacity) to library shelf chip icons: Emerald (#4ADE80) for Watched, Soft Gold (#DEC68B) for New Discovery, Sky Blue (#38BDF8) for Watch Later, Warm Amber (#FB923C) for Rewatch, and Crimson Red (#EF4444) for Nope.
+  * **Dynamic Hover & Active Vibrancy**: Brightens cleanly to 100% saturation on hover and retains full semantic color fidelity when the shelf is active, without neon glare or text distraction.
+- [x] **Ribbon Chips Definition & Readability (Discover Presets & Library Shelves)**
+  * **Visible Hairline Borders**: Raised inactive chip border opacity to 15% white (rgba(255, 255, 255, 0.15)) and active borders to 45% cinema gold (rgba(212, 175, 55, 0.45)), giving each squircle clean visual boundary definition.
+  * **Sharp, Legible Typography**: Increased font weight from thin 400 to medium 500/550 with antialiasing, lifting inactive text to neutral light grey (#D1D5DB) and active text to warm cream (#F3E8D2).
+  * **Tactile Chip Body**: Lifted inactive chip background to 4.5% white and active to 9% gold, and brightened inactive icons to slate (#9CA3AF) for balanced contrast against the dark canvas.
 - [x] **Refined Header Master Navigation (Crisp Typography, Hairline Underline & Toned-Down Gold Icons)**
   * **Crisp Header Titles**: Reduced font-weight from chunky 700/800 to a clean SemiBold 600 with subpixel antialiasing and balanced 0.09em letter-spacing, eliminating text bleed and blur across DISCOVER, LIBRARY, and NOTES.
   * **Hairline Underline Indicator (Zero Glow)**: Replaced the 2px glowing highlighter with a razor-sharp 1px hairline indicator in warm cinema gold (#DEC68B), completely removing the neon box-shadow blur.

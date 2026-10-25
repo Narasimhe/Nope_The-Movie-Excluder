@@ -2711,7 +2711,6 @@ footer span {
   flex: 0 0 1px !important;
 }
 
-.shelf-favorites-btn,
 .shelf-notes-lens-btn {
   padding: 0 4px !important;
   min-width: 26px !important;
@@ -2724,6 +2723,27 @@ footer span {
   box-sizing: border-box !important;
   border-radius: 0 !important;
   cursor: pointer !important;
+  transition: all 140ms ease !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.shelf-favorites-btn {
+  padding: 0 4px !important;
+  min-width: 26px !important;
+  width: 26px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  border-radius: 0 !important;
+  cursor: default !important;
+  pointer-events: none !important;
+  user-select: none !important;
   transition: all 140ms ease !important;
   background: transparent !important;
   border: none !important;
@@ -2835,11 +2855,11 @@ footer span {
   padding: 0 12px !important;
   max-width: none !important;
   border-radius: 8px !important;
-  background: rgba(255, 255, 255, 0.02) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  color: #9CA3AF !important;
+  background: transparent !important;
+  border: 1.25px solid rgba(255, 255, 255, 0.16) !important;
+  color: #D1D5DB !important;
   font-size: 12px !important;
-  font-weight: 400 !important;
+  font-weight: 500 !important;
   letter-spacing: 0.01em !important;
   white-space: nowrap !important;
   box-sizing: border-box !important;
@@ -2848,6 +2868,8 @@ footer span {
   user-select: none !important;
   transition: all 140ms ease !important;
   flex-shrink: 0 !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .ribbon-chip > span,
@@ -2858,34 +2880,120 @@ footer span {
 }
 
 .ribbon-chip:hover {
-  background: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.16) !important;
-  color: #E5E7EB !important;
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  color: #FFFFFF !important;
   box-shadow: none !important;
   transform: none !important;
 }
 
 .ribbon-chip.is-active {
-  background: rgba(212, 175, 55, 0.05) !important;
-  border: 1px solid rgba(212, 175, 55, 0.28) !important;
-  color: #E6D5B8 !important;
+  background: transparent !important;
+  border: 1.75px solid rgba(212, 175, 55, 0.85) !important;
+  color: #FFFFFF !important;
+  font-weight: 550 !important;
   box-shadow: none !important;
 }
 
 .ribbon-chip .shelf-chip-icon {
   width: 13px !important;
   height: 13px !important;
-  color: #6B7280 !important;
+  color: #9CA3AF !important;
   flex-shrink: 0 !important;
   transition: color 140ms ease !important;
 }
 
 .ribbon-chip:hover .shelf-chip-icon {
-  color: #E5E7EB !important;
+  color: #FFFFFF !important;
 }
 
 .ribbon-chip.is-active .shelf-chip-icon {
   color: #DEC68B !important;
+}
+
+/* Library Shelf Chip Status Icons (Dimmed Muted Tones) */
+.library-shelf-ribbon .ribbon-chip[data-view="new_discovery"] .shelf-chip-icon {
+  color: rgba(222, 198, 139, 0.75) !important;
+}
+.library-shelf-ribbon .ribbon-chip[data-view="watch_later"] .shelf-chip-icon {
+  color: rgba(56, 189, 248, 0.75) !important;
+}
+.library-shelf-ribbon .ribbon-chip[data-view="watched"] .shelf-chip-icon {
+  color: rgba(74, 222, 128, 0.75) !important;
+}
+.library-shelf-ribbon .ribbon-chip[data-view="rewatch"] .shelf-chip-icon {
+  color: rgba(251, 146, 60, 0.75) !important;
+}
+.library-shelf-ribbon .ribbon-chip[data-view="excluded"] .shelf-chip-icon {
+  color: rgba(224, 109, 109, 0.75) !important;
+}
+
+/* Hover: Brighten icons cleanly */
+.library-shelf-ribbon .ribbon-chip[data-view="new_discovery"]:hover .shelf-chip-icon {
+  color: #DEC68B !important;
+}
+.library-shelf-ribbon .ribbon-chip[data-view="watch_later"]:hover .shelf-chip-icon {
+  color: #38BDF8 !important;
+}
+.library-shelf-ribbon .ribbon-chip[data-view="watched"]:hover .shelf-chip-icon {
+  color: #4ADE80 !important;
+}
+.library-shelf-ribbon .ribbon-chip[data-view="rewatch"]:hover .shelf-chip-icon {
+  color: #FB923C !important;
+}
+.library-shelf-ribbon .ribbon-chip[data-view="excluded"]:hover .shelf-chip-icon {
+  color: #EF4444 !important;
+}
+
+/* Active State: Selected chip takes thicker border of its status icon with NO inner shades */
+.library-shelf-ribbon .ribbon-chip[data-view="new_discovery"].is-active {
+  border: 1.75px solid rgba(222, 198, 139, 0.85) !important;
+  background: transparent !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+.library-shelf-ribbon .ribbon-chip[data-view="new_discovery"].is-active .shelf-chip-icon {
+  color: #DEC68B !important;
+}
+
+.library-shelf-ribbon .ribbon-chip[data-view="watch_later"].is-active {
+  border: 1.75px solid rgba(56, 189, 248, 0.85) !important;
+  background: transparent !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+.library-shelf-ribbon .ribbon-chip[data-view="watch_later"].is-active .shelf-chip-icon {
+  color: #38BDF8 !important;
+}
+
+.library-shelf-ribbon .ribbon-chip[data-view="watched"].is-active {
+  border: 1.75px solid rgba(74, 222, 128, 0.85) !important;
+  background: transparent !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+.library-shelf-ribbon .ribbon-chip[data-view="watched"].is-active .shelf-chip-icon {
+  color: #4ADE80 !important;
+}
+
+.library-shelf-ribbon .ribbon-chip[data-view="rewatch"].is-active {
+  border: 1.75px solid rgba(251, 146, 60, 0.85) !important;
+  background: transparent !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+.library-shelf-ribbon .ribbon-chip[data-view="rewatch"].is-active .shelf-chip-icon {
+  color: #FB923C !important;
+}
+
+.library-shelf-ribbon .ribbon-chip[data-view="excluded"].is-active {
+  border: 1.75px solid rgba(239, 68, 68, 0.85) !important;
+  background: transparent !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+.library-shelf-ribbon .ribbon-chip[data-view="excluded"].is-active .shelf-chip-icon {
+  color: #EF4444 !important;
 }
 
 /* Navigation links in Library and Notes panes */
@@ -3969,8 +4077,8 @@ footer {
 }
 .filter-chip.is-active,
 .filter-chip:has(input:checked) {
-  background: rgba(212, 175, 55, 0.06) !important;
-  border-color: rgba(212, 175, 55, 0.32) !important;
+  background: transparent !important;
+  border-color: rgba(212, 175, 55, 0.5) !important;
   color: #DEC68B !important;
   font-weight: 500;
   box-shadow: none !important;
@@ -3979,8 +4087,8 @@ footer {
 #exclude-genres .filter-chip:has(input:checked),
 #exclude-languages .filter-chip.is-active,
 #exclude-languages .filter-chip:has(input:checked) {
-  background: rgba(190, 80, 80, 0.06) !important;
-  border-color: rgba(190, 80, 80, 0.30) !important;
+  background: transparent !important;
+  border-color: rgba(224, 109, 109, 0.5) !important;
   color: #CE8484 !important;
   font-weight: 500;
   box-shadow: none !important;
@@ -4031,8 +4139,8 @@ footer {
 
 /* Include state: Gold with + */
 .tri-chip.is-included {
-  background: rgba(212, 175, 55, 0.06) !important;
-  border-color: rgba(212, 175, 55, 0.32) !important;
+  background: transparent !important;
+  border-color: rgba(212, 175, 55, 0.5) !important;
   color: #DEC68B !important;
   font-weight: 500;
   box-shadow: none !important;
@@ -4040,8 +4148,8 @@ footer {
 
 /* Exclude state: Red with − */
 .tri-chip.is-excluded {
-  background: rgba(190, 80, 80, 0.06) !important;
-  border-color: rgba(190, 80, 80, 0.30) !important;
+  background: transparent !important;
+  border-color: rgba(224, 109, 109, 0.5) !important;
   color: #CE8484 !important;
   font-weight: 500;
   box-shadow: none !important;
@@ -8158,8 +8266,8 @@ body.grey-docked-open .entry-list.is-list-mode {
 
 /* State 1: Included Warm Gold (+) */
 .tri-chip.is-included {
-  background: rgba(212, 175, 55, 0.06) !important;
-  border: 1px solid rgba(212, 175, 55, 0.32) !important;
+  background: transparent !important;
+  border: 1px solid rgba(212, 175, 55, 0.5) !important;
   box-shadow: none !important;
 }
 .tri-chip.is-included .tri-chip-icon {
@@ -8173,16 +8281,16 @@ body.grey-docked-open .entry-list.is-list-mode {
 
 /* State 2: Excluded Dusty Rose (-) */
 .tri-chip.is-excluded {
-  background: rgba(190, 80, 80, 0.06) !important;
-  border: 1px solid rgba(190, 80, 80, 0.30) !important;
+  background: transparent !important;
+  border: 1px solid rgba(224, 109, 109, 0.5) !important;
   box-shadow: none !important;
 }
 .tri-chip.is-excluded .tri-chip-icon {
-  color: #D06B6B !important;
+  color: #EF4444 !important;
   font-weight: 600 !important;
 }
 .tri-chip.is-excluded .tri-chip-label {
-  color: #D8A8A8 !important;
+  color: #FCA5A5 !important;
   font-weight: 400 !important;
 }
 
@@ -8192,8 +8300,8 @@ body.grey-docked-open .entry-list.is-list-mode {
 .profile-workshop-chip.is-active,
 .status-options label:has(input:checked),
 .sort-chip.is-active {
-  background: rgba(212, 175, 55, 0.05) !important;
-  border: 1px solid rgba(212, 175, 55, 0.28) !important;
+  background: transparent !important;
+  border: 1px solid rgba(212, 175, 55, 0.5) !important;
   color: #E6D5B8 !important;
   box-shadow: none !important;
 }
@@ -8358,8 +8466,8 @@ body.grey-docked-open .entry-list.is-list-mode {
   color: #E5E7EB !important;
 }
 .sort-chip.is-active {
-  background: rgba(212, 175, 55, 0.06) !important;
-  border: 1px solid rgba(212, 175, 55, 0.32) !important;
+  background: transparent !important;
+  border: 1px solid rgba(212, 175, 55, 0.5) !important;
   color: #DEC68B !important;
   box-shadow: none !important;
 }
@@ -8431,8 +8539,8 @@ body.grey-docked-open .entry-list.is-list-mode {
   font-size: 12px !important;
   font-weight: 400 !important;
   box-sizing: border-box !important;
-  background: rgba(212, 175, 55, 0.06) !important;
-  border: 1px solid rgba(212, 175, 55, 0.32) !important;
+  background: transparent !important;
+  border: 1px solid rgba(212, 175, 55, 0.5) !important;
   color: #DEC68B !important;
   box-shadow: none !important;
   transition: all 140ms ease !important;
@@ -8445,8 +8553,8 @@ body.grey-docked-open .entry-list.is-list-mode {
   color: #E6D5B8 !important;
 }
 .selected-entity.is-excluded {
-  background: rgba(190, 80, 80, 0.06) !important;
-  border: 1px solid rgba(190, 80, 80, 0.30) !important;
+  background: transparent !important;
+  border: 1px solid rgba(224, 109, 109, 0.5) !important;
   color: #CE8484 !important;
   box-shadow: none !important;
 }

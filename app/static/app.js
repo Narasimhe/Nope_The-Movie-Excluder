@@ -524,6 +524,10 @@ function setActiveView(view) {
     elements.filmographyToolbar.classList.add("is-hidden");
     state.activeFilmographyPerson = null;
   }
+  const shelfHeartEl = document.querySelector(".shelf-favorites-btn");
+  if (shelfHeartEl) {
+    shelfHeartEl.classList.toggle("is-active", view === "favorites");
+  }
   elements.navLinks.forEach((button) => {
     const btnView = button.dataset.view;
     const isPrimary = btnView === view;
