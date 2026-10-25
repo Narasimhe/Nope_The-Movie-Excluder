@@ -16,6 +16,12 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Refined Title, Heart & Metadata Vertical Spacing**
+  * **Snug Title-to-Heart Alignment**: Tightened the horizontal gap between the movie title and the heart icon from 14px/19px down to a snug 6px with an unpadded 20px button container, eliminating floating distance.
+  * **Balanced Vertical Breathing Room**: Increased the bottom margin of the title wrap to 14px, providing clean vertical separation between the title and the metadata row below.
+- [x] **Relaxed Typographic Spacing for Plot Overview & Credits Lines**
+  * **Spacious Credits Rhythm**: Replaced cramped 4px stacking with a distinct 10px flex gap between Director and Actors lines, and added `min-width: 68px` to labels for clean key-value column alignment.
+  * **Breathing Room**: Increased vertical spacing above and below the plot overview (`margin: 14px 0 20px 0`, `line-height: 1.72`), expanded the gap above the action cockpit card to 24px, and removed noisy baseline underlines from actor links.
 - [x] **Full Responsiveness when Grey Cinema Companion is Docked Open**
   * **Fluid Adaptive Widths**: Converted fixed layout constraints on both the single movie page and main library/discover shell to fluid responsive grids when Grey is open (`calc(100vw - 420px)`), preventing blowout, truncation, or unresponsive lockup.
   * **Sidebar & Movie Grid Adaptation**: Slims sidebar to 240px below 1400px and collapses cleanly below 1140px; wraps movie posters using `repeat(auto-fill, minmax(95px, 105px))` so content remains fully accessible without horizontal clipping.

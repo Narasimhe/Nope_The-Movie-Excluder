@@ -8871,9 +8871,9 @@ footer {
 .detail-title-wrap {
   display: flex !important;
   align-items: center !important;
-  gap: 14px !important;
+  gap: 6px !important;
   flex-wrap: wrap !important;
-  margin: 0 0 8px 0 !important;
+  margin: 0 0 14px 0 !important;
 }
 
 .movie-detail-page .dialog-body h1,
@@ -8881,16 +8881,16 @@ footer {
   font-size: clamp(1.65rem, 2.5vw, 2.2rem) !important;
   line-height: 1.15 !important;
   letter-spacing: -0.025em !important;
-  font-weight: 750 !important;
+  font-weight: 700 !important;
   margin: 0 !important;
   display: inline !important;
 }
 
 .movie-detail-page .favorite-button,
 .favorite-button {
-  width: 32px !important;
-  height: 32px !important;
-  min-width: 32px !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -8979,8 +8979,8 @@ footer {
   background: rgba(20, 20, 24, 0.6) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 12px !important;
-  padding: 14px 16px !important;
-  margin-top: 16px !important;
+  padding: 16px 18px !important;
+  margin-top: 24px !important;
 }
 
 .cockpit-shelf-row {
@@ -9105,9 +9105,9 @@ footer {
 .detail-title-wrap {
   display: flex !important;
   align-items: center !important;
-  gap: 12px !important;
+  gap: 6px !important;
   flex-wrap: wrap !important;
-  margin: 0 0 8px 0 !important;
+  margin: 0 0 14px 0 !important;
 }
 
 .movie-detail-page .dialog-body h1,
@@ -9124,9 +9124,9 @@ footer {
 /* Standalone Unboxed Heart (No enclosing circle) */
 .movie-detail-page .favorite-button,
 .favorite-button {
-  width: 28px !important;
-  height: 28px !important;
-  min-width: 28px !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -9242,47 +9242,57 @@ footer {
 .movie-detail-page .dialog-overview {
   max-width: 670px !important;
   width: 670px !important;
-  margin: 0 0 16px 0 !important;
-  font-size: 14.5px !important;
-  line-height: 1.65 !important;
+  margin: 14px 0 20px 0 !important;
+  font-size: 15px !important;
+  line-height: 1.72 !important;
   font-weight: 400 !important;
   color: #D1D5DB !important;
   letter-spacing: 0.005em !important;
 }
 
-/* Credits Lines (Director & Actors) */
+/* Credits Lines (Director & Actors) - Generous Breathing Room */
 .credits-lines,
 .movie-detail-page .credits-lines {
   max-width: 670px !important;
   width: 670px !important;
-  margin: 0 0 18px 0 !important;
-  font-size: 13.5px !important;
-  line-height: 1.6 !important;
+  margin: 0 0 24px 0 !important;
+  font-size: 14px !important;
+  line-height: 1.65 !important;
   color: #9CA3AF !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
 }
 
 .credits-lines p,
 .movie-detail-page .credits-lines p {
-  margin: 4px 0 !important;
+  margin: 0 !important;
+  line-height: 1.65 !important;
 }
 
 .credits-lines .credit-label {
   font-weight: 600 !important;
   color: #E5E7EB !important;
-  margin-right: 6px !important;
+  margin-right: 8px !important;
+  display: inline-block !important;
+  min-width: 68px !important;
 }
 
-.credits-lines a {
-  color: #D1D5DB !important;
+.credits-lines a,
+.credit-link {
+  color: #E5E7EB !important;
   text-decoration: none !important;
-  font-weight: 450 !important;
+  border-bottom: none !important;
+  font-weight: 500 !important;
   transition: color 140ms ease !important;
 }
 
-.credits-lines a:hover {
+.credits-lines a:hover,
+.credit-link:hover {
   color: #DEC68B !important;
   text-decoration: underline !important;
   text-underline-offset: 3px !important;
+  border-bottom: none !important;
 }
 
 /* Keyword chips below poster */
