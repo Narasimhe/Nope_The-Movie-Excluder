@@ -7638,7 +7638,7 @@ body.grey-docked-open .entry-list.is-list-mode {
    DISCOVER & LIBRARY SIDEBAR FILTERS - ZEN REDESIGN
    ============================================================ */
 
-/* Header Logo & Topbar Alignment with Sidebar Inner Content */
+/* Topbar Header Logo Alignment */
 .topbar {
   padding-left: max(32px, calc((100vw - 1536px) / 2 + 16px)) !important;
   padding-right: max(32px, calc((100vw - 1536px) / 2 + 16px)) !important;
@@ -7692,8 +7692,8 @@ body.grey-docked-open .entry-list.is-list-mode {
   color: #FFFFFF !important;
 }
 .sidebar-search-actions .see-results-btn.is-dirty {
-  background: rgba(250, 204, 21, 0.1) !important;
-  border-color: rgba(250, 204, 21, 0.45) !important;
+  background: rgba(250, 204, 21, 0.05) !important;
+  border-color: rgba(250, 204, 21, 0.40) !important;
   color: #FACC15 !important;
   font-weight: 600 !important;
   box-shadow: none !important;
@@ -7749,7 +7749,7 @@ body.grey-docked-open .entry-list.is-list-mode {
   pointer-events: none !important;
 }
 
-/* 3. Clean Transparent Accordion Headers & Row Rhythm */
+/* 3. Clean Transparent Accordion Headers & Collapsed-by-Default States */
 .sidebar-accordion-item {
   display: block !important;
   width: 100% !important;
@@ -7840,6 +7840,11 @@ body.grey-docked-open .entry-list.is-list-mode {
   display: none !important;
 }
 
+/* Enforce Collapsed Drawer by default */
+.filter-card.is-collapsed,
+.sidebar-accordion-item .filter-card.is-collapsed {
+  display: none !important;
+}
 .sidebar-accordion-item .filter-card:not(.is-collapsed) {
   display: block !important;
   padding: 4px 0 14px 0 !important;
@@ -7848,7 +7853,7 @@ body.grey-docked-open .entry-list.is-list-mode {
   box-shadow: none !important;
 }
 
-/* 4. Expanded Filter Pills (When an accordion is open) */
+/* 4. Unified Flat Zen Pills (Sort, Genres, Languages, Countries, Library Status, Presets) */
 .tri-chip-cloud,
 .chip-cloud {
   display: flex !important;
@@ -7864,82 +7869,125 @@ body.grey-docked-open .entry-list.is-list-mode {
   display: none !important;
 }
 
+/* Strictly hide non-primary / hidden items */
+.tri-chip.is-hidden,
+.filter-chip.is-hidden,
+.profile-workshop-chip.is-hidden,
+.chip-adder.is-hidden,
+.is-hidden {
+  display: none !important;
+}
+
 .tri-chip,
 .filter-chip,
-.profile-workshop-chip {
+.profile-workshop-chip,
+.chip-adder {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 5px !important;
-  padding: 4px 10px !important;
+  height: 28px !important;
+  padding: 0 10px !important;
   border-radius: 999px !important;
-  background: rgba(255, 255, 255, 0.03) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: #9CA3AF !important;
   font-size: 12px !important;
   font-weight: 400 !important;
-  line-height: 1.2 !important;
+  line-height: 1 !important;
   white-space: nowrap !important;
   cursor: pointer !important;
   user-select: none !important;
   box-sizing: border-box !important;
+  box-shadow: none !important;
+  background-image: none !important;
   transition: all 140ms ease !important;
 }
 .tri-chip:hover,
 .filter-chip:hover,
-.profile-workshop-chip:hover {
-  background: rgba(255, 255, 255, 0.06) !important;
+.profile-workshop-chip:hover,
+.chip-adder:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
   border-color: rgba(255, 255, 255, 0.16) !important;
   color: #E5E7EB !important;
 }
 
-/* Included / Active State (Gold) */
+/* Standardized Whisper-Clean Gold State */
 .tri-chip.is-included,
 .filter-chip.is-active,
 .profile-workshop-chip.is-active {
-  background: rgba(250, 204, 21, 0.1) !important;
-  border: 1px solid rgba(250, 204, 21, 0.45) !important;
+  background: rgba(250, 204, 21, 0.05) !important;
+  border: 1px solid rgba(250, 204, 21, 0.40) !important;
   color: #FACC15 !important;
+  box-shadow: none !important;
 }
 
-/* Excluded State (Crimson) */
+/* Standardized Whisper-Clean Crimson State */
 .tri-chip.is-excluded {
-  background: rgba(239, 68, 68, 0.1) !important;
-  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+  background: rgba(239, 68, 68, 0.05) !important;
+  border: 1px solid rgba(239, 68, 68, 0.40) !important;
   color: #F87171 !important;
+  box-shadow: none !important;
 }
 
-/* Selected Entities (Keywords, Cast, Studios) */
-.selected-entities:empty {
+/* Search Profile Presets: Hide delete × until hovered, remove star icon */
+.profile-workshop-chip .chip-pin-btn {
   display: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
 }
-.selected-entities {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 5px !important;
-  margin-top: 7px !important;
+.profile-workshop-chip .chip-del-btn {
+  background: transparent !important;
+  border: none !important;
+  color: #9CA3AF !important;
+  cursor: pointer !important;
+  padding: 0 0 0 4px !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 140ms ease, color 140ms ease !important;
 }
-.selected-entity {
-  display: inline-flex !important;
-  gap: 5px !important;
-  align-items: center !important;
-  padding: 4px 10px !important;
-  border-radius: 999px !important;
-  font-size: 12px !important;
-  background: rgba(250, 204, 21, 0.1) !important;
-  border: 1px solid rgba(250, 204, 21, 0.45) !important;
-  color: #FACC15 !important;
-  transition: all 140ms ease !important;
+.profile-workshop-chip:hover .chip-del-btn,
+.profile-workshop-chip:focus-within .chip-del-btn {
+  opacity: 0.7 !important;
+  pointer-events: auto !important;
 }
-.selected-entity.is-excluded {
-  background: rgba(239, 68, 68, 0.1) !important;
-  border: 1px solid rgba(239, 68, 68, 0.4) !important;
+.profile-workshop-chip .chip-del-btn:hover {
+  opacity: 1 !important;
   color: #F87171 !important;
 }
 
-/* 5. Sort Drawer: 50/50 2-Column Grid */
+/* Clean inline unpin/dismiss × on hover (no grey circular box) */
+.chip-unpin {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  height: auto !important;
+  margin-left: 5px !important;
+  margin-right: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  color: #9CA3AF !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  opacity: 0 !important;
+  cursor: pointer !important;
+  transition: opacity 120ms ease, color 120ms ease !important;
+}
+.tri-chip:hover .chip-unpin,
+.filter-chip:hover .chip-unpin,
+.tri-chip:focus-within .chip-unpin,
+.filter-chip:focus-within .chip-unpin {
+  opacity: 0.7 !important;
+}
+.chip-unpin:hover {
+  opacity: 1 !important;
+  color: #F87171 !important;
+  background: transparent !important;
+}
+
+/* 5. Sort Results: Flat 50/50 2-Column Grid of Symmetrical 999px Pills */
 .sort-chip-cloud {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
@@ -7950,31 +7998,96 @@ body.grey-docked-open .entry-list.is-list-mode {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  height: 32px !important;
-  padding: 0 8px !important;
-  border-radius: 6px !important;
-  background: rgba(255, 255, 255, 0.03) !important;
+  height: 28px !important;
+  padding: 0 10px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.02) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: #9CA3AF !important;
   font-size: 12px !important;
   font-weight: 400 !important;
   cursor: pointer !important;
-  transition: all 140ms ease !important;
+  box-shadow: none !important;
+  background-image: none !important;
   white-space: nowrap !important;
   box-sizing: border-box !important;
+  transition: all 140ms ease !important;
 }
 .sort-chip:hover {
-  background: rgba(255, 255, 255, 0.06) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
   border-color: rgba(255, 255, 255, 0.16) !important;
   color: #E5E7EB !important;
 }
 .sort-chip.is-active {
-  background: rgba(250, 204, 21, 0.1) !important;
-  border: 1px solid rgba(250, 204, 21, 0.45) !important;
+  background: rgba(250, 204, 21, 0.05) !important;
+  border: 1px solid rgba(250, 204, 21, 0.40) !important;
   color: #FACC15 !important;
+  box-shadow: none !important;
 }
 
-/* 6. Release Year & Numeric Inputs - Clean In-box Placeholders & No Spinners */
+/* 6. Clean Keyword & Theme Tag Pills */
+.selected-entities:empty {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.selected-entities {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  margin-top: 7px !important;
+}
+.selected-entity {
+  display: inline-flex !important;
+  gap: 5px !important;
+  align-items: center !important;
+  height: 28px !important;
+  padding: 0 10px !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  box-sizing: border-box !important;
+  background: rgba(250, 204, 21, 0.05) !important;
+  border: 1px solid rgba(250, 204, 21, 0.40) !important;
+  color: #FACC15 !important;
+  box-shadow: none !important;
+  transition: all 140ms ease !important;
+}
+.selected-entity.is-excluded {
+  background: rgba(239, 68, 68, 0.05) !important;
+  border: 1px solid rgba(239, 68, 68, 0.40) !important;
+  color: #F87171 !important;
+  box-shadow: none !important;
+}
+.selected-entity button {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin-left: 4px !important;
+  width: auto !important;
+  height: auto !important;
+  color: rgba(250, 204, 21, 0.6) !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  transition: color 120ms ease !important;
+}
+.selected-entity button:hover {
+  color: #FACC15 !important;
+  background: transparent !important;
+}
+.selected-entity.is-excluded button {
+  color: rgba(248, 113, 113, 0.6) !important;
+}
+.selected-entity.is-excluded button:hover {
+  color: #F87171 !important;
+  background: transparent !important;
+}
+
+/* 7. Release Year & Numeric Inputs - Clean In-box Placeholders & No Spinners */
 .sidebar-range-row {
   display: flex !important;
   align-items: center !important;
@@ -8030,12 +8143,115 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-/* 7. Entity Grids (Actors & Directors) */
+/* 8. Entity Grids (Actors & Directors) */
 .entity-grid.sidebar-entity-grid {
   display: flex !important;
   flex-direction: column !important;
   gap: 8px !important;
   width: 100% !important;
+}
+
+/* 9. 22px Icon-Only Corner Poster Badges */
+.status-badge {
+  position: absolute !important;
+  z-index: 3 !important;
+  top: 4px !important;
+  left: 4px !important;
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  background: rgba(10, 10, 12, 0.88) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  backdrop-filter: blur(4px) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5) !important;
+}
+.status-badge[data-status="new_discovery"] {
+  color: #FACC15 !important;
+  border-color: rgba(250, 204, 21, 0.35) !important;
+}
+.status-badge[data-status="watched"] {
+  color: #4ADE80 !important;
+  border-color: rgba(74, 222, 128, 0.35) !important;
+}
+.status-badge[data-status="watch_later"] {
+  color: #38BDF8 !important;
+  border-color: rgba(56, 189, 248, 0.35) !important;
+}
+.status-badge[data-status="rewatch"] {
+  color: #FB923C !important;
+  border-color: rgba(251, 146, 60, 0.35) !important;
+}
+.status-badge[data-status="excluded"] {
+  color: #F87171 !important;
+  border-color: rgba(248, 113, 113, 0.35) !important;
+}
+/* In personal library shelves, status badges remain hidden */
+[data-view="watched"] .status-badge,
+[data-view="watch_later"] .status-badge,
+[data-view="rewatch"] .status-badge,
+[data-view="favorites"] .status-badge,
+[data-view="excluded"] .status-badge {
+  display: none !important;
+}
+
+/* 10. Workspace & Header Alignment (Search Bar, Movie Count, Footer) */
+.discover-toolbar-row {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  flex-wrap: nowrap !important;
+  gap: 16px !important;
+}
+.discover-search-cluster {
+  width: 670px !important;
+  max-width: 670px !important;
+  flex-shrink: 0 !important;
+}
+.toolbar-search {
+  width: 100% !important;
+  max-width: 670px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  border-radius: 8px !important;
+  box-sizing: border-box !important;
+}
+.result-count,
+.shelf-movie-count {
+  margin-left: auto !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: #8E8B97 !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  white-space: nowrap !important;
+}
+
+/* Symmetrical Footer Alignment */
+footer {
+  display: grid !important;
+  grid-template-columns: 310px minmax(0, 1fr) !important;
+  width: min(100% - 32px, 1536px) !important;
+  margin: 3rem auto 2rem auto !important;
+  padding: 1.5rem 0 0 0 !important;
+  box-sizing: border-box !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+.footer-identity {
+  padding-left: 16px !important;
+  margin: 0 !important;
+}
+.footer-nav {
+  padding-left: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  gap: 16px !important;
 }
 
 /* Permanently suppress Nope Mode banner */

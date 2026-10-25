@@ -69,8 +69,8 @@ const COUNTRY_OPTIONS = [
 ];
 
 // Compact chip clouds: only these are always visible. Anything else is added on demand via the "+" chip.
-const PRIMARY_LANGUAGE_CODES = ["en", "fr", "es", "de", "ja", "ko"];
-const PRIMARY_COUNTRY_CODES = ["US", "GB", "FR", "DE", "JP", "KR"];
+const PRIMARY_LANGUAGE_CODES = ["en", "fr", "es", "ko", "ja", "de", "it", "hi"];
+const PRIMARY_COUNTRY_CODES = ["US", "GB", "FR", "KR", "JP", "DE", "ES", "IT", "IN", "CA"];
 
 const PICKER_CONFIG = {
   "include-genres": { options: GENRE_OPTIONS, opposite: "exclude-genres" },
@@ -1031,6 +1031,21 @@ const COMPACT_CLOUD_CONFIG = [
   },
 ];
 
+function getDismissedChips(kind) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(`nope_dismissed_${kind}`) || "[]");
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+function setDismissedChips(kind, values) {
+  try {
+    localStorage.setItem(`nope_dismissed_${kind}`, JSON.stringify([...new Set(values.map(String))]));
+  } catch {}
+}
+
 function getPinnedChips(kind) {
   try {
     const parsed = JSON.parse(localStorage.getItem(`nope_pinned_${kind}`) || "[]");
@@ -1062,29 +1077,40 @@ function refreshCompactCloud(config) {
 
   const primary = new Set(config.primary);
   const pinned = new Set(getPinnedChips(config.kind));
+  const dismissed = new Set(getDismissedChips(config.kind));
 
   cloud.querySelectorAll(config.chipSelector).forEach((chip) => {
     const value = config.valueOf(chip);
     const isPrimary = primary.has(value);
     const isPinned = pinned.has(value) && !isPrimary;
-    const visible = isPrimary || isPinned || (config.isActive(chip) && !config.isBackground(chip));
+    const isDismissed = dismissed.has(value);
+    const isActive = config.isActive(chip) && !config.isBackground(chip);
+    const visible = isActive || (!isDismissed && (isPrimary || isPinned));
     chip.classList.toggle("is-hidden", !visible);
     chip.classList.toggle("is-pinned", isPinned);
 
     chip.querySelector(".chip-unpin")?.remove();
-    if (isPinned) {
+    if (visible && !config.isBackground(chip)) {
       const unpin = document.createElement("span");
       unpin.className = "chip-unpin";
       unpin.setAttribute("role", "button");
-      const chipName = (chip.querySelector(".tri-chip-label, .chip-label")?.textContent || chip.textContent).trim();
-      unpin.setAttribute("aria-label", `Remove ${chipName} from the list`);
-      unpin.title = "Remove from list";
+      const chipName = (chip.querySelector(".tri-chip-label, .chip-label")?.textContent || chip.textContent).replace(/^[+−×\s]+/, "").trim();
+      unpin.setAttribute("aria-label", `Dismiss ${chipName}`);
+      unpin.title = `Dismiss ${chipName}`;
       unpin.textContent = "×";
       unpin.addEventListener("click", (event) => {
         event.preventDefault();
         event.stopPropagation();
+        if (config.kind === "languages") {
+          setTriChipState(chip, "off", TRI_PICKER_CONFIG["languages-picker"]);
+        } else {
+          const input = chip.querySelector("input");
+          if (input) input.checked = false;
+        }
         setPinnedChips(config.kind, getPinnedChips(config.kind).filter((item) => item !== value));
+        setDismissedChips(config.kind, [...getDismissedChips(config.kind), value]);
         refreshCompactClouds();
+        updateFilterPillBadges();
       });
       chip.append(unpin);
     }
@@ -1186,6 +1212,7 @@ function toggleCompactAdderPanel(config, adderButton) {
         event.preventDefault();
         event.stopPropagation();
         setPinnedChips(config.kind, [...getPinnedChips(config.kind), String(value)]);
+        setDismissedChips(config.kind, getDismissedChips(config.kind).filter((item) => item !== String(value)));
         refreshCompactClouds();
         closeCompactAdderPanels();
       });
@@ -2146,6 +2173,14 @@ function updateSidebarExpandedState() {
 function setupFilterPills() {
   const pills = document.querySelectorAll(".filter-pill");
   pills.forEach((pill) => {
+    pill.classList.remove("is-open");
+    pill.setAttribute("aria-expanded", "false");
+    const targetId = pill.dataset.target;
+    const card = document.getElementById(targetId);
+    if (card) {
+      card.classList.add("is-collapsed");
+    }
+
     pill.addEventListener("click", (e) => {
       e.stopPropagation();
       const targetId = pill.dataset.target;
@@ -2607,11 +2642,26 @@ function createMovieCard(movie) {
     posterButton.append(noteMark);
   }
 
-  const statusBadge = document.createElement("span");
-  statusBadge.className = "status-badge";
-  statusBadge.dataset.status = status || "untracked";
-  statusBadge.textContent = status ? STATUS_LABELS[status] : "Untracked";
-  posterButton.append(statusBadge);
+  if (status && status !== "untracked") {
+    const statusBadge = document.createElement("span");
+    statusBadge.className = "status-badge";
+    statusBadge.dataset.status = status;
+    statusBadge.title = STATUS_LABELS[status] || status;
+    statusBadge.setAttribute("aria-label", STATUS_LABELS[status] || status);
+
+    if (status === "new_discovery") {
+      statusBadge.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor" stroke="none" aria-hidden="true"><path d="M12 2l2.4 7.2h7.6l-6.1 4.5 2.3 7.3-6.2-4.6-6.2 4.6 2.3-7.3-6.1-4.5h7.6z"/></svg>';
+    } else if (status === "watched") {
+      statusBadge.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>';
+    } else if (status === "watch_later") {
+      statusBadge.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>';
+    } else if (status === "rewatch") {
+      statusBadge.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>';
+    } else if (status === "excluded") {
+      statusBadge.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>';
+    }
+    posterButton.append(statusBadge);
+  }
 
   const rating = getMovieRating(movie);
 
