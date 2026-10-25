@@ -575,9 +575,13 @@ function setActiveView(view) {
   if (discoverHeader) {
     discoverHeader.classList.toggle("is-hidden", !isDiscover || state.mode === "filmography");
   }
+  const libraryHeader = document.querySelector("#library-canvas-header");
+  if (libraryHeader) {
+    libraryHeader.classList.toggle("is-hidden", !isLibrary || state.mode === "filmography");
+  }
   const sectionHeadingBlock = document.querySelector("#section-heading-block");
   if (sectionHeadingBlock) {
-    sectionHeadingBlock.classList.toggle("is-hidden", isDiscover || state.mode === "filmography");
+    sectionHeadingBlock.classList.toggle("is-hidden", isDiscover || isLibrary || state.mode === "filmography");
   }
   if (typeof updateBackToTopVisibility === "function") {
     updateBackToTopVisibility();
@@ -3022,6 +3026,12 @@ function setAuxiliaryView(view = null) {
     discoverHeader.classList.toggle("is-hidden", visible || state.currentView !== "discover");
     discoverHeader.classList.toggle("force-hidden", visible || state.currentView !== "discover");
   }
+  const libraryHeader = document.querySelector("#library-canvas-header");
+  const isLibraryView = ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes"].includes(state.currentView);
+  if (libraryHeader) {
+    libraryHeader.classList.toggle("is-hidden", visible || !isLibraryView);
+    libraryHeader.classList.toggle("force-hidden", visible || !isLibraryView);
+  }
   if (elements.pagination) {
     elements.pagination.classList.toggle("force-hidden", visible);
     if (visible) elements.pagination.classList.add("is-hidden");
@@ -3846,12 +3856,133 @@ function setupLibraryFilters() {
     });
   }
 
+  const scopeToggleBtn = document.querySelector("#library-scope-toggle");
+  const targetToggleBtn = document.querySelector("#library-target-toggle");
+
+  const SCOPE_ICONS = {
+    shelf: '<svg class="scope-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="10" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/></svg>',
+    all: '<svg class="scope-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/></svg>'
+  };
+
+  const TARGET_ICONS = {
+    all: '<svg class="target-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>',
+    title: '<svg class="target-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><line x1="12" y1="4" x2="12" y2="20"/></svg>',
+    notes: '<svg class="target-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
+  };
+
+  function updateLibrarySearchPlaceholder() {
+    if (!elements.libraryFilterQuery) return;
+    const scope = state.librarySearchScope || "shelf";
+    const target = state.librarySearchTarget || "all";
+
+    let shelfName = "shelf";
+    if (state.currentView === "movie-notes") {
+      if (state.movieNotesShelfFilter) {
+        shelfName = VIEW_COPY[state.movieNotesShelfFilter]?.title || state.movieNotesShelfFilter;
+      } else {
+        shelfName = "Movie Notes";
+      }
+    } else if (state.currentView && VIEW_COPY[state.currentView]) {
+      shelfName = VIEW_COPY[state.currentView].title;
+    }
+
+    let text = "";
+    if (state.currentView === "movie-notes" && !state.movieNotesShelfFilter) {
+      if (target === "title") text = "Search titles in notes…";
+      else if (target === "notes") text = "Search note text…";
+      else text = "Search all notes…";
+    } else if (scope === "shelf") {
+      if (target === "title") text = `Search titles in ${shelfName}…`;
+      else if (target === "notes") text = `Search notes in ${shelfName}…`;
+      else text = `Search in ${shelfName}…`;
+    } else {
+      if (target === "title") text = "Search titles across all shelves…";
+      else if (target === "notes") text = "Search notes across all shelves…";
+      else text = "Search entire library…";
+    }
+
+    elements.libraryFilterQuery.placeholder = text;
+    elements.libraryFilterQuery.title = text;
+  }
+  window.updateLibrarySearchPlaceholder = updateLibrarySearchPlaceholder;
+
+  function syncLibraryScopeBtn() {
+    if (!scopeToggleBtn) return;
+    const isAll = state.librarySearchScope === "all";
+    const iconWrap = scopeToggleBtn.querySelector("#library-scope-icon");
+    const textSpan = scopeToggleBtn.querySelector("#library-scope-text");
+    if (iconWrap) iconWrap.innerHTML = isAll ? SCOPE_ICONS.all : SCOPE_ICONS.shelf;
+    if (textSpan) textSpan.textContent = isAll ? "All shelves" : "This shelf";
+    scopeToggleBtn.classList.toggle("is-all-shelves", isAll);
+    scopeToggleBtn.title = isAll
+      ? "Search scope: All shelves (Click to search only this shelf)"
+      : "Search scope: This shelf (Click to search all shelves)";
+    scopeToggleBtn.setAttribute("aria-label", isAll ? "Search scope: All shelves" : "Search scope: This shelf");
+    updateLibrarySearchPlaceholder();
+  }
+
+  function syncLibraryTargetBtn() {
+    if (!targetToggleBtn) return;
+    const curTarget = state.librarySearchTarget || "all";
+    const iconWrap = targetToggleBtn.querySelector("#library-target-icon");
+    const textSpan = targetToggleBtn.querySelector("#library-target-text");
+    if (iconWrap) iconWrap.innerHTML = TARGET_ICONS[curTarget] || TARGET_ICONS.all;
+    if (textSpan) {
+      const labels = { all: "All", title: "Title", notes: "Notes" };
+      textSpan.textContent = labels[curTarget] || "All";
+    }
+    targetToggleBtn.classList.toggle("is-active-target", curTarget !== "all");
+    const titles = {
+      all: "Search field: All (Click to search Titles only)",
+      title: "Search field: Title (Click to search Notes only)",
+      notes: "Search field: Notes (Click to search All fields)"
+    };
+    targetToggleBtn.title = titles[curTarget] || "Search field";
+    targetToggleBtn.setAttribute("aria-label", titles[curTarget] || "Search field");
+    updateLibrarySearchPlaceholder();
+  }
+
+  if (scopeToggleBtn) {
+    syncLibraryScopeBtn();
+    scopeToggleBtn.addEventListener("click", () => {
+      state.librarySearchScope = (state.librarySearchScope === "all") ? "shelf" : "all";
+      syncLibraryScopeBtn();
+      if (hasActiveLibraryFilters() || (elements.libraryFilterQuery?.value || "").trim()) {
+        searchPersonalLibrary();
+      }
+    });
+  }
+
+  if (targetToggleBtn) {
+    syncLibraryTargetBtn();
+    targetToggleBtn.addEventListener("click", () => {
+      const cycle = { all: "title", title: "notes", notes: "all" };
+      state.librarySearchTarget = cycle[state.librarySearchTarget || "all"] || "all";
+      syncLibraryTargetBtn();
+      if (hasActiveLibraryFilters() || (elements.libraryFilterQuery?.value || "").trim()) {
+        searchPersonalLibrary();
+      }
+    });
+  }
+
+  const notesLensBtn = document.querySelector("#shelf-notes-lens-btn");
+  if (notesLensBtn) {
+    notesLensBtn.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const exitTarget = state.lastNormalShelf || "watched";
+      state.movieNotesShelfFilter = null;
+      loadShelf(exitTarget);
+    });
+  }
+
   if (elements.scopeBtnAll && elements.scopeBtnShelf) {
     elements.scopeBtnAll.addEventListener("click", () => {
       if (state.librarySearchScope === "all") return;
       state.librarySearchScope = "all";
       elements.scopeBtnAll.classList.add("is-active");
       elements.scopeBtnShelf.classList.remove("is-active");
+      syncLibraryScopeBtn();
       if (hasActiveLibraryFilters()) {
         searchPersonalLibrary();
       }
@@ -3862,6 +3993,7 @@ function setupLibraryFilters() {
       state.librarySearchScope = "shelf";
       elements.scopeBtnShelf.classList.add("is-active");
       elements.scopeBtnAll.classList.remove("is-active");
+      syncLibraryScopeBtn();
       if (hasActiveLibraryFilters()) {
         searchPersonalLibrary();
       }
@@ -4967,7 +5099,10 @@ async function restoreSearchSnapshot() {
   } else if (snap.currentView) {
     if (elements.discoverWorkspace) elements.discoverWorkspace.classList.add("is-hidden");
     if (discoverHeader) discoverHeader.classList.add("is-hidden");
-    elements.sectionHeadingBlock?.classList.remove("is-hidden");
+    const isLibSnap = ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes"].includes(snap.currentView);
+    const libHeader = document.querySelector("#library-canvas-header");
+    if (libHeader) libHeader.classList.toggle("is-hidden", !isLibSnap);
+    elements.sectionHeadingBlock?.classList.toggle("is-hidden", isLibSnap);
     if (elements.libraryTitle) elements.libraryTitle.textContent = snap.title;
   }
 
@@ -5038,6 +5173,8 @@ async function loadPersonFilmography(person, entityKey = "directors", department
   // Hide canvas headers so the filmography toolbar sits cleanly at the top of the canvas
   const discoverHeader = document.querySelector("#discover-canvas-header");
   if (discoverHeader) discoverHeader.classList.add("is-hidden");
+  const libHeaderFilmo = document.querySelector("#library-canvas-header");
+  if (libHeaderFilmo) libHeaderFilmo.classList.add("is-hidden");
   if (elements.notesSearchContainer) elements.notesSearchContainer.classList.add("is-hidden");
   const headingBlock = document.querySelector("#section-heading-block");
   if (headingBlock) headingBlock.classList.add("is-hidden");

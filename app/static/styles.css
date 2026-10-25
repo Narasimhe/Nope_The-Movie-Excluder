@@ -2638,37 +2638,136 @@ footer span {
   display: none !important;
 }
 
+/* Library Search Dual Micro-Pills (Scope & Target) */
 .library-search-pills {
   display: flex !important;
   align-items: center !important;
-  gap: 4px !important;
+  gap: 6px !important;
   margin-left: auto !important;
-  flex-shrink: 0 !important;
+  flex: 0 0 auto !important;
 }
 
 .library-scope-toggle-btn,
 .library-target-toggle-btn {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 4px !important;
+  justify-content: center !important;
+  gap: 5px !important;
   height: 24px !important;
-  padding: 0 8px !important;
-  background: rgba(255, 255, 255, 0.04) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  min-height: 24px !important;
+  padding: 0 9px !important;
   border-radius: 8px !important;
-  color: #9CA3AF !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #c5c2cb !important;
   font-size: 11px !important;
-  font-weight: 500 !important;
+  font-weight: 400 !important;
+  white-space: nowrap !important;
   cursor: pointer !important;
   transition: all 140ms ease !important;
-  white-space: nowrap !important;
+  user-select: none !important;
+  box-sizing: border-box !important;
+  box-shadow: none !important;
 }
 
 .library-scope-toggle-btn:hover,
 .library-target-toggle-btn:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-  color: #E5E7EB !important;
+  background: rgba(255, 255, 255, 0.09) !important;
+  border-color: rgba(212, 175, 55, 0.35) !important;
+  color: #ffffff !important;
+}
+
+.library-scope-toggle-btn.is-all-shelves,
+.library-target-toggle-btn.is-active-target {
+  background: rgba(212, 175, 55, 0.08) !important;
+  border-color: rgba(212, 175, 55, 0.45) !important;
+  color: #DEC68B !important;
+}
+
+.library-scope-icon-wrap,
+.library-target-icon-wrap {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 0.85 !important;
+}
+
+.library-scope-toggle-btn:hover .library-scope-icon-wrap,
+.library-target-toggle-btn:hover .library-target-icon-wrap {
+  opacity: 1 !important;
+}
+
+/* Shelf Ribbon Divider & Dual Action Lenses (Favourites & Notes) */
+.shelf-ribbon-divider {
+  display: inline-block !important;
+  width: 1px !important;
+  height: 16px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  margin: 0 4px !important;
+  flex: 0 0 1px !important;
+}
+
+.shelf-favorites-btn,
+.shelf-notes-lens-btn {
+  padding: 0 8px !important;
+  min-width: 28px !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: none !important;
+}
+
+.shelf-favorites-btn:hover,
+.shelf-notes-lens-btn:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
   border-color: rgba(255, 255, 255, 0.16) !important;
+  color: #E5E7EB !important;
+}
+
+.shelf-favorites-btn svg,
+.shelf-notes-lens-btn svg {
+  display: block !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+  stroke: #6B7280 !important;
+  transition: stroke 140ms ease !important;
+}
+
+.shelf-favorites-btn:hover svg,
+.shelf-notes-lens-btn:hover svg {
+  stroke: #E5E7EB !important;
+}
+
+.shelf-notes-lens-btn.is-active {
+  background: rgba(212, 175, 55, 0.05) !important;
+  border-color: rgba(212, 175, 55, 0.28) !important;
+  color: #DEC68B !important;
+  box-shadow: none !important;
+}
+
+.shelf-notes-lens-btn.is-active svg {
+  stroke: #DEC68B !important;
+}
+
+.shelf-favorites-btn.is-active {
+  background: rgba(212, 175, 55, 0.05) !important;
+  border-color: rgba(212, 175, 55, 0.28) !important;
+  color: #DEC68B !important;
+  box-shadow: none !important;
+}
+
+.shelf-favorites-btn.is-active svg {
+  stroke: #DEC68B !important;
+  fill: rgba(212, 175, 55, 0.2) !important;
 }
 
 .result-count,

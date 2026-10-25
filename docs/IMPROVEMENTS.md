@@ -16,6 +16,11 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Full Library Search Area Restoration (Canvas Header, Dual Micro-Pills & Notes Lens)**
+  * **Zero-Shift Library Canvas Header**: Reconnected `#library-canvas-header` visibility switching in `setActiveView`, `toggleDetailPage`, `restoreSearchSnapshot`, and filmography mode. It mirrors `#discover-canvas-header` with exact 102px vertical geometry parity and 670px 6-column alignment, eliminating layout shift.
+  * **Dual Micro-Pills in Search Bar**: Restored full interactive wiring and styles for `#library-scope-toggle` (toggling between `[ ◫ This shelf ]` ⇄ `[ ☷ All shelves ]` with `.is-all-shelves` highlight) and `#library-target-toggle` (cycling between `[ ✦ All ]` → `[ 🏷 Title ]` → `[ 📝 Notes ]` with `.is-active-target` highlight).
+  * **Dynamic Human-Readable Live Placeholder**: Restored `updateLibrarySearchPlaceholder` to continuously reflect current search scope and field in plain English (*"Search in Watched…"*, *"Search titles in Watched…"*, *"Search notes across all shelves…"*, *"Search all notes…"*) without requiring cryptic syntax prefixes.
+  * **Bidirectional Notes Lens & Ribbon Divider**: Restored styling and interaction for `.shelf-ribbon-divider` (1px vertical hairline) and `#shelf-notes-lens-btn` (28px squircle with active gold border/stroke and double-click to exit), working in symmetry with `.shelf-favorites-btn`.
 - [x] **Universal 8px Squircle Chips & Nope 'X' Icon Consistency**
   * **8px Squircles Everywhere (No Ellipsoids)**: Replaced 999px pill/capsule radii with clean 8px squircles across all chips: preset ribbon chips, library shelf ribbon chips, scope/target toggles, sidebar tri-chips, filter chips, profile workshop chips, sort chips, status chips, and selected entity tags.
   * **Nope Icon Standardization to 'X'**: Replaced prohibition/ban circle ('dont' circle-slash) with a crisp 'X' across the entire interface: Material Symbols glyph set to 'close' (on poster badges and sidebar status filter) and inline SVG vectors updated to clean crossed lines (in library shelf ribbon and movie detail cockpit).
