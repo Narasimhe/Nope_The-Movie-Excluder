@@ -2703,7 +2703,7 @@ footer span {
   width: 1px !important;
   height: 16px !important;
   background: rgba(255, 255, 255, 0.12) !important;
-  margin: 0 4px !important;
+  margin: 0 6px 0 auto !important;
   flex: 0 0 1px !important;
 }
 
@@ -2759,15 +2759,15 @@ footer span {
 }
 
 .shelf-favorites-btn.is-active {
-  background: rgba(212, 175, 55, 0.05) !important;
-  border-color: rgba(212, 175, 55, 0.28) !important;
-  color: #DEC68B !important;
+  background: rgba(224, 82, 82, 0.08) !important;
+  border-color: rgba(224, 82, 82, 0.35) !important;
+  color: #E05252 !important;
   box-shadow: none !important;
 }
 
 .shelf-favorites-btn.is-active svg {
-  stroke: #DEC68B !important;
-  fill: rgba(212, 175, 55, 0.2) !important;
+  stroke: #E05252 !important;
+  fill: #E05252 !important;
 }
 
 .result-count,
@@ -2791,11 +2791,13 @@ footer span {
   gap: 8px !important;
   height: 32px !important;
   min-height: 32px !important;
+  width: 100% !important;
   max-width: 670px !important;
   padding: 0 !important;
   margin: 0 !important;
   overflow-x: auto !important;
   scrollbar-width: none !important;
+  box-sizing: border-box !important;
 }
 
 .profile-ribbon::-webkit-scrollbar,
@@ -2811,7 +2813,7 @@ footer span {
   height: 28px !important;
   min-height: 28px !important;
   padding: 0 12px !important;
-  max-width: 130px !important;
+  max-width: none !important;
   border-radius: 8px !important;
   background: rgba(255, 255, 255, 0.02) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -2820,23 +2822,19 @@ footer span {
   font-weight: 400 !important;
   letter-spacing: 0.01em !important;
   white-space: nowrap !important;
-  overflow: hidden !important;
   box-sizing: border-box !important;
   box-shadow: none !important;
   cursor: pointer !important;
   user-select: none !important;
   transition: all 140ms ease !important;
+  flex-shrink: 0 !important;
 }
 
 .ribbon-chip > span,
 .ribbon-chip-text {
   display: inline-block !important;
-  min-width: 0 !important;
-  max-width: 100% !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
   white-space: nowrap !important;
-  text-align: left !important;
+  text-align: center !important;
 }
 
 .ribbon-chip:hover {
@@ -8387,7 +8385,7 @@ body.grey-docked-open .entry-list.is-list-mode {
 }
 
 /* Discover mode: never display favourite hearts on posters */
-body[data-active-view="discover"] .favorite-mark {
+.favorite-mark {
   display: none !important;
 }
 
@@ -8585,11 +8583,15 @@ input[type="number"] {
   border-color: rgba(190, 80, 80, 0.35) !important;
 }
 /* In personal library shelves, status badges remain hidden */
-[data-view="watched"] .status-badge,
-[data-view="watch_later"] .status-badge,
-[data-view="rewatch"] .status-badge,
-[data-view="favorites"] .status-badge,
-[data-view="excluded"] .status-badge {
+body:not([data-active-view="discover"]) .movie-card .status-badge,
+body[data-active-view="watched"] .status-badge,
+body[data-active-view="watch_later"] .status-badge,
+body[data-active-view="rewatch"] .status-badge,
+body[data-active-view="favorites"] .status-badge,
+body[data-active-view="excluded"] .status-badge,
+body[data-active-view="new_discovery"] .status-badge,
+body[data-active-view="movie-notes"] .status-badge,
+body[data-active-view="entries"] .status-badge {
   display: none !important;
 }
 

@@ -16,6 +16,9 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Right-Aligned Personal Action Lenses (Notes & Heart)**
+  * **Negative Space Demarcation**: Applied `margin-left: auto` to `.shelf-ribbon-divider`, anchoring the divider, Notes lens (`📄`), and Favourites Heart (`♡`) buttons flush against the right edge of the 670px shelf ribbon row.
+  * **Visual Separation**: Established open negative space between the 5 shelf status chips on the left and the 2 personal archive lenses on the right, perfectly matching the 670px search bar alignment above.
 - [x] **Full Library Search Area Restoration (Canvas Header, Dual Micro-Pills & Notes Lens)**
   * **Zero-Shift Library Canvas Header**: Reconnected `#library-canvas-header` visibility switching in `setActiveView`, `toggleDetailPage`, `restoreSearchSnapshot`, and filmography mode. It mirrors `#discover-canvas-header` with exact 102px vertical geometry parity and 670px 6-column alignment, eliminating layout shift.
   * **Dual Micro-Pills in Search Bar**: Restored full interactive wiring and styles for `#library-scope-toggle` (toggling between `[ ◫ This shelf ]` ⇄ `[ ☷ All shelves ]` with `.is-all-shelves` highlight) and `#library-target-toggle` (cycling between `[ ✦ All ]` → `[ 🏷 Title ]` → `[ 📝 Notes ]` with `.is-active-target` highlight).

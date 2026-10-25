@@ -822,15 +822,7 @@ function updateMovieCardDOM(movieId, userData) {
   if (posterBtn) {
     updateCardStatusBadge(posterBtn, status);
     let favMark = posterBtn.querySelector(".favorite-mark");
-    if (userData?.is_favorite && state.currentView !== "discover") {
-      if (!favMark) {
-        favMark = document.createElement("span");
-        favMark.className = "favorite-mark";
-        favMark.textContent = "♥";
-        favMark.setAttribute("aria-label", "Favourite");
-        posterBtn.append(favMark);
-      }
-    } else if (favMark) {
+    if (favMark) {
       favMark.remove();
     }
   }
@@ -2720,13 +2712,7 @@ function createMovieCard(movie) {
     posterButton.addEventListener("blur", hidePosterNotePreview);
   }
 
-  if (movie.user_data?.is_favorite && state.currentView !== "discover") {
-    const favorite = document.createElement("span");
-    favorite.className = "favorite-mark";
-    favorite.textContent = "♥";
-    favorite.setAttribute("aria-label", "Favourite");
-    posterButton.append(favorite);
-  }
+
 
   if (rawNotes) {
     const noteMark = document.createElement("span");
