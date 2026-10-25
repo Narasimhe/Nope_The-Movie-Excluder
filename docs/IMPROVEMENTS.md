@@ -16,6 +16,14 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Material Symbols Glyphs, Spacing Harmony & Dismiss Hover Bugfix**
+  * **Material Symbols Glyphs**: Integrated self-hosted Material Symbols Outlined variable font (pp/static/fonts/MaterialSymbolsOutlined.woff2) for crisp, standardized typography across Sort Results (	rending_up, star, how_to_vote, schedule, history, sort_by_alpha) and Library Status (uto_awesome, schedule, check, 
+eplay, lock, 
+adio_button_unchecked).
+  * **Unified Muted Gold Brand Color & Gap Spacing**: Applied unified muted gold brand palette (#D4AF37) across all glyphs with 6px breathing room gap between glyph and text label, resolving cramped text-to-icon contact.
+  * **Zero Inner Glow Guarantee**: Ensured flat, glare-free aesthetic across all chips, pills, and active filter states (ox-shadow: none !important;).
+  * **Hindi Dismiss Hover Bug Fix**: Resolved edge case in 
+efreshCompactCloud where background excluded status prevented Hindi from receiving the chip-unpin (×) dismiss button on hover; all visible language chips now reliably display dismissal triggers.
 - [x] **Zen Sidebar Palette, Tri-State Click Mechanics & Split-Contrast Pills**
   * **Desaturated Warm Zen Palette**: Replaced harsh neon yellow (`#FACC15`) and coral red (`#F87171`) with a warm, calm Zen palette: warm sand/ochre (`rgba(212, 175, 55, 0.06)` background, `rgba(212, 175, 55, 0.32)` border) and muted dusty rose/terracotta (`rgba(190, 80, 80, 0.06)` background, `rgba(190, 80, 80, 0.30)` border).
   * **3-State Click Cycle (Genres, Languages, Countries)**: Clicking cycles sequentially through State 0 (Neutral `#9CA3AF`), State 1 (Included `+` in warm gold), State 2 (Excluded `-` in dusty rose), and back to Neutral. Right-click or Alt-click jumps directly to Excluded in one click.

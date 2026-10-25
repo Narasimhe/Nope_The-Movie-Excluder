@@ -858,6 +858,7 @@ function buildMultiPicker(container, config) {
 
       updateFilterPillBadges();
       scheduleSearchStateSave();
+      refreshCompactClouds();
     });
   });
 
@@ -930,6 +931,7 @@ function buildTriStatePicker(containerId, config) {
       updateFilterPillBadges();
       renderActiveFilterTags();
       scheduleSearchStateSave();
+      refreshCompactClouds();
     });
 
     chip.addEventListener("contextmenu", (e) => {
@@ -942,6 +944,7 @@ function buildTriStatePicker(containerId, config) {
       updateFilterPillBadges();
       renderActiveFilterTags();
       scheduleSearchStateSave();
+      refreshCompactClouds();
     });
   });
 
@@ -1111,7 +1114,7 @@ function refreshCompactCloud(config) {
     chip.classList.toggle("is-pinned", isPinned);
 
     chip.querySelector(".chip-unpin")?.remove();
-    if (visible && !config.isBackground(chip)) {
+    if (visible) {
       const unpin = document.createElement("span");
       unpin.className = "chip-unpin";
       unpin.setAttribute("role", "button");
@@ -1295,6 +1298,7 @@ function initializeSortChips() {
       syncSortChips(val);
       updateFilterPillBadges();
       scheduleSearchStateSave();
+      refreshCompactClouds();
       runDiscoverySearch();
     });
   });
@@ -1422,6 +1426,7 @@ function renderSelectedEntities(key) {
         updateFilterPillBadges();
         renderActiveFilterTags();
         scheduleSearchStateSave();
+      refreshCompactClouds();
       });
     }
 
@@ -1446,6 +1451,7 @@ function renderSelectedEntities(key) {
       updateFilterPillBadges();
       renderActiveFilterTags();
       scheduleSearchStateSave();
+      refreshCompactClouds();
       if (key.startsWith("lib")) searchPersonalLibrary();
     });
     chip.append(name, remove);
@@ -1463,6 +1469,7 @@ function renderSelectedEntities(key) {
       updateFilterPillBadges();
       renderActiveFilterTags();
       scheduleSearchStateSave();
+      refreshCompactClouds();
       if (key.startsWith("lib")) searchPersonalLibrary();
     });
     container.append(clear);
@@ -1587,6 +1594,7 @@ function initializeEntityPickers() {
           updateFilterPillBadges();
           renderActiveFilterTags();
           scheduleSearchStateSave();
+      refreshCompactClouds();
           return;
         }
       });

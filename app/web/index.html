@@ -101,12 +101,12 @@
                       </button>
                       <section class="filter-card is-collapsed" id="card-sort">
                         <div class="sort-chip-cloud" id="sort-chip-cloud" role="radiogroup" aria-label="Sort by">
-                          <button type="button" class="sort-chip is-active" data-value="popularity.desc">Most popular</button>
-                          <button type="button" class="sort-chip" data-value="vote_average.desc">Highest rated</button>
-                          <button type="button" class="sort-chip" data-value="vote_count.desc">Most voted</button>
-                          <button type="button" class="sort-chip" data-value="primary_release_date.desc">Newest first</button>
-                          <button type="button" class="sort-chip" data-value="primary_release_date.asc">Oldest first</button>
-                          <button type="button" class="sort-chip" data-value="title.asc">Title A–Z</button>
+                          <button type="button" class="sort-chip is-active" data-value="popularity.desc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">trending_up</span><span>Most popular</span></button>
+                          <button type="button" class="sort-chip" data-value="vote_average.desc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">star</span><span>Highest rated</span></button>
+                          <button type="button" class="sort-chip" data-value="vote_count.desc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">how_to_vote</span><span>Most voted</span></button>
+                          <button type="button" class="sort-chip" data-value="primary_release_date.desc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">schedule</span><span>Newest first</span></button>
+                          <button type="button" class="sort-chip" data-value="primary_release_date.asc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">history</span><span>Oldest first</span></button>
+                          <button type="button" class="sort-chip" data-value="title.asc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">sort_by_alpha</span><span>Title A–Z</span></button>
                         </div>
                         <div class="is-hidden" style="display:none !important;">
                           <label for="sort-by" class="sr-only">Sort by</label>
@@ -361,12 +361,12 @@
                       </button>
                       <section class="filter-card personal-filter-card is-collapsed" id="personal-filters">
                         <div class="status-options status-grid-2x3">
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="new_discovery" checked><span>New discovery</span></label>
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="watch_later" checked><span>Watch later</span></label>
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="watched"><span>Watched</span></label>
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="rewatch"><span>Rewatch</span></label>
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="excluded"><span>Nope</span></label>
-                          <label class="filter-chip"><input id="include-untracked" type="checkbox" checked><span>Untracked</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="new_discovery" checked><span class="material-symbols-outlined status-chip-glyph" aria-hidden="true">auto_awesome</span><span>New discovery</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="watch_later" checked><span class="material-symbols-outlined status-chip-glyph" aria-hidden="true">schedule</span><span>Watch later</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="watched"><span class="material-symbols-outlined status-chip-glyph" aria-hidden="true">check</span><span>Watched</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="rewatch"><span class="material-symbols-outlined status-chip-glyph" aria-hidden="true">replay</span><span>Rewatch</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="excluded"><span class="material-symbols-outlined status-chip-glyph" aria-hidden="true">block</span><span>Nope</span></label>
+                          <label class="filter-chip"><input id="include-untracked" type="checkbox" checked><span class="material-symbols-outlined status-chip-glyph" aria-hidden="true">radio_button_unchecked</span><span>Untracked</span></label>
                         </div>
                         <div class="is-hidden" style="display: none !important;">
                           <label class="personal-toggle-pill">
@@ -444,10 +444,10 @@
                 </button>
                 <section class="filter-card is-collapsed" id="card-lib-sort">
                   <div class="sort-chip-cloud" id="lib-sort-cloud" role="radiogroup" aria-label="Sort order">
-                    <button type="button" class="sort-chip filter-chip is-active" data-sort="recent">Recently updated</button>
-                    <button type="button" class="sort-chip filter-chip" data-sort="year_desc">Newest first</button>
-                    <button type="button" class="sort-chip filter-chip" data-sort="year_asc">Oldest first</button>
-                    <button type="button" class="sort-chip filter-chip" data-sort="title_asc">Title A–Z</button>
+                    <button type="button" class="sort-chip filter-chip is-active" data-sort="recent"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">history</span><span>Recently updated</span></button>
+                    <button type="button" class="sort-chip filter-chip" data-sort="year_desc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">schedule</span><span>Newest first</span></button>
+                    <button type="button" class="sort-chip filter-chip" data-sort="year_asc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">history</span><span>Oldest first</span></button>
+                    <button type="button" class="sort-chip filter-chip" data-sort="title_asc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">sort_by_alpha</span><span>Title A–Z</span></button>
                   </div>
                 </section>
               </div>

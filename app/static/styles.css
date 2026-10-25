@@ -31,6 +31,31 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Material Symbols Outlined";
+  src: url("/static/fonts/MaterialSymbolsOutlined.woff2") format("woff2");
+  font-weight: 100 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: "liga";
+  font-feature-settings: "liga";
+  -webkit-font-smoothing: antialiased;
+}
+
 :root {
   color-scheme: dark;
   /* Swap the first family to switch the whole UI font: "Geist", "Plus Jakarta Sans", "Manrope" or "Inter" */
@@ -8041,6 +8066,7 @@ body.grey-docked-open .entry-list.is-list-mode {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  gap: 6px !important;
   height: 28px !important;
   padding: 0 10px !important;
   border-radius: 999px !important;
@@ -8074,6 +8100,36 @@ body.grey-docked-open .entry-list.is-list-mode {
   grid-template-columns: 1fr 1fr !important;
   gap: 6px !important;
   padding: 4px 0 !important;
+}
+.status-options label {
+  gap: 6px !important;
+  box-shadow: none !important;
+}
+
+/* Material Symbols Glyphs inside Sort and Status Chips */
+.sort-chip-glyph,
+.status-chip-glyph {
+  font-size: 15px !important;
+  width: 15px !important;
+  height: 15px !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  color: #D4AF37 !important;
+  opacity: 0.82 !important;
+  transition: color 140ms ease, opacity 140ms ease !important;
+}
+.sort-chip:hover .sort-chip-glyph,
+.status-options label:hover .status-chip-glyph {
+  color: #DEC68B !important;
+  opacity: 1 !important;
+}
+.sort-chip.is-active .sort-chip-glyph,
+.status-options label:has(input:checked) .status-chip-glyph {
+  color: #D4AF37 !important;
+  opacity: 1 !important;
 }
 
 /* 6. Clean Keyword & Theme Tag Pills */
