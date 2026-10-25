@@ -7638,6 +7638,12 @@ body.grey-docked-open .entry-list.is-list-mode {
    DISCOVER & LIBRARY SIDEBAR FILTERS - ZEN REDESIGN
    ============================================================ */
 
+/* Header Logo & Topbar Alignment with Sidebar Inner Content */
+.topbar {
+  padding-left: max(32px, calc((100vw - 1536px) / 2 + 16px)) !important;
+  padding-right: max(32px, calc((100vw - 1536px) / 2 + 16px)) !important;
+}
+
 /* Outer Sidebar Aside & Card Container */
 .sidebar {
   border-right: none !important;
