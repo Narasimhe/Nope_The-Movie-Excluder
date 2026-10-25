@@ -595,12 +595,19 @@ class MovieMetadataRepository:
             if not keyword["is_custom"]
         ]
 
-    def get_custom_keywords(self, tmdb_id: int) -> list[dict]:
-        return [
-            keyword
-            for keyword in self.get_movie_keywords(tmdb_id)
-            if keyword["is_custom"]
-        ]
+    def purge_movie_metadata(self, tmdb_id: int) -> None:
+        """Purge cast, crew, and official keywords to optimize storage for excluded titles."""
+        self._validate_movie_id(tmdb_id)
+        with get_connection() as connection:
+            connection.execute("DELETE FROM movie_credits WHERE tmdb_id = ?", (tmdb_id,))
+            connection.execute(
+                """
+                DELETE FROM movie_keywords
+                WHERE tmdb_id = ?
+                  AND keyword_id IN (SELECT keyword_id FROM keywords WHERE is_custom = 0)
+                """,
+                (tmdb_id,),
+            )
 
     def replace_movie_credits(
         self,

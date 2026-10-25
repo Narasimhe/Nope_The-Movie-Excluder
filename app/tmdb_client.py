@@ -7,12 +7,12 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from app.advanced_filters import AdvancedMovieFilters
-from app.config import TMDB_READ_ACCESS_TOKEN
+from app.config import DEFAULT_REQUEST_TIMEOUT, TMDB_BASE_URL, TMDB_READ_ACCESS_TOKEN
 from app.database import get_connection
 
 logger = logging.getLogger(__name__)
 
-BASE_URL = "https://api.themoviedb.org/3"
+BASE_URL = TMDB_BASE_URL
 
 
 class TMDBClient:
@@ -59,8 +59,8 @@ class TMDBClient:
     def _cycle_session(self) -> None:
         try:
             self.session.close()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Error closing TMDB session: %s", exc)
         self.session = self._create_session()
 
     def _get_cached_country_details(self, movie_id: int) -> dict | None:
@@ -79,8 +79,8 @@ class TMDBClient:
                         "origin_country": json.loads(row["origin_country"] or "[]"),
                         "production_countries": json.loads(row["production_countries"] or "[]"),
                     }
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Could not read country cache for movie %s: %s", movie_id, exc)
         return None
 
     def _save_cached_country_details(self, movie_id: int, details: dict) -> None:
@@ -101,8 +101,8 @@ class TMDBClient:
                         json.dumps(details.get("production_countries") or []),
                     ),
                 )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Could not save country cache for movie %s: %s", movie_id, exc)
 
     def _get_cached_discover_response(self, cache_key: str) -> dict | None:
         try:
@@ -117,8 +117,8 @@ class TMDBClient:
                 ).fetchone()
                 if row and row["response_json"]:
                     return json.loads(row["response_json"])
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Could not read discover cache for %s: %s", cache_key, exc)
         return None
 
     def _save_cached_discover_response(self, cache_key: str, response: dict) -> None:
@@ -137,8 +137,8 @@ class TMDBClient:
                         json.dumps(response),
                     ),
                 )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Could not save discover cache for %s: %s", cache_key, exc)
 
     def _get_cached_person_credits(self, person_id: int) -> dict | None:
         try:
@@ -153,8 +153,8 @@ class TMDBClient:
                 ).fetchone()
                 if row and row["response_json"]:
                     return json.loads(row["response_json"])
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Could not read person credits cache for %s: %s", person_id, exc)
         return None
 
     def _save_cached_person_credits(self, person_id: int, response: dict) -> None:
@@ -173,8 +173,8 @@ class TMDBClient:
                         json.dumps(response),
                     ),
                 )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Could not save person credits cache for %s: %s", person_id, exc)
 
     def get_movie(self, movie_id: int) -> dict:
         if self.is_offline():

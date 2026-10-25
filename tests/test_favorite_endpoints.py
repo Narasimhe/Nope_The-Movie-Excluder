@@ -51,7 +51,6 @@ class FavoriteEndpointTests(unittest.TestCase):
         }
 
         self.assertIn("/movies/{tmdb_id}/favorite", route_paths)
-        self.assertIn("/movies/favorites", route_paths)
 
     def test_movie_can_be_favorited(self) -> None:
         service = FakeFavoriteService()
@@ -81,15 +80,6 @@ class FavoriteEndpointTests(unittest.TestCase):
             result["message"],
             "Movie removed from favorites",
         )
-
-    def test_favorites_can_be_listed(self) -> None:
-        service = FakeFavoriteService()
-
-        with patch.object(main, "movie_service", service):
-            result = main.get_favorite_movies()
-
-        self.assertEqual(result["results"][0]["tmdb_id"], 101)
-        self.assertTrue(result["results"][0]["user_data"]["is_favorite"])
 
     def test_unwatched_favorite_attempt_returns_400(self) -> None:
         service = FakeFavoriteService()

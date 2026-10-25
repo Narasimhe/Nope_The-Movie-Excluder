@@ -42,7 +42,8 @@ def test_grey_loads_prompt_file_and_replaces_placeholders():
 
         assert "You are Grey, the native cinema curator" in system_instruction
         assert "ACTIVE MOVIE SCREEN FOCUS (CRITICAL OVERRIDE RULE)" in system_instruction
-        assert "CORE CINEMA TASTE PHILOSOPHY (CRAFT OVER GENRE)" in system_instruction
+        assert "CORE CINEMA TASTE PHILOSOPHY" in system_instruction
+        assert "CRAFT OVER GENRE" in system_instruction
         assert "RUNTIME IS NEVER A CONSTRAINT" in system_instruction
         assert "JOURNAL & NOTE ACTIONS (CREATE VS. UPDATE)" in system_instruction
         assert res["text"] == "Nordic thrillers from 2010 onward."

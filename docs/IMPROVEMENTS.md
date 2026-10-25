@@ -4,11 +4,131 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
-*(No pending tasks — backlog is clear.)*
+- [ ] **Pluggable Critic Personalities & Roger Ebert Lens for Grey**
+  * **Goal**: Replace rigid, repetitive buzzword lexicons with deep, authentic critical perspectives. Allow Grey to channel legendary film critics—starting with Roger Ebert—to provide nuanced, humane, and varied critiques.
+  * **Key Components**:
+    * **Personality Profile Architecture (`app/grey/personalities/`)**: Dedicated markdown/config profiles defining voice, critical philosophy, and review guidelines (starting with `ebert.md`).
+    * **Dual-Era Ebert Intelligence**:
+      * *Pre-2013 films*: Gemini surfaces his actual historical reviews, four-star ratings, and memorable quotes or pans.
+      * *Post-2013 films*: Gemini channels his distinctive humanistic philosophy (*"A movie is not about what it is about, but how it is about it"*) to evaluate modern films through his eyes.
+    * **Activation & Interaction**: Support natural conversational triggers (e.g. *"What would Ebert say?"*, `/ebert`), contextual suggestion pills on the movie detail page, or a discreet critic lens selector in the Grey drawer.
 
 ---
 
 ## ✅ Completed Tasks
+- [x] **Zen Design Refinements Batch: Header, Pagination, Badges, Scope & Toasts**
+  * **Vertical Axis Alignment & Gap Tightening**: Synchronized topbar navigation with main content column on the exact same vertical x-axis. Shaved 18px of dead space out of the sidebar-to-canvas canyon, achieving a cohesive 24px visual gap.
+  * **Icon-Only 22px Poster Badges (Task 14)**: Replaced wide all-caps text banners with compact 22px rounded-square frosted badges (✦, ✓, ↻, ◷, ✕) with distinct muted tones, preserving 100% of movie title art visibility.
+  * **Pagination Zen & Legibility (Task 10)**: Bound pagination to universal 8px squircle geometry, increased top vertical separation gap to 38px, and elevated disabled "Previous" button opacity to 0.45 with clean hairline border.
+  * **Floating Top-Right Toast & Preset Overflow (Task 11)**: Replaced disruptive full-width red notice box with a fixed floating toast sliding in from top-right with auto-dismiss. Capped preset ribbon chips at 115px with ellipsis so all 6 fit without clipping.
+  * **Single Dynamic 2-State Library Scope (Task 16)**: Replaced 160px double-box with a compact squircle switch flipping between "In: This shelf" and "In: All shelves".
+  * **Reversible 2-Way Favourites Toggle (Task 17)**: Converted Hall of Fame Heart button into a 2-way toggle that remembers previous shelf and returns with 1 click.
+  * **Nope Mode Hotkey Alt+N (Task 13)**: Migrated off bare "X" key to deliberate Alt+N shortcut and removed clutter hint from the search placeholder.
+  * **Grey Docked Responsive Grid Collapse (Task 20)**: Added responsive auto-fill and 4-column scaling for poster grid and canvas headers when Grey drawer is open on viewports under 1440px.
+
+
+- [x] **Personal Library Floating Card Parity & Right-Aligned [Pages | Continuous] Toggle**
+  * **Sidebar Card Parity**: Applied floating card envelope to .library-filters-workspace matching .discovery-workspace (16px border-radius, warm gold hairline border, dark translucent glass fill, and 12px 14px padding) eliminating layout shift.
+  * **Right-Aligned Browse Mode with Generous Space**: Positioned [ Pages | Continuous ] at the far-right edge of the ribbon row (margin-left: auto), separated from the 5 status chips by a generous open gap of negative space, styled as a quiet 2-segment switch (#131317) to prevent visual mixing.
+  * **Movie Counter Font Size**: Elevated top-right counter typography to 14px (var(--text-base)) for confident readability.
+
+- [x] **UI & UX Zen Architecture: Squircle Geometry, Top-Right Telemetry & Canvas Parity**
+  * **Universal 8px Squircle Geometry**: Retired puffy 999px hotdogs across Search Bar, Nope Mode toggle, Ribbon chips, Preset Action rows, Library modifier pills, and all sidebar filter chips (.tri-chip genres/languages, .sort-chip, .filter-chip, and .selected-entity pills).
+  * **Top Bar Demarcation & Double-Wall Removal**: Elevated .topbar bottom border to subtle warm gold (rgba(242, 201, 76, 0.22)) and removed the sidebar's right divider (border-right: none), giving the left card space to breathe.
+  * **Extreme Top-Right Telemetry & Font Harmony**: Bound search and Nope Mode to exact 670px 6-column grid width with Nope flush right, and positioned the movie counter at the extreme top right in open negative space with unified UI typography (var(--font-ui), var(--text-xs), #8e8b97).
+  * **Eradicated 'Filtered Discovery' Headline**: Eradicated the giant 32px title; posters rise ~50px directly beneath the preset ribbon.
+  * **Preset Action Rows Geometric Consistency**: Converted 'Update active preset' and 'Save current search as preset' to full-width 8px squircle action rows separated by 12px space, with quiet dashed border, uniform Regular 400 weight (12px), and 12x12px inline vector SVGs.
+  * **Positive vs Negative Selection Tokens**: Preserved faded brand yellow (+, rgba(242, 201, 76, 0.75)) for positive inclusions and muted rose (−, #cf9b9e) for exclusions.
+  * **Personal Library Zen Alignment**: Positioned Library search in top canvas with identical 36px squircle styling; relocated core personal shelves (New discovery, Watch later, Watched, Rewatch, Nope) into top ribbon; converted Favourites and Has Notes into a twin modifier strip ([ ★ Favourites only ] [ 📝 Has notes ]) at the top of the Library sidebar; removed duplicate bottom Sort accordion.
+
+- [x] **Visual Separation & Counter Deduplication Fix**
+  * **Warm Gold Borders**: Added subtle brand yellow / warm gold borders to the Left Sidebar (.discovery-workspace: rgba(242, 201, 76, 0.28)), the Search Bar (.toolbar-search: rgba(242, 201, 76, 0.3)), the Top Ribbon Pills (.ribbon-chip: rgba(242, 201, 76, 0.25)), and Nope Mode (.nope-mode-toggle: rgba(242, 201, 76, 0.25)), eliminating the pitch-black lack of separation.
+  * **True Total Movie Count**: Resolved the 12/24 batch slice count by using the full TMDB/search total (response.tmdb_total_results || response.total_results), always displaying the true total number of movies.
+  * **Counter Deduplication**: Suppressed the duplicate movie count in the top toolbar row (.discover-toolbar-row #result-count), leaving only the clean total counter next to [Pages | Continuous].
+
+- [x] **Task 6: Movie Grid Spacing, Right-Edge Alignment & Centered Zen Pagination**
+  * **Snapping Right Edge to 6th Column**: Bound .discover-canvas-header and .section-heading to max-width: 670px, snapping header controls ([Pages | Continuous] and movie count) cleanly to the right edge of the 6th poster column.
+  * **Poster Grid Breathing Room**: Preserved the original compact Letterboxd poster scale (105px cards with 10px 8px gaps), aligning the canvas boundary to 670px.
+  * **Hover Title Legibility Overlay**: Added smooth bottom gradient title/year overlay on hover (.movie-card:hover .card-copy) for instant readability on dark or stylized poster artwork.
+  * **Centered Zen Pagination**: Centered pagination strip under the movie grid (max-width: 670px) with Option A active page pill (#161618 dark fill, muted gold border rgba(242,201,76,0.5), soft off-white text #f5f3ee, regular weight, 32px height) and quiet neutral inactive pills.
+
+- [x] **Top Search Bar & Nope Mode: Zen Redesign**
+  * **Top Search Bar**: Retired the bright yellow 'Search' button. The bar is now a clean, minimalist 36px pill with dark #141419 fill, subtle border (rgba(255, 255, 255, 0.08)), muted magnifying icon, and soft focus glow (rgba(242, 201, 76, 0.5)), smoothly triggered on Enter.
+  * **Nope Mode Toggle**: Replaced the loud bright red box with a calm 36px Zen pill (#161618 dark fill, subtle neutral border rgba(255,255,255,0.08), muted grey text #9c9aa5, regular weight, with only the ✕ icon tinted in soft muted rose #cf9b9e). In active state, it engages a calm muted rose glow without pulsing strobe animations.
+
+- [x] **Top Ribbon Preset Pills: Option A & Zen Philosophy Alignment**
+  * Active preset ribbon chip (.ribbon-chip.is-active) now uses the Option A Zen formula: dark #161618 fill, muted gold border (rgba(242, 201, 76, 0.5)), soft off-white text (#f5f3ee), regular 400 weight, and subtle 8px ambient glow.
+  * Inactive ribbon chips use dark #161618 fill, subtle border (rgba(255, 255, 255, 0.08)), muted silver/grey text (#9c9aa5), and regular 400 weight.
+
+- [x] **Pure Zen Movie Counters: Eliminate Pagination Noise & De-Box Counts**
+  * **No Pagination Arithmetic**: Eradicated all occurrences of '24 of 1,820 movies' and 'X movies on this page'. The counter now displays strictly the pure total count (e.g. '1,820 movies' or '687 movies').
+  * **De-Boxed & Softened**: Removed pill borders and backgrounds from .result-count and .shelf-movie-count, rendering them as borderless, quiet dimmed text (#716e7a, 12px, regular weight).
+
+- [x] **Sidebar Zen Mode: Selected Entity Pills, Uniform Input Heights & Preset Alignment**
+  * **Selected Entity Pills (Keywords, Actors, Directors, Studios)**: Excluded entity pills now use the calm genre exclusion phenomenon (rgba(220, 100, 100, 0.08) fill, rgba(220, 100, 100, 0.22) border, soft muted rose text #cf9b9e, 60% opacity fade, no strikethrough). Included entity pills adopt Option A (#161618 dark fill, rgba(242, 201, 76, 0.5) gold border, #f5f3ee warm off-white text, muted + prefix at rgba(242, 201, 76, 0.68) with medium weight, subtle 8px gold glow). Dismissal × icon is quiet muted grey fading to red on hover; 'Clear all' link styled as a quiet, borderless 11px link.
+  * **Uniform Input Heights Across Sidebar**: Standardized all sidebar text, number, and search data entry fields (Minimum Votes, Rating Min/Max, Release Year From/To, Keywords & Themes, Actors, Directors, Studios, and Library filter inputs) to a consistent 34px height (height: 34px !important; min-height: 34px !important; line-height: 32px; border-radius: 6px;). Suppressed default WebKit search clear/cancel adornments.
+  * **Preset Action Links Left-Edge Alignment**: Shifted Update active preset and + Save current search as preset right (padding-left: 29px !important;) so their left edges (↻ and +) align directly under the letter 'A' of 'Atmospheric thrillers' in the preset pills above them.
+
+- [x] **Phase 4 Implementation: Database, Storage & Memory Hygiene**
+  * **Goal**: Enable persistent SQLite WAL mode and synchronous NORMAL, add performance indexes on high-frequency query paths, eliminate redundant schema PRAGMA checks inside hot read paths, enforce excluded movie metadata pruning, purge expired discovery/credits cache payloads, and cap client-side state objects to prevent memory leaks.
+  * **Key Changes**:
+    * **SQLite WAL & Synchronous Configuration ([`database.py`](file:///f:/Movie_Excluder/movie-excluder/app/database.py))**: Configured `PRAGMA journal_mode = WAL` and `PRAGMA synchronous = NORMAL` at startup in `initialize_database()` so WAL mode is persistent without re-executing PRAGMAs on every connection.
+    * **Performance Indexes ([`database.py`](file:///f:/Movie_Excluder/movie-excluder/app/database.py))**: Added `idx_user_movie_status` on `user_movie_data(status, updated_at DESC)`, `idx_movie_keywords_keyword` on `movie_keywords(keyword_id)`, `idx_movie_genres_genre` on `movie_genres(tmdb_genre_id)`, and `idx_movie_credits_person` on `movie_credits(tmdb_person_id)`.
+    * **Hot-Loop Optimization ([`user_movie_repository.py`](file:///f:/Movie_Excluder/movie-excluder/app/user_movie_repository.py))**: Removed dynamic `PRAGMA table_info(user_movie_data)` inspection from `get_user_movie_data_map`, querying `is_favorite` directly to eliminate redundant SQLite roundtrips during movie list loading.
+    * **Storage Invariant & Excluded Metadata Pruning ([`movie_metadata_repository.py`](file:///f:/Movie_Excluder/movie-excluder/app/movie_metadata_repository.py), [`movie_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/movie_service.py), [`storage_repository.py`](file:///f:/Movie_Excluder/movie-excluder/app/storage_repository.py))**: Added `purge_movie_metadata(tmdb_id)` to remove cast/crew credits and official TMDB keywords when movies are marked excluded (`NOPE`). In `cleanup_old_cache(days)`, added automatic pruning of expired `tmdb_discover_cache` and `tmdb_person_credits_cache`, unreferenced `movie_country_cache`, and metadata for excluded movies.
+    * **Bounded Client State & Memory Protection ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Added LRU cache eviction capping `discoveryCache` at 40 pages and bounded `greyChatHistory` to the last 40 conversation turns.
+    * **Full Verification**: Ran complete test suite (`python -m pytest`) with 220 passed in 46.27s (100% green).
+
+- [x] **Typography Standardization & Design Token Consolidation**
+  * **Goal**: Standardize fragmented font-sizes, font-weights, and letter-spacings into a cohesive design token system in `:root`, eliminate ad-hoc styles, fix microscopic poster badges, and unify sidebar action buttons.
+  * **Key Changes**:
+    * **Design Tokens ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Established unified semantic scales for type size (`--text-2xs` to `--text-3xl`), font weights (`--weight-regular` to `--weight-heavy`), and letter spacing (`--tracking-tighter` to `--tracking-widest`).
+    * **Font Size & Tracking Consolidation ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Replaced 78 ad-hoc font-sizes and 24 letter-spacing values across the entire stylesheet with the semantic design tokens.
+    * **Legibility & Action Consistency ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css), [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Increased microscopic poster badges from 0.47rem (~7.5px) to `--text-2xs` (0.65rem, ~10.4px); unified sidebar action buttons ("See results", "Update", "Reset", "Refresh") to a consistent `--text-sm` and `--weight-semibold`; replaced inline JS `ratingSpan.style.fontWeight = "700"` with `"var(--weight-bold)"`.
+    * **Documentation ([`FONT_REPORT.md`](file:///f:/Movie_Excluder/movie-excluder/docs/FONT_REPORT.md))**: Updated typography audit summary verdict.
+
+- [x] **Phase 3 Implementation: Strict Tier Boundary Enforcement & Async Non-Blocking Operations**
+  * **Goal**: Enforce strict 3-tier separation (HTTP routes -> business logic services -> SQLite repositories), eliminate raw database queries leaking into HTTP routes and service layers, offload banner upload disk writes to non-blocking worker threads, and synchronize client-side mention cache with movie status mutations.
+  * **Key Changes**:
+    * **Repository Encapsulation ([`movie_repository.py`](file:///f:/Movie_Excluder/movie-excluder/app/movie_repository.py))**: Added `is_poster_excluded(filename)`, `find_in_discover_cache(tmdb_id)`, and `resolve_genre_names(genre_ids)` to encapsulate all SQLite database queries.
+    * **Service Tier Delegation ([`movie_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/movie_service.py))**: Removed direct database connection instantiation and raw SQL from `MovieService`. Added `is_poster_caching_allowed(filename)` and delegated discover cache lookups and genre resolutions directly to `self.movie_repository`.
+    * **Main Route Cleanliness & Non-Blocking Disk I/O ([`main.py`](file:///f:/Movie_Excluder/movie-excluder/app/main.py))**: Replaced raw SQL in `GET /images/posters/{filename}` with `movie_service.is_poster_caching_allowed(filename)` and removed unused `get_connection` import. In `POST /entries/upload-banner`, converted blocking `target_path.write_bytes(contents)` into non-blocking `await anyio.to_thread.run_sync(target_path.write_bytes, contents)`.
+    * **Client-Side Mention Cache Synchronization ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Added `updateMovieMentionCacheStatus(movieId, userData)` and capped `movieMentionCache` at the last 100 entries to prevent unbounded memory growth. Wired live mention cache updates into `updateMovieCardDOM`, `handleLiberateMovie`, and `handleNopeUndo`.
+    * **Full Verification**: Ran complete test suite (`python -m pytest`) with 220 passed in 137.94s (100% green).
+
+- [x] **Phase 2 Implementation: Vibe-Coding Remnants, Config Centralization & Swallowed Error Logging**
+  * **Goal**: Centralize scattered configuration settings (TMDB base URLs, image hostnames, Gemini endpoints, default and fallback models, timeouts) and replace swallowed exceptions with structured diagnostic logging across backend and frontend.
+  * **Key Changes**:
+    * **Centralized Configuration ([`config.py`](file:///f:/Movie_Excluder/movie-excluder/app/config.py))**: Centralized `TMDB_BASE_URL`, `TMDB_IMAGE_BASE_URL`, `DEFAULT_REQUEST_TIMEOUT`, `GEMINI_API_BASE_URL`, `DEFAULT_FLASH_MODEL`, `DEFAULT_PRO_MODEL`, `GEMINI_PRO_CANDIDATE_MODELS`, and `GEMINI_FLASH_CANDIDATE_MODELS` with sensible environment variable fallbacks.
+    * **Eliminated Silent Failures in TMDB Client ([`tmdb_client.py`](file:///f:/Movie_Excluder/movie-excluder/app/tmdb_client.py))**: Replaced 7 empty `except Exception: pass` blocks in cache query/write operations with structured `logger.debug()` logging and switched hardcoded `BASE_URL` to `TMDB_BASE_URL`.
+    * **Centralized Poster & Image URLs ([`poster_cache_service.py`](file:///f:/Movie_Excluder/movie-excluder/app/poster_cache_service.py), [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Updated image generation to source from `TMDB_IMAGE_BASE_URL` on the backend and normalized `TMDB_IMAGE_HOST` across thumbnail and hover cards in the frontend.
+    * **Streamlined Gemini Endpoint & Cascade Fallbacks ([`grey/service.py`](file:///f:/Movie_Excluder/movie-excluder/app/grey/service.py))**: Replaced inline hardcoded model lists and endpoint URLs with the centralized config constants, and replaced bare exception swallows in SQLite context lookups with structured debug logging.
+    * **Orphaned Asset Handling ([`storage_repository.py`](file:///f:/Movie_Excluder/movie-excluder/app/storage_repository.py))**: Added structured warning logging when banner unlinking fails during maintenance runs.
+    * **Full Verification**: Ran complete test suite (`python -m pytest`) with 220 passed in 128.85s (100% green).
+
+- [x] **Self-Hosted UI Fonts (Inter active; Manrope, Geist, Plus Jakarta Sans available)**
+  * **Goal**: The stylesheet requested Inter but never loaded it, so Windows silently fell back to Segoe UI.
+  * **Key Changes**:
+    * **Bundled Variable Fonts (`app/static/fonts/`)**: Added `Inter-Variable.woff2`, `Manrope-Variable.woff2`, `Geist-Variable.woff2` and `PlusJakartaSans-Variable.woff2` (latin subset, full weight range) registered via `@font-face` at the top of [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css).
+    * **Single Font Switch**: New `--font-ui` variable in `:root` drives the body font; swap `"Inter"` for `"Manrope"` to change the whole UI. Bumped stylesheet cache version in [`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html).
+
+- [x] **Phase 1 Full Clean Purge: Dead Endpoints, Legacy Dependencies, Dead JS & Pruned CSS**
+  * **Goal**: Strip all superseded legacy routes, unused Pydantic models, dead dependencies, orphaned keyword/default-profile logic, dead JS selectors/functions, and dead CSS rules while consolidating duplicate media queries.
+  * **Key Changes**:
+    * **Purged 9 Dead / Unused FastAPI Routes ([`main.py`](file:///f:/Movie_Excluder/movie-excluder/app/main.py))**: Deleted superseded legacy shelf endpoints (`GET /movies/watched`, `POST /movies/watched`, `GET /movies/status/{status}`, `GET /movies/notes`, `GET /movies/favorites`), the 4 uncalled custom keyword endpoints (`/movies/{tmdb_id}/keywords/custom`, `/keywords/custom/{keyword_id}`, etc.), and the unneeded default profile route (`PUT /search-preferences/{preference_id}/default`).
+    * **Removed Obsolete Pydantic Schemas ([`main.py`](file:///f:/Movie_Excluder/movie-excluder/app/main.py))**: Deleted `WatchedRequest` and `CustomKeywordRequest`.
+    * **Cleaned Dependency Manifest ([`requirements.txt`](file:///f:/Movie_Excluder/movie-excluder/requirements.txt))**: Purged 17 obsolete or transitive packages (Flask, Werkzeug, itsdangerous, blinker, Jinja2, MarkupSafe, pillow, Pygments, and pinned sub-dependencies), keeping strictly the 5 active top-level packages (`fastapi`, `uvicorn[standard]`, `requests`, `python-dotenv`, `pytest`).
+    * **Fixed Broken JSON Library Export ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Corrected `#export-library-json` to fetch `/movies/library/search` instead of the non-existent `/movies/personal` route.
+    * **Pruned Dead Frontend JS ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Removed unused helper functions `updatePickerSummary`, `formatReleaseDate`, `setupSidebarMasterToggle()`, and `renderActiveFilterTags()`. Removed dead DOM selector references and conditional checks (`#notes-search-container`, `#notes-search-input`, `#clear-notes-search`, `#reader-save-split`, `#reader-save-menu-toggle`, `#reader-save-dropdown`, `#grey-status-text`, `#badge-quality`, `#pill-quality`, `#active-filter-tags`, and `#active-entry-tag` cleanup check).
+    * **Optimized & Pruned Stylesheet ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Removed 3 unused `:root` variables (`--bg-soft`, `--blue`, `--surface-high`) and 72 unreferenced CSS classes, shaving nearly 19 KB of dead styles while strictly preserving all 411 `!important` declarations. Consolidated duplicate `@media` blocks across all 6 breakpoint sets (`(max-width: 800px)`, `(max-width: 560px)`, `(max-width: 1100px)`, `(max-width: 760px)`, `(max-width: 860px)`, `(max-width: 620px)`) into single media queries while preserving cascade order.
+    * **Synchronized Test Suite ([`tests/`](file:///f:/Movie_Excluder/movie-excluder/tests))**: Deleted obsolete `test_custom_keyword_endpoints.py`, removed legacy assertions in `test_movie_status_list_endpoint.py`, `test_favorite_endpoints.py`, `test_search_preference_endpoints.py`, and `test_web_ui.py`. All 220 tests across the entire test suite pass 100% green.
+
+- [x] **Zero-Flash Lifecycle Fixes for Discover, Single Note Reader, and Movie Detail Page**
+  * **Goal**: Eliminate initial page flash on refresh across the Discover page, Single Note Reader, and Single Movie Detail Page, and add deep-linked URL routing and persistent state memory for single movie pages.
+  * **Key Changes**:
+    * **Discover "Favourites" Title Flash Elimination ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js), [`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html))**: Fixed [`setAuxiliaryView`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js#L2846-L2875) so `#section-heading-block` is only unhidden if the active view is truly an open library shelf (`isLibrary && state.mode !== "filmography"`), preventing `setEntriesVisible(false)` from accidentally revealing the heading on Discover. Cleared the hardcoded `"Favourites"` DOM placeholder in `<h2 id="library-title"></h2>` and removed static `is-active` from the Favourites shelf link in [`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html).
+    * **Zero-Flash Single Note Reader Reload ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: In [`initializeApp`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js#L9832-L9865), when refreshing an `entry-reader` URL, bypassed the foreground `loadShelf("entries")` call. Now immediately sets auxiliary view to `"entry-reader"`, fetches the target note directly via `GET /entries/{id}`, and calls `openEntryReader(entry)` while loading background timeline and tags silently in parallel, completely eradicating the intermediate flash of the notes list stream.
+    * **Movie Detail URL Routing & Persistent Refresh Memory ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Added `#movie:${movieId}` URL hash synchronization in [`openMovieDetails`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js#L5254-L5295) and persistent tracking of the origin view and scroll coordinates. Added movie detail route handlers to [`initializeApp`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js#L9736-L9758) and the `hashchange` listener to seamlessly restore open films across F5 browser refreshes, and cleanly restore the origin shelf hash upon closing details.
 
 - [x] **Completely Blackhole `Looking Out For` (UI + Logic + Backend) & Hide Filter Sidebar on `Storage` Page**
   * **Goal**: Completely remove the `Looking Out For` feature across UI, frontend JS, CSS, backend API, and SQLite schema, and hide the left filter sidebar (`#app-sidebar`) whenever viewing the `Storage` page.
@@ -497,6 +617,116 @@
 * **Movie Notes + Shelf Double-Select Lens (Option 1)**: Clicking **Movie Notes** activates the notes lens; clicking any shelf button (*Watched*, *Nope*, *Favourites*, *Watch Later*, *Rewatch*, *New Discovery*) highlights both buttons and filters strictly to notes on that shelf. Clicking the active shelf again clears the shelf filter; clicking **Movie Notes** again exits the lens back to the full shelf.
 * **Instant Poster Hover Preview Card**: Hovering over any poster with a personal note triggers a snappy (150ms) dark glassmorphism popover card (`#poster-note-popover`) displaying the gold `📝 Note` badge, title/year, and formatted note text without opening the modal.
 
+### AG. UI/UX Zen Redesign: Poster Badges, Typography De-Thickening & Sidebar Mechanics (done — Oct 24)
+* **Poster Badge Zen & Scale Fix**: Eliminated untracked badges; fully suppressed status badges and favorite marks inside personal library shelves (`#movie-grid:not([data-view="discover"]) .status-badge`, `[data-view="favorites"] .favorite-mark`) for clean poster walls. Discover cards feature dark high-contrast badges (`rgba(10, 10, 14, 0.90)`), soft drop-shadows, off-white text, and non-clipping labels.
+* **Category Label Halation & Glare Elimination**: Replaced bold stark-white category headers (`#ffffff`, 700) with Regular (`400`) muted silver (`#9c9aa5`) with `+0.015em` letter-spacing. Active/open headers step to Medium (`500`) in warm off-white (`#f5f3ee`), eliminating halation bloom.
+* **Inverted Input Scale Fixed**: De-escalated numeric inputs (Rating, Minimum Votes, Release Year) to Regular (`400`), `12px` (`--text-xs`), and muted `#c5c2cb` with compact `32px` heights, restoring parent title dominance.
+* **Native Number Steppers Removed**: Stripped visual spinner arrows across number inputs (`appearance: textfield`) while preserving physical keyboard Up/Down arrow nudging.
+* **3-State Click (Exclude First) & Quiet Red**: Replaced clumsy mode switches with direct 3-state cycling (1st click = Exclude, 2nd click = Include, 3rd click = Off). Excluded pills recede at 60% opacity with soft maroon borders and no strikethrough.
+* **Balanced Sidebar Header Row**: Restored dim uppercase `FILTERS` micro-label on the left to symmetrically balance `↺ Reset` on the right below the full-width `See results` button.
+* **Sort Results 50/50 Grid**: Formatted sidebar sort drawer into an even 2-column grid (`grid-template-columns: 1fr 1fr`), removing jagged text-length edges.
+* **Sort Results Promoted to Top**: Slid Sort Results out of the #4 middle spot to the very top of the accordion (above Genres), cleanly separating output ordering from data filters.
+* **True Dirty State for 'See results'**: 'See results' remains calm neutral grey on initial load and reset, only illuminating in warm gold when the user actively modifies a filter.
+* **Search Profiles Zen Redesign**: Consolidated split ribbon/reserve areas into a single `SAVED PRESETS` cloud without dead void gaps. Removed star icons (`★` / `☆`), highlighted active presets in warm gold, and replaced crowded buttons with a quiet `+ Save current search as preset` link.
+* **Empty Entity Drawer Collapse**: Added zero-height collapse for empty `.selected-entities:empty` containers, removing dead black voids below the keywords input box.
+* **Clean Range Inputs & Minimal Placeholders**: Restored dark `#141419` backgrounds, `6px` radius, and subtle gold focus rings to Rating and Release Year boxes. Eliminated tutorial chatter in placeholders (`From (e.g. 1990)` -> `1990` - `2024`, `6.0` - `10.0`, `500`).
+* **Removed Redundant Sub-Header Row**: Eradicated `SAVED PRESETS / 4/6` inside the Search Profiles drawer; first preset pill now breathes with a clean 10px top gap.
+* **Strict Dirty-Only Preset Update**: `↻ Update "Preset"` remains completely hidden until a filter is actively changed; tight 8px gap between action links.
+* **Universal Option A Pill Styling**: Applied Option A (dark `#161618` fill, soft off-white `#f5f3ee` text, muted gold border `rgba(242, 201, 76, 0.5)`, regular weight) universally across all sidebar selection pills (Genres, Languages, Sort Results, Countries, Presets, Library Statuses), eliminating muddy yellow fills and swollen text.
+* **Same-Line Paired Inputs**: Forced `sidebar-range-row` into a non-wrapping flex row (`flex-wrap: nowrap`, 50/50 input sizing), locking Min – Max Rating and From – To Year boxes on a single horizontal line with a centered dash.
+* **Symmetrical 2x3 Library Status Grid**: Moved `Untracked` directly into the status pill group as the 6th pill in a balanced 2-column x 3-row grid, eradicating the awkward dashed-border checkbox.
+* **Minimalist Vector Pin & Hover Delete**: Replaced red OS emoji pushpins with sleek inline vector SVGs (pinned in warm gold, unpinned in subtle stroke). Preset deletion `✕` is now completely hidden until hovering over a row.
+* **Tight Left-Aligned Action Links**: Reduced spacing between `↻ Update` and `+ Save` to 8px and aligned both flush against the left boundary under the preset pills.
+* **Separated Ribbon Pin vs Preset Delete**: Each preset chip in `SAVED PRESETS` now provides an explicit `📌` icon to toggle ribbon pinning and a distinct `✕` icon to permanently delete the preset.
+* **Left-Aligned '+ Save' Text Action**: Replaced the centered dashed box with a clean, left-aligned plain text link directly beneath the presets.
+
 ---
 
-*Last Updated: October 22, 2026*
+*Last Updated: October 24, 2026*
+
+
+- **UI/UX Zen Shelf Ribbon & Icons**: Embedded crisp vector SVGs in front of Personal Library shelf status chips and right-aligned `[ Pages | Continuous ]` toggle with generous negative space and 8px squircle styling.
+
+- **UI/UX Zen Favourites Heart & Nope Hotkey**: Replaced shelf view toggle with a dedicated Favourites Heart button on the library ribbon; decoupled Nope Mode from the Discover search bar to prevent submit-button confusion, replacing it with an instant `X` / `Escape` keyboard shortcut and floating status banner.
+
+### AH. UI/UX Zen: Unified Canvas Geometry, Zero-Shift Transitions & Preset Ribbon Polish (done — Oct 25)
+* **Unified 670px Canvas Search Geometry**: Embedded the Library search scope switch (`[ ◫ This shelf ]` ⇄ `[ ☷ All shelves ]`) directly inside the right edge of the Library search bar as a quiet 24px frosted squircle pill. Discover and Library search inputs now share identical 670px outer bounding boxes with zero width shift.
+* **Unchoked Preset Ribbon Chips**: Expanded preset chip `max-width` from artificial 115px choke to 220px with natural content expansion (`flex: 0 0 auto`), allowing preset titles (e.g. *The current best sci-fi*, *Atmospheric thrillers*, *new search filter test*) to display fully without premature ellipsis cutting off text. Added hover title tooltips to all preset chips.
+* **Locked 32px Ribbon Height & 28px Chips**: Synchronized `.profile-ribbon` and `.library-shelf-ribbon` to exact identical `32px` container height and `28px` chip height (`gap: 8px`), eliminating vertical layout jitter when toggling tabs.
+* **Pixel-Locked Poster Grid Origin**: Locked total canvas header height (`36px` search + `14px` gap + `32px` ribbon + `20px` bottom margin = `102px`) across both Discover and Library tabs, guaranteeing that Row 1 of the poster grid (`#movie-grid`) starts at the exact same pixel in both views with zero vertical jump. Permanently disabled legacy `.section-heading` element.
+
+* **Standardized Poster Overlay Badges**: Unified all 4 poster overlay corners (Top-Left Status, Top-Right Favourite Heart, Bottom-Left Note, Bottom-Right Rating) to use the exact same dark glassmorphism container: `background: rgba(10, 10, 12, 0.88)`, `border: 1px solid rgba(255, 255, 255, 0.14)`, and `backdrop-filter: blur(4px)` with matched 22px heights and 6px border radii.
+* **Status Icon Weight & Color Contrast**: Differentiated library statuses via high-contrast icon hues and matched visual weights; upgraded Watched status to a dedicated `#4ADE80` checkmark with heavy `2.5px` stroke-width to perfectly balance the filled Discovery star and Favourite heart. Upgraded Note badge to a vector SVG.
+* **Library Scope Toggle Visibility Restored**: Fixed `.toolbar-search button` rule that was suppressing `#library-scope-toggle` when placed within the search bar form; the `[ ◫ This shelf ]` pill now displays clearly inside the right side of the search input.
+
+* **Unification of 3 Vertical Alignment Axes & Pagination Breathing Room**:
+  - **Inner-Left Sidebar Axis**: Nudged top header "NOPE" logo and bottom footer "NOPE" identity block with `15px` left inset to sit on the exact same vertical x-axis as the sidebar card's inner content edge (the left edge of "See results", "FILTERS", and accordion filter icons).
+  - **Main Content Left Axis**: Aligned footer navigation (`.footer-nav`) in a matched 2-column grid (`padding-left: 16px`) so the left edge of "Storage" and "API" locks directly onto the exact same vertical x-axis as top navigation tabs (DISCOVER, LIBRARY, NOTES), Search Bar, Ribbon row, and Poster Column 1.
+  - **Far-Right Viewport Axis**: Synchronized the right margin of the top movie counter (`#result-count` / `#shelf-count`) and the bottom-right "Grey" status pill (`#grey-toggle`) using a unified right viewport formula `max(40px, calc((100% - 1536px) / 2 + 40px))` so the right edge of "movies" aligns vertically with the right border of the Grey pill across all display resolutions.
+  - **Pagination Breathing Room**: Increased top margin of `#pagination` to `42px` (`margin: 42px 0 28px 0 !important;`), providing a clean ~40px separation gap between the bottom row of movie posters and the pagination bar.
+
+* **Pagination CSS Parser Recovery & Breathing Room Reflection**:
+  - Repaired a corrupted nested selector block around line 6560 (`body.grey-docked-open .library`) that was causing browsers' CSS parsers to discard subsequent styles including the pagination rules.
+  - Appended a guaranteed pagination override enforcing `margin: 44px 0 28px 0 !important;` alongside the 8px squircle buttons, 0.45 disabled button opacity, and `#dedbd4` active typography so the breathing room and Zen pagination controls reflect cleanly across all views.
+
+* **3-State Search Target Switch & Dynamic Live Placeholder**:
+  - Embedded matching 24px squircle Pill 2 (`#library-target-toggle`) beside the scope toggle in the 670px Library search bar, directly cycling across `[ ✦ All ]` → `[ 🏷 Title ]` → `[ 📝 Notes ]`.
+  - Added dynamic human-readable live placeholder (`updateLibrarySearchPlaceholder`) that automatically updates as the user navigates shelves and toggles pills (e.g. *"Search notes in Watched…"*, *"Search titles across all shelves…"*, *"Search in Watched…"*, *"Search entire library…"*, *"Search all notes…"*) without requiring manual syntax prefixes.
+* **Bidirectional Personal Notes Ribbon Lens (`[ 📝 ]`)**:
+  - Embedded a dedicated `[ 📝 ]` notes lens button beside the Favourites Heart (`[ ♡ ]`) at the right end of the shelf ribbon, separated by a subtle 1px vertical hairline divider.
+  - Supports bidirectional workflows: clicking `[ 📝 ]` from any shelf (e.g. *Watched*) immediately activates the notes lens for that shelf; clicking any shelf from the full notes collection narrows the notes strictly to that shelf; clicking the active notes button or double-clicking immediately exits back to the primary shelf view.
+* **Streamlined Library Sidebar Parity**:
+  - Completely removed the redundant `Has notes` modifier strip from the Personal Library sidebar, giving it the exact same clean structure and card geometry as the Discover sidebar (top `FILTERS` / `Reset` header followed immediately by accordion filter pills).
+
+### AI. Personal Library Cross-Shelf Search & Title Matching Precision (done — Oct 25)
+* **Word-Boundary Prefix Matching for Search-As-You-Type**:
+  - Removed restrictive trailing lookahead assertion `(?![a-z0-9])` from both backend (`_build_word_boundary_pattern` in `app/movie_repository.py`) and frontend (`buildLibraryWordBoundaryRegex` in `app/static/app.js`).
+  - Search queries now match progressive word stems and prefixes starting at word boundaries (e.g. `god` matches *The Godfather*, `bat` matches *Batman*, `inter` matches *Interstellar*, `dark kni` matches *The Dark Knight*) while properly rejecting intra-word false positives (e.g. `bat` does not match *Wombat*).
+* **Search Target Pill Synchronization in Client-Side Ranking**:
+  - Synchronized `searchMode` in `applyLibraryFilters()` with `state.librarySearchTarget`. When Pill 2 is switched to `[ 🏷 Title ]`, client-side ranking strictly filters by title and original title, preventing movies that only match in overview/plot or notes from leaking into Title results.
+* **Instant Cross-Shelf Exploration (`All shelves`)**:
+  - Toggling Scope to `[ ☷ All shelves ]` without entering search text now immediately queries and displays the full cross-shelf personal library (1,300+ movies) instead of silently no-oping or reloading only the current shelf.
+  - Toggling Target to `[ 🏷 Title ]` or `[ 📝 Notes ]` while in All Shelves immediately re-executes search and re-ranks results.
+* **Poster Status Badges & Nope Differentiation in All-Shelves View**:
+  - Dynamically enabled status badges on poster cards during All Shelves searches (`#movie-grid.is-all-shelves-search .status-badge`), displaying the correct shelf indicators (Watched checkmark, Watch Later clock, Rewatch arrows, New Discovery star, and Excluded badge) so users can immediately distinguish which shelf each movie belongs to.
+  - Added `.is-noped` styling for excluded movies during All Shelves searches to visually flag rejected titles.
+  - Bumped cache buster to `v=20261025_zen_107` in `app/web/index.html`.
+* **Shelf Ribbon Action Ordering (Mental Model Alignment)**:
+  - Repositioned the personal notes lens (`[ 📝 ]`) to sit first right after the hairline divider, followed immediately by the favourites heart button (`[ ♡ ]`).
+  - Updated flex margins (`margin: 0 4px 0 auto` on `.shelf-ribbon-divider`) so the divider and both buttons cleanly align to the right edge of the shelf ribbon with uniform spacing.
+  - Bumped asset cache buster to `v=20261025_zen_108` in `app/web/index.html`.
+* **Discover & Sidebar Typography Whiteness Elevation (Without Weight Halation)**:
+  - Stepped up inactive sidebar category headers (*Sort*, *Genres*, *Rating*, *Release Year*, *Keywords*, *Languages*, *Countries*, *Studios*) from dim `#9c9aa5` mid-grey to crisp `#dedbd4` pearl off-white.
+  - Stepped up hovered and open active category titles to `#ffffff`.
+  - Stepped up `FILTERS` micro-header from `#716e7a` to `#a5a2ad` silver, and the `Reset` action link to `#c5c2cb`.
+  - Stepped up input placeholders from dim `#615e6b` to readable `#7e7b89`.
+  - Stepped up movie card year/language metadata and top telemetry counters from `#9c9aa5` / `#8e8b97` to `#b8b5bf`.
+  - Stepped up top navigation tabs (DISCOVER, LIBRARY, NOTES) from `#9c9aa5` to `#c5c2cb`.
+  - Maintained thin `400` Regular weight throughout to ensure zero halation or chunky letter bleeding.
+  - Bumped asset cache buster to `v=20261025_zen_109` in `app/web/index.html`.
+* **Library Sidebar Filter Aesthetics Parity with Discover**:
+  - Repositioned **Sort Results** to the #1 top spot in the Library sidebar, creating exact structural parity with Discover (*Sort Results* → *Genres* → *Release Year* → *Keywords & Themes* → *Cast & Crew* → *Languages*).
+  - Upgraded Library Sort Results (`#lib-sort-cloud`) to use the exact Discover 2-column squircle grid (`.sort-chip-cloud` and `.sort-chip`).
+  - Upgraded Library Release Year (`#card-lib-year`) to the same-line paired inputs layout (`.sidebar-range-row` with centered dash `-`).
+  - Upgraded Cast & Crew and Keywords & Themes to match Discover's compact entity grid (`.entity-grid.sidebar-entity-grid`) with screen-reader labels and clean placeholders.
+  - Linked `.is-dimmed` dynamic state to `#reset-library-filters` so it dims when no filters are active and lights up as soon as a filter is chosen.
+  - Bumped asset cache buster to `v=20261025_zen_110` in `app/web/index.html`.
+* **Library Sidebar Strict 1:1 Parity with Discover**:
+  - **Scrollbar Elimination**: Removed `max-height: 220px` and `overflow-y: auto` from `.chip-cloud`, replacing with `max-height: none !important` and `overflow-y: visible !important` with scrollbar suppressed so Genres and Languages expand naturally without internal scrollbars, matching Discover's `.tri-chip-cloud`.
+  - **Font Size & Padding Normalization**: Scaled down `.filter-chip` from `var(--text-sm)` (14px) and 5px 11px padding to `var(--text-xs)` (12px) and `4px 9px` padding with `gap: 5px`, perfectly matching Discover's `.tri-chip` dimensions.
+  - **Cast & Crew Hierarchy**: Placed **Actor** above **Director** in the Library sidebar's Cast & Crew picker, locking structural parity with Discover.
+  - Bumped asset cache buster to `v=20261025_zen_111` in `app/web/index.html`.
+
+### 2026-10-25 - Zen Single Movie Detail Redesign & Parity Alignment
+- **2-Tier Instant Action Cockpit**: Replaced stacked Status dropdown + Save button + Verdict card with a unified card containing 5 auto-saving shelf pills (Library ribbon SVG icon parity, zero inside color fills) on Tier 1 and a 10-star rating bar with score badge on Tier 2.
+- **Top Bar & Navigation Parity**: Synchronized detail header height to 64px matching .topbar. Standardized neutral ← Back to [Shelf] button and unified Prev/Next segmented pill control. Removed legacy faded NOPE watermark.
+- **Hero & Dossier Layout**: Compacted poster to natural 220px x 330px (2:3 aspect ratio, uncropped). Bare inline heart toggle beside title. Aligned director and cast credits to crisp off-white (#dedbd4) with subtle labels.
+- **Notes & Related Parity**: Added generous 18px separation between action cockpit and notes canvas; updated notes placeholder to 'Thoughts, observations, or anything worth remembering...'. Standardized Related Movies grid to 105px width with 22px icon status corner badges.
+- **Bug Fix**: Enforced strict display hiding on #movie-grid when viewing the Notes tab (entries view).
+
+### AI. Full Zen Foundation Restoration & Single Movie Detail Zen Architecture (v121)
+- **Zen Foundation Restored**: Completely reconstructed and restored all Zen refinements in `index.html`, `styles.css`, and `app.js` (`v=20261025_zen_121`).
+- **Ribbon & Lens Hierarchy**: Preserved Personal Notes lens button (`[ 📝 ]`) preceding favourites heart button (`[ ♡ ]`), with hairline divider pushed right.
+- **Library Sidebar Parity**: Sort Results placed at top with squircle chip cloud, coupled release year inputs (`#lib-year-from` & `#lib-year-to`) separated by centered hyphen, Actor positioned above Director, and `.chip-cloud` scrollbars removed.
+- **Typography Whiteness**: High-contrast `#dedbd4` and `#ffffff` typography applied across all category accordion triggers, headers, and navigation tabs.
+- **Single Movie Detail Zen Layout**: Standardized 64px frosted topbar with uppercase tracked navigation (`Back to Movies`, `Prev` / `Next`), bare title-height inline heart, 2-tier Action Cockpit (`width: fit-content`), separated Notes card, and 105px standardized related movie posters.

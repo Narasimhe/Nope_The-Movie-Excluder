@@ -1,7 +1,6 @@
 import json
 import logging
 
-from app.database import get_connection
 from app.movie_metadata_repository import MovieMetadataRepository
 from app.movie_repository import MovieRepository
 from app.movie_status import MovieStatus, validate_movie_status
@@ -47,40 +46,14 @@ class MovieService:
             else PosterCacheService()
         )
 
+    def is_poster_caching_allowed(self, filename: str) -> bool:
+        return not self.movie_repository.is_poster_excluded(filename)
+
     def _find_movie_in_discover_cache(self, tmdb_id: int) -> dict | None:
-        try:
-            with get_connection() as connection:
-                rows = connection.execute(
-                    "SELECT response_json FROM tmdb_discover_cache ORDER BY updated_at DESC LIMIT 100"
-                ).fetchall()
-                for row in rows:
-                    if not row["response_json"]:
-                        continue
-                    try:
-                        data = json.loads(row["response_json"])
-                        for m in data.get("results", []):
-                            if m.get("id") == tmdb_id:
-                                return m
-                    except Exception:
-                        continue
-        except Exception as e:
-            logger.warning(f"Error reading discover cache for movie {tmdb_id}: {e}")
-        return None
+        return self.movie_repository.find_in_discover_cache(tmdb_id)
 
     def _resolve_genre_names(self, g_ids: list[int]) -> list[dict]:
-        if not g_ids:
-            return []
-        try:
-            with get_connection() as conn:
-                placeholders = ",".join("?" for _ in g_ids)
-                rows = conn.execute(
-                    f"SELECT tmdb_genre_id, name FROM genres WHERE tmdb_genre_id IN ({placeholders})",
-                    tuple(g_ids),
-                ).fetchall()
-                found = {r["tmdb_genre_id"]: r["name"] for r in rows}
-                return [{"id": gid, "name": found.get(gid, f"Genre #{gid}")} for gid in g_ids]
-        except Exception:
-            return [{"id": gid, "name": f"Genre #{gid}"} for gid in g_ids]
+        return self.movie_repository.resolve_genre_names(g_ids)
 
     def get_movie(self, tmdb_id: int) -> dict:
         local_movie = self.movie_repository.get_movie(tmdb_id)
@@ -601,12 +574,13 @@ class MovieService:
             validated_status,
         )
 
-        # Storage optimization invariant: NOPE movies never cache posters
-        if local_movie and local_movie.get("poster_path"):
-            if validated_status == MovieStatus.EXCLUDED:
+        # Storage optimization invariant: NOPE movies never cache posters or bloated metadata
+        if validated_status == MovieStatus.EXCLUDED:
+            if local_movie and local_movie.get("poster_path"):
                 self.poster_cache_service.purge_excluded_poster(local_movie["poster_path"])
-            else:
-                self.poster_cache_service.cache_posters_async([local_movie])
+            self.metadata_repository.purge_movie_metadata(tmdb_id)
+        elif local_movie and local_movie.get("poster_path"):
+            self.poster_cache_service.cache_posters_async([local_movie])
 
         return res
 

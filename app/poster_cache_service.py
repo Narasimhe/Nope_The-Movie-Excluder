@@ -6,6 +6,7 @@ from typing import Any
 
 import requests
 
+from app.config import DEFAULT_REQUEST_TIMEOUT, TMDB_IMAGE_BASE_URL
 from app.database import get_connection
 
 logger = logging.getLogger(__name__)
@@ -68,7 +69,7 @@ class PosterCacheService:
         if self.is_offline():
             return None
 
-        url = f"https://image.tmdb.org/t/p/w500/{filename}"
+        url = f"{TMDB_IMAGE_BASE_URL}/w500/{filename}"
         try:
             resp = requests.get(url, timeout=timeout)
             if resp.status_code == 200 and resp.content:

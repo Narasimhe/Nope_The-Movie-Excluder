@@ -202,17 +202,6 @@ class UserMovieRepository:
 
         with get_connection() as connection:
             connection.row_factory = sqlite3.Row
-            columns = {
-                row["name"]
-                for row in connection.execute(
-                    "PRAGMA table_info(user_movie_data)"
-                ).fetchall()
-            }
-            favorite_expression = (
-                "is_favorite"
-                if "is_favorite" in columns
-                else "0 AS is_favorite"
-            )
             rows = connection.execute(
                 f"""
                 SELECT
@@ -220,7 +209,7 @@ class UserMovieRepository:
                     status,
                     verdict,
                     notes,
-                    {favorite_expression},
+                    is_favorite,
                     updated_at
                 FROM user_movie_data
                 WHERE tmdb_id IN ({placeholders})

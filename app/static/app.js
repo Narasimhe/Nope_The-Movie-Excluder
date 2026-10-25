@@ -370,7 +370,10 @@ const state = {
   unfilteredShelfMovies: [],
   libSelectedGenres: new Set(),
   libSelectedLanguages: new Set(),
-  librarySearchScope: "all",
+  librarySearchScope: "shelf",
+  librarySearchTarget: "all",
+  librarySearchTarget: "all",
+  librarySearchTarget: "all",
   isSearchingLibrary: false,
   movieNotesShelfFilter: null,
   lastNormalShelf: "favorites",
@@ -555,14 +558,8 @@ function setActiveView(view) {
     history.replaceState(null, "", `#${view}`);
   }
 
-  if (elements.libraryFilterQuery) {
-    if (view === "movie-notes") {
-      elements.libraryFilterQuery.placeholder = "Search your movie notes…";
-      elements.libraryFilterQuery.title = "Search inside your movie notes, or use title:, plot: prefixes";
-    } else {
-      elements.libraryFilterQuery.placeholder = "Search library (or title:, plot:)…";
-      elements.libraryFilterQuery.title = "Search across your library, or use title:, plot: prefixes";
-    }
+  if (typeof updateLibrarySearchPlaceholder === "function") {
+    updateLibrarySearchPlaceholder();
   }
 
   updateGreyContext();
@@ -2572,8 +2569,9 @@ function createMovieCard(movie) {
   if (rawNotes) {
     const noteMark = document.createElement("span");
     noteMark.className = "card-note-mark";
-    noteMark.textContent = "📝";
     noteMark.setAttribute("aria-label", "Has note");
+    noteMark.title = "Personal note attached (hover to preview)";
+    noteMark.innerHTML = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#f2c94c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>';
     posterButton.append(noteMark);
   }
 
@@ -3522,6 +3520,7 @@ function resetLibraryFilters({ silent = false } = {}) {
     elements.libLanguagesCloud.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("is-active"));
   }
   state.isSearchingLibrary = false;
+  elements.grid?.classList.remove("is-all-shelves-search");
   refreshCompactClouds();
   if (silent) return;
   reloadCurrentLibraryView();
@@ -3545,10 +3544,12 @@ function onLibraryFilterChange() {
 async function searchPersonalLibrary() {
   const query = (elements.libraryFilterQuery?.value || "").trim();
   const hasFilters = hasActiveLibraryFilters();
+  const scope = state.librarySearchScope || "shelf";
 
-  if (!query && !hasFilters) {
+  if (!query && !hasFilters && scope !== "all") {
     if (state.isSearchingLibrary) {
       state.isSearchingLibrary = false;
+      elements.grid?.classList.remove("is-all-shelves-search");
       await reloadCurrentLibraryView();
     } else {
       applyLibraryFilters();
@@ -3556,9 +3557,9 @@ async function searchPersonalLibrary() {
     return;
   }
 
-  const scope = state.librarySearchScope || "all";
   const requestNumber = ++state.requestNumber;
   state.isSearchingLibrary = true;
+  elements.grid?.classList.toggle("is-all-shelves-search", scope === "all");
   elements.pagination.classList.add("is-hidden");
   const shelfTitle =
     state.currentView === "movie-notes"
@@ -3570,10 +3571,18 @@ async function searchPersonalLibrary() {
     description: scope === "all" ? "Results from every shelf." : `Results from ${shelfTitle}.`,
   });
   showLoadingCards();
+  elements.grid?.classList.toggle("is-all-shelves-search", scope === "all");
   elements.count.textContent = `Searching ${scope === "all" ? "personal library" : "current shelf"}…`;
 
   try {
-    let url = `/movies/library/search?query=${encodeURIComponent(query)}`;
+    let effectiveQuery = query;
+    const target = state.librarySearchTarget || "all";
+    if (query && target !== "all") {
+      if (!query.startsWith("title:") && !query.startsWith("plot:") && !query.startsWith("notes:") && !query.startsWith("note:")) {
+        effectiveQuery = `${target}:${query}`;
+      }
+    }
+    let url = `/movies/library/search?query=${encodeURIComponent(effectiveQuery)}`;
     if (state.currentView === "movie-notes") {
       const statusParam = state.movieNotesShelfFilter
         ? `movie-notes:${state.movieNotesShelfFilter}`
@@ -3591,7 +3600,7 @@ async function searchPersonalLibrary() {
 
     const count = state.allFilteredMovies ? state.allFilteredMovies.length : state.movies.length;
     const scopeLabel = scope === "all" ? "all shelves" : shelfTitle;
-    const filterDetail = query ? ` matching "${query}"` : " matching filters";
+    const filterDetail = query ? ` matching "${query}"` : "";
     const countText = `${count} ${count === 1 ? "movie" : "movies"}${filterDetail} (${scopeLabel})`;
     elements.count.textContent = countText;
     if (elements.shelfCount) elements.shelfCount.textContent = countText;
@@ -4371,6 +4380,7 @@ function renderProfileRibbon() {
     chip.className = "ribbon-chip";
     chip.dataset.profile = String(prof.id);
     chip.textContent = prof.name;
+    chip.title = prof.name;
     chip.addEventListener("click", () => {
       if (elements.query) {
         elements.query.value = "";
@@ -7876,15 +7886,17 @@ elements.navLinks.forEach((button) => {
 
     if (clickedView === "movie-notes") {
       if (state.currentView === "movie-notes") {
-        const exitTarget = state.movieNotesShelfFilter || state.lastNormalShelf || "favorites";
+        const exitTarget = state.movieNotesShelfFilter || state.lastNormalShelf || "watched";
         state.movieNotesShelfFilter = null;
         loadShelf(exitTarget);
         return;
       }
       if (normalLibraryShelves.includes(state.currentView)) {
         state.lastNormalShelf = state.currentView;
+        state.movieNotesShelfFilter = state.currentView;
+      } else {
+        state.movieNotesShelfFilter = null;
       }
-      state.movieNotesShelfFilter = null;
       loadMovieNotes(1);
       return;
     }

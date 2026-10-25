@@ -11,10 +11,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-logger = logging.getLogger(__name__)
+from app.config import (
+    DEFAULT_FLASH_MODEL,
+    DEFAULT_PRO_MODEL,
+    GEMINI_API_BASE_URL,
+    GEMINI_FLASH_CANDIDATE_MODELS,
+    GEMINI_PRO_CANDIDATE_MODELS,
+)
 
-DEFAULT_FLASH_MODEL = os.getenv("GEMINI_FLASH_MODEL", "gemini-3.8-flash")
-DEFAULT_PRO_MODEL = os.getenv("GEMINI_PRO_MODEL", "gemini-3.1-pro-preview")
+logger = logging.getLogger(__name__)
 
 SKILLS_REGISTRY = {
     "related": {
@@ -351,8 +356,8 @@ class GreyService:
                     row = conn.execute("SELECT title FROM movies WHERE tmdb_id = ?", (inspected_movie_id,)).fetchone()
                     if row and row["title"]:
                         candidate_titles.append(row["title"].strip())
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Could not resolve movie title from SQLite for Grey: %s", exc)
 
         raw_new_lines = [l.strip() for l in (new_body or "").splitlines() if l.strip()]
         first_line_clean = ""
@@ -725,8 +730,8 @@ class GreyService:
                         body_preview = (er["body"] or "")[:700]
                         relevant_journal_excerpt = f"Title: {er['title']}\nExcerpt: {body_preview}"
                         break
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Could not query journal entries for Grey: %s", exc)
 
         inspected_note_info = "None"
         inspected_note_title = None
@@ -755,8 +760,8 @@ class GreyService:
                             nstatus = mr["status"] or "published"
                             inspected_note_info = f"Title: {inspected_note_title} (ID: {inspected_note_id}) (Status: {nstatus})\nContent:\n{nbody[:25000]}"
                             break
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Could not match note rows for Grey: %s", exc)
 
         # Format related movies list for inspected movie
         related_movies_str = "None"
@@ -791,8 +796,8 @@ class GreyService:
                     items.append(f"- {t}{yr}{id_str}: Status: {st}{rt}{vd}")
                 if items:
                     related_movies_str = "\n".join(items)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Could not fetch related movies for Grey: %s", exc)
 
         active_person_info = "None"
         if active_person and isinstance(active_person, dict):
@@ -973,31 +978,13 @@ Active filters: {{ACTIVE_FILTERS_JSON}}
         }
 
         def call_gemini(model_name: str):
-            endpoint = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+            endpoint = f"{GEMINI_API_BASE_URL}/models/{model_name}:generateContent?key={self.api_key}"
             return requests.post(endpoint, json=payload, headers={"Content-Type": "application/json"}, timeout=60)
 
         if "pro" in target_model.lower():
-            candidate_models = list(dict.fromkeys([
-                target_model,
-                "gemini-3.1-pro-preview",
-                "gemini-pro-latest",
-                "gemini-3.5-flash",
-                "gemini-3.8-flash",
-                "gemini-3.7-flash",
-                "gemini-3.5-flash-lite",
-                "gemini-flash-lite-latest",
-            ]))
+            candidate_models = list(dict.fromkeys([target_model, *GEMINI_PRO_CANDIDATE_MODELS]))
         else:
-            candidate_models = list(dict.fromkeys([
-                target_model,
-                "gemini-3.5-flash",
-                "gemini-3.8-flash",
-                "gemini-3.7-flash",
-                "gemini-3.5-flash-lite",
-                "gemini-3.1-flash-lite",
-                "gemini-flash-latest",
-                "gemini-flash-lite-latest",
-            ]))
+            candidate_models = list(dict.fromkeys([target_model, *GEMINI_FLASH_CANDIDATE_MODELS]))
 
         try:
             resp = None

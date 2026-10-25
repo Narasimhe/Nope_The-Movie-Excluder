@@ -87,10 +87,6 @@ class SearchPreferenceEndpointTests(unittest.TestCase):
             "/search-preferences/{preference_id}",
             route_paths,
         )
-        self.assertIn(
-            "/search-preferences/{preference_id}/default",
-            route_paths,
-        )
 
     def test_preference_can_be_created(self) -> None:
         repository = FakeSearchPreferenceRepository()
@@ -205,19 +201,6 @@ class SearchPreferenceEndpointTests(unittest.TestCase):
             result["preference"]["name"],
             "American Thrillers",
         )
-
-    def test_preference_can_be_set_as_default(self) -> None:
-        repository = FakeSearchPreferenceRepository()
-
-        with patch.object(
-            main,
-            "search_preference_repository",
-            repository,
-        ):
-            result = main.set_default_search_preference(1)
-
-        self.assertEqual(repository.default_id, 1)
-        self.assertTrue(result["preference"]["is_default"])
 
     def test_preference_can_be_deleted(self) -> None:
         repository = FakeSearchPreferenceRepository()

@@ -1,7 +1,11 @@
+import logging
 from pathlib import Path
 from typing import Any
 
 from app import database
+from app.movie_status import MovieStatus
+
+logger = logging.getLogger(__name__)
 
 
 class StorageRepository:
@@ -41,6 +45,45 @@ class StorageRepository:
                 (f"-{days} days",),
             )
             removed = cursor.rowcount
+            # Prune expired TMDB discover and credit payload caches
+            connection.execute(
+                "DELETE FROM tmdb_discover_cache WHERE updated_at <= datetime('now', ?)",
+                (f"-{days} days",),
+            )
+            connection.execute(
+                "DELETE FROM tmdb_person_credits_cache WHERE updated_at <= datetime('now', ?)",
+                (f"-{days} days",),
+            )
+            connection.execute(
+                """
+                DELETE FROM movie_country_cache
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM movies WHERE movies.tmdb_id = movie_country_cache.tmdb_id
+                )
+                """
+            )
+            # Storage optimization invariant: NOPE movies never keep bloated metadata
+            connection.execute(
+                """
+                DELETE FROM movie_credits
+                WHERE tmdb_id IN (
+                    SELECT tmdb_id FROM user_movie_data WHERE status = ?
+                )
+                """,
+                (MovieStatus.EXCLUDED.value,),
+            )
+            connection.execute(
+                """
+                DELETE FROM movie_keywords
+                WHERE tmdb_id IN (
+                    SELECT tmdb_id FROM user_movie_data WHERE status = ?
+                )
+                AND keyword_id IN (
+                    SELECT keyword_id FROM keywords WHERE is_custom = 0
+                )
+                """,
+                (MovieStatus.EXCLUDED.value,),
+            )
             connection.execute(
                 """
                 DELETE FROM keywords
@@ -94,8 +137,8 @@ class StorageRepository:
                 if p.is_file() and p.name not in active_banners:
                     try:
                         p.unlink()
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.warning("Could not unlink orphaned banner %s: %s", p, exc)
 
         self._vacuum()
         return {"removed_entries": max(0, removed)}

@@ -1,8 +1,12 @@
+import json
+import logging
 import re
 from typing import Any
 
 from app.database import get_connection
 from app.movie_status import MovieStatus, validate_movie_status
+
+logger = logging.getLogger(__name__)
 
 _ACRONYM_DOT_RE = re.compile(r"\b([a-zA-Z])(?:\.([a-zA-Z]))+\.?")
 _PREFIX_QUERY_RE = re.compile(r"^(title|plot|notes?)\s*:\s*(.*)$", re.IGNORECASE)
@@ -38,9 +42,9 @@ def _build_word_boundary_pattern(normalized_term: str) -> re.Pattern | None:
     tokens = _WORD_TOKEN_RE.findall(normalized_term)
     if tokens:
         joined = r"[\s\-_:,.;!?'\"/()+]+".join(re.escape(t) for t in tokens)
-        pattern_str = rf"(?<![a-z0-9]){joined}(?![a-z0-9])"
+        pattern_str = rf"(?<![a-z0-9]){joined}"
     else:
-        pattern_str = re.escape(normalized_term)
+        pattern_str = rf"(?<![a-z0-9]){re.escape(normalized_term)}"
     return re.compile(pattern_str, re.IGNORECASE)
 
 
@@ -606,3 +610,52 @@ class MovieRepository:
                 """,
                 (tmdb_id,),
             )
+
+    def is_poster_excluded(self, filename: str) -> bool:
+        with get_connection() as conn:
+            row = conn.execute(
+                """
+                SELECT u.status
+                FROM movies m
+                JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
+                WHERE m.poster_path LIKE ?
+                LIMIT 1
+                """,
+                (f"%{filename}",),
+            ).fetchone()
+            return bool(row and row["status"] == "excluded")
+
+    def find_in_discover_cache(self, tmdb_id: int) -> dict | None:
+        try:
+            with get_connection() as connection:
+                rows = connection.execute(
+                    "SELECT response_json FROM tmdb_discover_cache ORDER BY updated_at DESC LIMIT 100"
+                ).fetchall()
+                for row in rows:
+                    if not row["response_json"]:
+                        continue
+                    try:
+                        data = json.loads(row["response_json"])
+                        for m in data.get("results", []):
+                            if m.get("id") == tmdb_id:
+                                return m
+                    except Exception:
+                        continue
+        except Exception as e:
+            logger.warning("Error reading discover cache for movie %s: %s", tmdb_id, e)
+        return None
+
+    def resolve_genre_names(self, genre_ids: list[int]) -> list[dict]:
+        if not genre_ids:
+            return []
+        try:
+            with get_connection() as conn:
+                placeholders = ",".join("?" for _ in genre_ids)
+                rows = conn.execute(
+                    f"SELECT tmdb_genre_id, name FROM genres WHERE tmdb_genre_id IN ({placeholders})",
+                    tuple(genre_ids),
+                ).fetchall()
+                found = {r["tmdb_genre_id"]: r["name"] for r in rows}
+                return [{"id": gid, "name": found.get(gid, f"Genre #{gid}")} for gid in genre_ids]
+        except Exception:
+            return [{"id": gid, "name": f"Genre #{gid}"} for gid in genre_ids]

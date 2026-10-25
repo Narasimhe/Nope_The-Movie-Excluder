@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 from app.advanced_filters import FilterLogic
 from app.advanced_search_service import AdvancedSearchService
 from app.general_entry_repository import GeneralEntryRepository
-from app.database import initialize_database, get_connection
+from app.database import initialize_database
 from app.movie_service import MovieService
 from app.movie_status import MovieStatus
 from app.search_preference_repository import (
@@ -73,14 +73,6 @@ general_entry_repository = GeneralEntryRepository()
 storage_repository = StorageRepository()
 grey_service = GreyService()
 tmdb_lookup_client = advanced_search_service.tmdb_client
-
-
-class WatchedRequest(BaseModel):
-    tmdb_id: int
-
-
-class CustomKeywordRequest(BaseModel):
-    name: str
 
 
 class MovieStatusRequest(BaseModel):
@@ -247,6 +239,8 @@ def health_check():
     return {"status": "ok"}
 
 
+
+
 @app.get(
     "/images/posters/{file_path:path}",
     tags=["images"],
@@ -270,22 +264,11 @@ def get_cached_poster(file_path: str):
         )
 
     # 2. Check if movie is marked as excluded in database (invariant)
-    with get_connection() as conn:
-        row = conn.execute(
-            """
-            SELECT u.status
-            FROM movies m
-            JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
-            WHERE m.poster_path LIKE ?
-            LIMIT 1
-            """,
-            (f"%{filename}",),
-        ).fetchone()
-        if row and row["status"] == "excluded":
-            raise HTTPException(
-                status_code=404,
-                detail="Poster caching excluded for rejected titles",
-            )
+    if not movie_service.is_poster_caching_allowed(filename):
+        raise HTTPException(
+            status_code=404,
+            detail="Poster caching excluded for rejected titles",
+        )
 
     # 3. Online download and cache
     cached_file = movie_service.poster_cache_service.cache_poster(filename)
@@ -297,39 +280,6 @@ def get_cached_poster(file_path: str):
         )
 
     raise HTTPException(status_code=404, detail="Poster image unavailable offline")
-
-
-@app.get("/movies/watched")
-def get_watched_movies(page: int = 1):
-    try:
-        return movie_service.get_watched_movies_page(page)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-
-
-@app.post("/movies/watched")
-def add_watched_movie(request: WatchedRequest):
-    result = movie_service.mark_as_watched(request.tmdb_id)
-
-    return {
-        "message": "Movie marked as watched",
-        "user_movie_data": result,
-    }
-
-
-@app.get(
-    "/movies/status/{status}",
-    tags=["movies"],
-    summary="List movies by exact status",
-)
-def get_movies_by_status(status: str, page: int = 1):
-    try:
-        return movie_service.get_movies_by_status_page(status, page)
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error),
-        ) from error
 
 
 @app.get("/movies/search")
@@ -694,18 +644,6 @@ def get_company(company_id: int):
 
 
 @app.get(
-    "/movies/notes",
-    tags=["movies"],
-    summary="List movies with personal notes",
-)
-def get_movies_with_notes(page: int = 1):
-    try:
-        return movie_service.get_movies_with_notes_page(page)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-
-
-@app.get(
     "/movies/notes/search",
     tags=["movies"],
     summary="Search personal movie notes",
@@ -741,18 +679,6 @@ def search_local_movies_by_keyword(
             status_code=400,
             detail=str(error),
         ) from error
-
-
-@app.get(
-    "/movies/favorites",
-    tags=["movies"],
-    summary="List favorite movies",
-)
-def get_favorite_movies(page: int = 1):
-    try:
-        return movie_service.get_favorite_movies_page(page)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
 
 
 @app.get(
@@ -971,121 +897,6 @@ def set_movie_favorite(
     }
 
 
-@app.post(
-    "/movies/{tmdb_id}/keywords/custom",
-    tags=["movies"],
-    summary="Add a custom keyword",
-)
-def add_custom_keyword(
-    tmdb_id: int,
-    request: CustomKeywordRequest,
-):
-    try:
-        keyword = movie_service.add_custom_keyword(
-            tmdb_id,
-            request.name,
-        )
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error),
-        ) from error
-
-    return {
-        "message": "Custom keyword added",
-        "keyword": keyword,
-    }
-
-
-@app.delete(
-    "/movies/{tmdb_id}/keywords/custom/{keyword_id}",
-    tags=["movies"],
-    summary="Remove a custom keyword from one movie",
-)
-def remove_custom_keyword(
-    tmdb_id: int,
-    keyword_id: int,
-):
-    removed = movie_service.remove_custom_keyword(
-        tmdb_id,
-        keyword_id,
-    )
-
-    if not removed:
-        raise HTTPException(
-            status_code=404,
-            detail="Custom keyword link was not found.",
-        )
-
-    return {
-        "message": "Custom keyword removed from this movie"
-    }
-
-
-@app.delete(
-    "/keywords/custom/{keyword_id}",
-    tags=["movies"],
-    summary="Delete a custom keyword from every movie",
-)
-def delete_custom_keyword(keyword_id: int):
-    try:
-        deleted = movie_service.delete_custom_keyword(keyword_id)
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error),
-        ) from error
-
-    if deleted is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Custom keyword was not found.",
-        )
-
-    return {
-        "message": "Custom keyword deleted from every movie",
-        "deleted_keyword": deleted,
-    }
-
-
-@app.put(
-    "/keywords/custom/{keyword_id}",
-    tags=["movies"],
-    summary="Rename or merge a custom keyword globally",
-)
-def rename_custom_keyword(
-    keyword_id: int,
-    request: CustomKeywordRequest,
-):
-    try:
-        renamed = movie_service.rename_custom_keyword(
-            keyword_id,
-            request.name,
-        )
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error),
-        ) from error
-
-    if renamed is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Custom keyword was not found.",
-        )
-
-    message = (
-        "Custom keywords merged globally"
-        if renamed["action"] == "merged"
-        else "Custom keyword renamed globally"
-    )
-
-    return {
-        "message": message,
-        "keyword": renamed,
-    }
-
-
 @app.put(
     "/movies/{tmdb_id}/status",
     tags=["movies"],
@@ -1238,30 +1049,6 @@ def update_search_preference(
     }
 
 
-@app.put(
-    "/search-preferences/{preference_id}/default",
-    tags=["search preferences"],
-    summary="Set the default search preference",
-)
-def set_default_search_preference(preference_id: int):
-    get_search_preference(preference_id)
-
-    try:
-        preference = search_preference_repository.set_default(
-            preference_id
-        )
-    except ValueError as error:
-        raise HTTPException(
-            status_code=400,
-            detail=str(error),
-        ) from error
-
-    return {
-        "message": "Default search preference updated",
-        "preference": preference,
-    }
-
-
 @app.delete(
     "/search-preferences/{preference_id}",
     tags=["search preferences"],
@@ -1402,13 +1189,14 @@ async def upload_entry_banner(request: Request):
         if guessed_ext in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
             ext = guessed_ext
 
+    import anyio
     import hashlib
+
     file_hash = hashlib.sha256(contents).hexdigest()[:16]
     filename = f"{file_hash}{ext}"
     target_path = BANNERS_DIR / filename
     if not target_path.exists():
-        with open(target_path, "wb") as f:
-            f.write(contents)
+        await anyio.to_thread.run_sync(target_path.write_bytes, contents)
     return {"url": f"/banners/{filename}"}
 
 

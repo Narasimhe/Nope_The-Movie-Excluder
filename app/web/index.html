@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="en">
 <head>
+
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#09090b">
@@ -10,8 +11,8 @@
   >
   <title>NOPE</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/styles.css?v=20261022_clean_grey_32">
-  <script src="/static/app.js?v=20261022_clean_grey_32" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261025_zen_125">
+  <script src="/static/app.js?v=20261025_zen_125" defer></script>
 </head>
 <body>
   <div class="site-shell" id="app-shell">
@@ -40,7 +41,7 @@
         </button>
         <button type="button" class="master-tab" data-master-tab="library" id="tab-library">
           <svg class="master-tab-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/></svg>
-          <span class="master-tab-label">PERSONAL LIBRARY</span>
+          <span class="master-tab-label">LIBRARY</span>
         </button>
         <button type="button" class="master-tab" data-master-tab="notes" id="tab-notes">
           <svg class="master-tab-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
@@ -76,84 +77,19 @@
                 <form id="advanced-search-form">
                   <div class="sidebar-search-actions">
                     <button class="see-results-btn" id="run-advanced-search" type="submit">See results</button>
-                    <button class="update-profile-top-btn is-hidden" id="quick-update-profile" type="button" title="Save changes to active profile">Update</button>
-                    <button class="reset-filters-btn" id="reset-filters" type="button" title="Reset all filters">Reset</button>
-                    <button class="refresh-feed-btn" id="refresh-feed" type="button" title="Fetch fresh movies from TMDB">↻</button>
+                    <button class="update-profile-top-btn is-hidden" id="quick-update-profile" type="button" title="Save changes to active profile" style="display:none !important;">Update</button>
+                    <button class="refresh-feed-btn is-hidden" id="refresh-feed" type="button" title="Fetch fresh movies from TMDB" style="display:none !important;">↻</button>
+                  </div>
+
+                  <div class="sidebar-filters-header">
+                    <span class="sidebar-filters-label">FILTERS</span>
+                    <button class="sidebar-reset-link is-dimmed" id="reset-filters" type="button" title="Reset all filters">
+                      <svg class="reset-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                      <span>Reset</span>
+                    </button>
                   </div>
 
                   <div class="filter-pills-bar sidebar-pills-bar" id="filter-pills-bar" role="toolbar" aria-label="Discovery filters">
-                    <!-- 1. Genres -->
-                    <div class="sidebar-accordion-item">
-                      <button class="filter-pill sidebar-accordion-trigger" id="pill-genres" data-target="card-genres" type="button">
-                        <span class="pill-title">
-                          <svg class="pill-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
-                          <span class="pill-text">Genres</span>
-                        </span>
-                        <span class="pill-badge is-hidden" id="badge-genres">0</span>
-                        <span class="pill-caret">▾</span>
-                      </button>
-                      <section class="filter-card is-collapsed" id="card-genres">
-                        <div class="filter-card-heading">
-                          <div class="genre-mode-toggle" id="genre-mode-toggle" role="radiogroup" aria-label="Genre selection mode">
-                            <button type="button" class="genre-mode-btn is-active" data-mode="exclude" id="genre-mode-exclude">Exclude (Default)</button>
-                            <button type="button" class="genre-mode-btn" data-mode="include" id="genre-mode-include">Include</button>
-                          </div>
-                          <!-- Preserved select for test suite assertions -->
-                          <select id="genre-logic" class="is-hidden" style="display:none !important;" aria-label="Match logic">
-                            <option value="or">Any selected</option>
-                            <option value="and">All selected</option>
-                          </select>
-                        </div>
-                        <div class="tri-state-picker" id="genres-picker"></div>
-                        <!-- Hidden legacy elements for programmatic access and test suite compatibility -->
-                        <div class="is-hidden" style="display:none !important;">
-                          <div class="multi-picker" id="include-genres"></div>
-                          <div class="multi-picker" id="exclude-genres"></div>
-                        </div>
-                      </section>
-                    </div>
-
-                    <!-- 2. Rating -->
-                    <div class="sidebar-accordion-item">
-                      <button class="filter-pill sidebar-accordion-trigger" id="pill-rating" data-target="card-rating" type="button">
-                        <span class="pill-title">
-                          <svg class="pill-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                          <span class="pill-text">Rating</span>
-                        </span>
-                        <span class="pill-badge is-hidden" id="badge-rating">0</span>
-                        <span class="pill-caret">▾</span>
-                      </button>
-                      <section class="filter-card is-collapsed" id="card-rating">
-                        <div class="number-grid sidebar-number-grid">
-                          <label>Min rating
-                            <input id="minimum-rating" type="number" min="0" max="10" step="0.5" placeholder="6.0">
-                          </label>
-                          <label>Max rating
-                            <input id="maximum-rating" type="number" min="0" max="10" step="0.5" placeholder="10.0">
-                          </label>
-                        </div>
-                      </section>
-                    </div>
-
-                    <!-- 3. Minimum Votes -->
-                    <div class="sidebar-accordion-item">
-                      <button class="filter-pill sidebar-accordion-trigger" id="pill-votes" data-target="card-votes" type="button">
-                        <span class="pill-title">
-                          <svg class="pill-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
-                          <span class="pill-text">Minimum Votes</span>
-                        </span>
-                        <span class="pill-badge is-hidden" id="badge-votes">0</span>
-                        <span class="pill-caret">▾</span>
-                      </button>
-                      <section class="filter-card is-collapsed" id="card-votes">
-                        <div class="number-grid sidebar-number-grid">
-                          <label>Min votes
-                            <input id="minimum-votes" type="number" min="0" step="10" placeholder="100">
-                          </label>
-                        </div>
-                      </section>
-                    </div>
-
                     <!-- 3. Sort -->
                     <div class="sidebar-accordion-item">
                       <button class="filter-pill sidebar-accordion-trigger" id="pill-sort" data-target="card-sort" type="button">
@@ -186,6 +122,82 @@
                       </section>
                     </div>
 
+                    <!-- 1. Genres -->
+                    <div class="sidebar-accordion-item">
+                      <button class="filter-pill sidebar-accordion-trigger" id="pill-genres" data-target="card-genres" type="button">
+                        <span class="pill-title">
+                          <svg class="pill-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>
+                          <span class="pill-text">Genres</span>
+                        </span>
+                        <span class="pill-badge is-hidden" id="badge-genres">0</span>
+                        <span class="pill-caret">▾</span>
+                      </button>
+                      <section class="filter-card is-collapsed" id="card-genres">
+                        <div class="filter-card-heading" style="display:none !important;">
+                          <div class="genre-mode-toggle" id="genre-mode-toggle" role="radiogroup" aria-label="Genre selection mode">
+                            <button type="button" class="genre-mode-btn is-active" data-mode="exclude" id="genre-mode-exclude">Exclude</button>
+                            <button type="button" class="genre-mode-btn" data-mode="include" id="genre-mode-include">Include</button>
+                          </div>
+                          <!-- Preserved select for test suite assertions -->
+                          <select id="genre-logic" class="is-hidden" style="display:none !important;" aria-label="Match logic">
+                            <option value="or">Any selected</option>
+                            <option value="and">All selected</option>
+                          </select>
+                        </div>
+                        <div class="tri-state-picker" id="genres-picker"></div>
+                        <!-- Hidden legacy elements for programmatic access and test suite compatibility -->
+                        <div class="is-hidden" style="display:none !important;">
+                          <div class="multi-picker" id="include-genres"></div>
+                          <div class="multi-picker" id="exclude-genres"></div>
+                        </div>
+                      </section>
+                    </div>
+
+                    <!-- 2. Rating -->
+                    <div class="sidebar-accordion-item">
+                      <button class="filter-pill sidebar-accordion-trigger" id="pill-rating" data-target="card-rating" type="button">
+                        <span class="pill-title">
+                          <svg class="pill-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                          <span class="pill-text">Rating</span>
+                        </span>
+                        <span class="pill-badge is-hidden" id="badge-rating">0</span>
+                        <span class="pill-caret">▾</span>
+                      </button>
+                      <section class="filter-card is-collapsed" id="card-rating">
+                        <div class="sidebar-range-row">
+                          <label class="compact-input-wrap">
+                            <span class="sr-only">Min rating</span>
+                            <input id="minimum-rating" type="number" min="0" max="10" step="0.5" placeholder="6.0" aria-label="Min rating">
+                          </label>
+                          <span class="range-separator" aria-hidden="true">–</span>
+                          <label class="compact-input-wrap">
+                            <span class="sr-only">Max rating</span>
+                            <input id="maximum-rating" type="number" min="0" max="10" step="0.5" placeholder="10.0" aria-label="Max rating">
+                          </label>
+                        </div>
+                      </section>
+                    </div>
+
+                    <!-- 3. Minimum Votes -->
+                    <div class="sidebar-accordion-item">
+                      <button class="filter-pill sidebar-accordion-trigger" id="pill-votes" data-target="card-votes" type="button">
+                        <span class="pill-title">
+                          <svg class="pill-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+                          <span class="pill-text">Minimum Votes</span>
+                        </span>
+                        <span class="pill-badge is-hidden" id="badge-votes">0</span>
+                        <span class="pill-caret">▾</span>
+                      </button>
+                      <section class="filter-card is-collapsed" id="card-votes">
+                        <div class="number-grid sidebar-number-grid">
+                          <label class="compact-input-wrap">
+                            <span class="sr-only">Min votes</span>
+                            <input id="minimum-votes" type="number" min="0" step="10" placeholder="500" aria-label="Min votes">
+                          </label>
+                        </div>
+                      </section>
+                    </div>
+
                     <!-- 4. Release Year -->
                     <div class="sidebar-accordion-item">
                       <button class="filter-pill sidebar-accordion-trigger" id="pill-year" data-target="card-year" type="button">
@@ -197,12 +209,15 @@
                         <span class="pill-caret">▾</span>
                       </button>
                       <section class="filter-card is-collapsed" id="card-year">
-                        <div class="number-grid sidebar-number-grid">
-                          <label>From
-                            <input id="release-year-from" type="number" min="1880" max="2099" placeholder="Any">
+                        <div class="sidebar-range-row">
+                          <label class="compact-input-wrap">
+                            <span class="sr-only">From year</span>
+                            <input id="release-year-from" type="number" min="1880" max="2099" placeholder="1990" aria-label="From year">
                           </label>
-                          <label>To
-                            <input id="release-year-to" type="number" min="1880" max="2099" placeholder="Any">
+                          <span class="range-separator" aria-hidden="true">–</span>
+                          <label class="compact-input-wrap">
+                            <span class="sr-only">To year</span>
+                            <input id="release-year-to" type="number" min="1880" max="2099" placeholder="2024" aria-label="To year">
                           </label>
                         </div>
                       </section>
@@ -286,13 +301,13 @@
                       <section class="filter-card people-card is-collapsed" id="card-people">
                         <div class="entity-grid sidebar-entity-grid">
                           <div class="entity-picker" data-entity="actors">
-                            <label for="actor-query">Actor</label>
+                            <label for="actor-query" class="sr-only">Actor</label>
                             <input id="actor-query" type="search" placeholder="Type an actor name…" autocomplete="off">
                             <div class="entity-results is-hidden" id="actor-results"></div>
                             <div class="selected-entities" id="selected-actors"></div>
                           </div>
                           <div class="entity-picker" data-entity="directors">
-                            <label for="director-query">Director</label>
+                            <label for="director-query" class="sr-only">Director</label>
                             <input id="director-query" type="search" placeholder="Type a director name…" autocomplete="off">
                             <div class="entity-results is-hidden" id="director-results"></div>
                             <div class="selected-entities" id="selected-directors"></div>
@@ -340,19 +355,16 @@
                         <span class="pill-caret">▾</span>
                       </button>
                       <section class="filter-card personal-filter-card is-collapsed" id="personal-filters">
-                        <div class="status-options chip-cloud">
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="new_discovery" checked> New discovery</label>
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="watch_later" checked> Watch later</label>
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="watched"> Watched</label>
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="rewatch"> Rewatch</label>
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="excluded"> Nope</label>
+                        <div class="status-options status-grid-2x3">
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="new_discovery" checked><span>New discovery</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="watch_later" checked><span>Watch later</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="watched"><span>Watched</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="rewatch"><span>Rewatch</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="excluded"><span>Nope</span></label>
+                          <label class="filter-chip"><input id="include-untracked" type="checkbox" checked><span>Untracked</span></label>
                         </div>
-                        <div class="personal-toggles-row">
+                        <div class="is-hidden" style="display: none !important;">
                           <label class="personal-toggle-pill">
-                            <input id="include-untracked" type="checkbox" checked>
-                            <span>Include untracked</span>
-                          </label>
-                          <label class="personal-toggle-pill is-hidden" style="display: none !important;">
                             <input id="favorite-only" type="checkbox">
                             <span>♥ Favourites only</span>
                           </label>
@@ -373,27 +385,26 @@
                       <section class="filter-card is-collapsed" id="card-profiles">
                         <div class="profile-workshop" id="profile-workshop">
                           <div class="profile-group">
-                            <div class="profile-group-header">
-                              <span class="profile-group-label">Active on Ribbon</span>
-                              <span class="profile-group-count" id="ribbon-slots-count">6/6</span>
-                            </div>
+                            <span class="is-hidden" id="ribbon-slots-count" style="display:none !important;"></span>
                             <div class="profile-chips-cloud" id="ribbon-profiles-cloud"></div>
                           </div>
-                          <div class="profile-group" style="margin-top: 10px;">
-                            <div class="profile-group-header">
-                              <span class="profile-group-label">In Reserve</span>
-                            </div>
-                            <div class="profile-chips-cloud" id="reserve-profiles-cloud"></div>
-                          </div>
+                          <div class="profile-chips-cloud is-hidden" id="reserve-profiles-cloud" style="display:none !important;"></div>
                         </div>
                         <div class="profile-toolbar">
-                          <select id="profile-select" aria-label="Search profiles">
+                          <select id="profile-select" class="is-hidden" style="display:none !important;" aria-label="Search profiles">
                             <option value="">Custom search</option>
                           </select>
-                          <div class="profile-btn-row">
-                            <button id="save-profile" type="button">Save</button>
-                            <button id="update-profile" type="button" disabled>Update</button>
-                            <button class="danger-button" id="delete-profile" type="button" disabled>Delete</button>
+                          <div class="profile-action-wrap" id="profile-action-wrap">
+                            <button class="update-active-preset-link is-hidden" id="quick-update-preset" type="button" style="display:none !important;">
+                              <svg class="preset-action-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                              <span class="preset-action-text" id="quick-update-preset-text">Update active preset</span>
+                            </button>
+                            <button class="save-preset-link" id="save-profile" type="button">
+                              <svg class="preset-action-svg" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                              <span class="preset-action-text">Save current search as preset</span>
+                            </button>
+                            <button id="update-profile" type="button" class="is-hidden" style="display:none !important;" disabled>Update</button>
+                            <button class="danger-button is-hidden" id="delete-profile" type="button" style="display:none !important;" disabled>Delete</button>
                           </div>
                         </div>
                       </section>
@@ -407,51 +418,36 @@
 
         <!-- Personal Library Shelves Pane -->
         <div class="sidebar-pane is-hidden" id="sidebar-pane-library">
-          <nav class="desktop-nav library-shelves-grid" aria-label="Personal library shelves">
-            <button class="nav-link" data-view="new_discovery">
-              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-              <span>New discovery</span>
-            </button>
-            <button class="nav-link" data-view="watched">
-              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-              <span>Watched</span>
-            </button>
-            <button class="nav-link" data-view="watch_later">
-              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <span>Watch later</span>
-            </button>
-            <button class="nav-link" data-view="rewatch">
-              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
-              <span>Rewatch</span>
-            </button>
-            <button class="nav-link is-active" data-view="favorites">
-              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-              <span>Favourites</span>
-            </button>
-            <button class="nav-link" data-view="excluded">
-              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-              <span>Nope</span>
-            </button>
-            <button class="nav-link library-movie-notes-link" data-view="movie-notes">
-              <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 3v18"/><path d="M3 7.5h4"/><path d="M3 12h18"/><path d="M3 16.5h4"/><path d="M17 3v18"/><path d="M17 7.5h4"/><path d="M17 16.5h4"/></svg>
-              <span>Movie Notes</span>
-            </button>
-          </nav>
-
           <section class="library-filters-workspace" id="library-filters-workspace" aria-label="Library filters">
-            <div class="library-search-actions">
-              <div class="library-quick-search-wrap">
-                <input id="library-filter-query" type="search" placeholder="Search library (or title:, plot:)…" title="Search across your library, or use title:, plot: prefixes" autocomplete="off">
-              </div>
-              <button class="reset-filters-btn" id="reset-library-filters" type="button" title="Reset shelf filters">Reset</button>
-            </div>
-            <div class="library-search-scope" id="library-search-scope" role="group" aria-label="Search scope">
-              <button type="button" class="scope-btn is-active" id="scope-btn-all" data-scope="all">All Shelves</button>
-              <button type="button" class="scope-btn" id="scope-btn-shelf" data-scope="shelf">Current Shelf</button>
+            <div class="sidebar-filters-header">
+              <span class="sidebar-filters-label">FILTERS</span>
+              <button class="sidebar-reset-link is-dimmed" id="reset-library-filters" type="button" title="Reset shelf filters">
+                <svg class="reset-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                <span>Reset</span>
+              </button>
             </div>
 
             <div class="filter-pills-bar sidebar-pills-bar" id="library-pills-bar" role="toolbar" aria-label="Library shelf filters">
-              <!-- 1. Genres -->
+              <!-- 1. Sort Results -->
+              <div class="sidebar-accordion-item">
+                <button class="filter-pill sidebar-accordion-trigger" id="pill-lib-sort" data-target="card-lib-sort" type="button">
+                  <span class="pill-title">
+                    <svg class="pill-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>
+                    <span class="pill-text">Sort Results</span>
+                  </span>
+                  <span class="pill-caret">▾</span>
+                </button>
+                <section class="filter-card is-collapsed" id="card-lib-sort">
+                  <div class="sort-chip-cloud" id="lib-sort-cloud" role="radiogroup" aria-label="Sort order">
+                    <button type="button" class="sort-chip filter-chip is-active" data-sort="recent">Recently updated</button>
+                    <button type="button" class="sort-chip filter-chip" data-sort="year_desc">Newest first</button>
+                    <button type="button" class="sort-chip filter-chip" data-sort="year_asc">Oldest first</button>
+                    <button type="button" class="sort-chip filter-chip" data-sort="title_asc">Title A–Z</button>
+                  </div>
+                </section>
+              </div>
+
+              <!-- 2. Genres -->
               <div class="sidebar-accordion-item">
                 <button class="filter-pill sidebar-accordion-trigger" id="pill-lib-genres" data-target="card-lib-genres" type="button">
                   <span class="pill-title">
@@ -466,8 +462,6 @@
                 </section>
               </div>
 
-
-
               <!-- 3. Release Year -->
               <div class="sidebar-accordion-item">
                 <button class="filter-pill sidebar-accordion-trigger" id="pill-lib-year" data-target="card-lib-year" type="button">
@@ -479,12 +473,15 @@
                   <span class="pill-caret">▾</span>
                 </button>
                 <section class="filter-card is-collapsed" id="card-lib-year">
-                  <div class="number-grid sidebar-number-grid">
-                    <label>From
-                      <input id="lib-year-from" type="number" min="1880" max="2099" placeholder="Any">
+                  <div class="sidebar-range-row">
+                    <label class="compact-input-wrap">
+                      <span class="sr-only">From year</span>
+                      <input id="lib-year-from" type="number" min="1880" max="2099" placeholder="1990" aria-label="From year">
                     </label>
-                    <label>To
-                      <input id="lib-year-to" type="number" min="1880" max="2099" placeholder="Any">
+                    <span class="range-separator" aria-hidden="true">-</span>
+                    <label class="compact-input-wrap">
+                      <span class="sr-only">To year</span>
+                      <input id="lib-year-to" type="number" min="1880" max="2099" placeholder="2026" aria-label="To year">
                     </label>
                   </div>
                 </section>
@@ -501,11 +498,13 @@
                   <span class="pill-caret">▾</span>
                 </button>
                 <section class="filter-card is-collapsed" id="card-lib-keywords">
-                  <div class="entity-picker" data-entity="lib-keywords">
-                    <label for="lib-keyword-query" class="sr-only">Topic or trope</label>
-                    <input id="lib-keyword-query" type="search" placeholder="Type a theme (e.g. heist)…" autocomplete="off">
-                    <div class="entity-results is-hidden" id="lib-keyword-results"></div>
-                    <div class="selected-entities" id="selected-lib-keywords"></div>
+                  <div class="entity-grid sidebar-entity-grid">
+                    <div class="entity-picker" data-entity="lib-keywords">
+                      <label for="lib-keyword-query" class="sr-only">Topic or trope</label>
+                      <input id="lib-keyword-query" type="search" placeholder="Type a theme (e.g. heist, dystopia)…" autocomplete="off">
+                      <div class="entity-results is-hidden" id="lib-keyword-results"></div>
+                      <div class="selected-entities" id="selected-lib-keywords"></div>
+                    </div>
                   </div>
                 </section>
               </div>
@@ -522,17 +521,17 @@
                 </button>
                 <section class="filter-card is-collapsed" id="card-lib-people">
                   <div class="entity-grid sidebar-entity-grid">
-                    <div class="entity-picker" data-entity="lib-directors">
-                      <label for="lib-director-query">Directors</label>
-                      <input id="lib-director-query" type="search" placeholder="Search director…" autocomplete="off">
-                      <div class="entity-results is-hidden" id="lib-director-results"></div>
-                      <div class="selected-entities" id="selected-lib-directors"></div>
-                    </div>
                     <div class="entity-picker" data-entity="lib-actors">
-                      <label for="lib-actor-query">Actors</label>
-                      <input id="lib-actor-query" type="search" placeholder="Search actor…" autocomplete="off">
+                      <label for="lib-actor-query" class="sr-only">Actors</label>
+                      <input id="lib-actor-query" type="search" placeholder="Type an actor name…" autocomplete="off">
                       <div class="entity-results is-hidden" id="lib-actor-results"></div>
                       <div class="selected-entities" id="selected-lib-actors"></div>
+                    </div>
+                    <div class="entity-picker" data-entity="lib-directors">
+                      <label for="lib-director-query" class="sr-only">Directors</label>
+                      <input id="lib-director-query" type="search" placeholder="Type a director name…" autocomplete="off">
+                      <div class="entity-results is-hidden" id="lib-director-results"></div>
+                      <div class="selected-entities" id="selected-lib-directors"></div>
                     </div>
                   </div>
                 </section>
@@ -550,25 +549,6 @@
                 </button>
                 <section class="filter-card is-collapsed" id="card-lib-languages">
                   <div class="chip-cloud" id="lib-languages-cloud"></div>
-                </section>
-              </div>
-
-              <!-- 7. Sort Results -->
-              <div class="sidebar-accordion-item">
-                <button class="filter-pill sidebar-accordion-trigger" id="pill-lib-sort" data-target="card-lib-sort" type="button">
-                  <span class="pill-title">
-                    <svg class="pill-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/></svg>
-                    <span class="pill-text">Sort Results</span>
-                  </span>
-                  <span class="pill-caret">▾</span>
-                </button>
-                <section class="filter-card is-collapsed" id="card-lib-sort">
-                  <div class="chip-cloud" id="lib-sort-cloud" role="radiogroup" aria-label="Sort order">
-                    <button type="button" class="filter-chip is-active" data-sort="recent">Recently updated</button>
-                    <button type="button" class="filter-chip" data-sort="year_desc">Newest first</button>
-                    <button type="button" class="filter-chip" data-sort="year_asc">Oldest first</button>
-                    <button type="button" class="filter-chip" data-sort="title_asc">Title A–Z</button>
-                  </div>
                 </section>
               </div>
             </div>
@@ -632,21 +612,84 @@
 
         <div class="discover-canvas-header" id="discover-canvas-header">
           <div class="discover-toolbar-row">
-            <form class="search-form toolbar-search" id="movie-search">
-              <label class="sr-only" for="search-query">Search for a movie</label>
-              <span class="search-icon" aria-hidden="true"></span>
-              <input id="search-query" name="query" type="search" placeholder="Search any movie..." autocomplete="off" required>
-              <button type="submit">Search</button>
-            </form>
-            <button type="button" class="nope-mode-toggle" id="nope-mode-toggle" aria-pressed="false" title="Toggle Nope Mode (or press N): click any movie to immediately Nope it">
-              <span class="nope-indicator" aria-hidden="true">✕</span>
-              <span class="nope-label">Nope Mode</span>
-              <span class="nope-undo-counter is-hidden" id="nope-undo-counter" title="Press Ctrl+Z to undo (up to 3)">Undo (0)</span>
-            </button>
+            <div class="discover-search-cluster">
+              <form class="search-form toolbar-search" id="movie-search">
+                <label class="sr-only" for="search-query">Search for a movie</label>
+                <span class="search-icon" aria-hidden="true"></span>
+                <input id="search-query" name="query" type="search" placeholder="Search any movie..." autocomplete="off" required>
+                <button type="submit" class="is-hidden" style="display:none !important;" tabindex="-1" aria-hidden="true">Search</button>
+              </form>
+            </div>
             <span class="result-count" id="result-count" aria-live="polite">0 movies</span>
           </div>
 
           <div class="profile-ribbon" id="profile-ribbon" role="toolbar" aria-label="Quick Search Profiles"></div>
+        </div>
+
+        <div class="library-canvas-header is-hidden" id="library-canvas-header">
+          <div class="library-toolbar-row">
+            <div class="library-search-cluster">
+              <form class="search-form toolbar-search library-toolbar-search" id="library-search-form" onsubmit="return false;">
+                <label class="sr-only" for="library-filter-query">Search library</label>
+                <span class="search-icon" aria-hidden="true"></span>
+                <input id="library-filter-query" type="search" placeholder="Search in Watched…" title="Search across your library" autocomplete="off">
+                <div class="library-search-pills" id="library-search-pills">
+                  <button type="button" class="library-scope-toggle-btn" id="library-scope-toggle" title="Search scope: Click to toggle (This shelf vs All shelves)" aria-label="Search scope">
+                    <span class="library-scope-icon-wrap" id="library-scope-icon" aria-hidden="true"><svg class="scope-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="10" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>
+                    <span id="library-scope-text">This shelf</span>
+                  </button>
+                  <button type="button" class="library-target-toggle-btn" id="library-target-toggle" title="Search field: Click to cycle (All -> Title -> Notes)" aria-label="Search field">
+                    <span class="library-target-icon-wrap" id="library-target-icon" aria-hidden="true"><svg class="target-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg></span>
+                    <span id="library-target-text">All</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+            <span class="shelf-movie-count" id="shelf-count" aria-live="polite">0 movies</span>
+          </div>
+
+          <div class="library-shelf-ribbon" id="library-shelf-ribbon" role="toolbar" aria-label="Personal Library Shelves">
+            <button type="button" class="ribbon-chip nav-link" data-view="new_discovery">
+              <svg class="shelf-chip-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+              <span>New discovery</span>
+            </button>
+            <button type="button" class="ribbon-chip nav-link" data-view="watch_later">
+              <svg class="shelf-chip-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>Watch later</span>
+            </button>
+            <button type="button" class="ribbon-chip nav-link is-active" data-view="watched">
+              <svg class="shelf-chip-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span>Watched</span>
+            </button>
+            <button type="button" class="ribbon-chip nav-link" data-view="rewatch">
+              <svg class="shelf-chip-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+              <span>Rewatch</span>
+            </button>
+            <button type="button" class="ribbon-chip nav-link" data-view="excluded">
+              <svg class="shelf-chip-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              <span>Nope</span>
+            </button>
+
+            <span class="shelf-ribbon-divider" aria-hidden="true"></span>
+
+            <button type="button" class="ribbon-chip nav-link shelf-notes-lens-btn" id="shelf-notes-lens-btn" data-view="movie-notes" title="Personal Notes (Click to toggle notes lens; double click to exit)" aria-label="Movie Notes">
+              <svg class="shelf-note-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+            </button>
+
+            <button type="button" class="ribbon-chip nav-link shelf-favorites-btn" data-view="favorites" title="Favourites (Hall of Fame)" aria-label="Favourites">
+              <svg class="shelf-heart-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+              </svg>
+            </button>
+
+            <!-- Parked Browse Mode Toggle (Dormant until location decided) -->
+            <div class="shelf-view-toggle is-hidden" id="shelf-view-toggle" style="display:none !important;" aria-hidden="true">
+              <button type="button" class="view-toggle-btn is-active" id="view-mode-paged" data-mode="paged" tabindex="-1">Pages</button>
+              <button type="button" class="view-toggle-btn" id="view-mode-continuous" data-mode="continuous" tabindex="-1">Continuous</button>
+            </div>
+          </div>
         </div>
 
         <button class="return-to-origin is-hidden" id="return-to-origin" type="button"></button>
@@ -668,25 +711,25 @@
 
         <div class="section-heading is-hidden" id="section-heading-block">
           <div class="section-heading-main">
-            <h2 id="library-title">Favourites</h2>
+            <h2 id="library-title"></h2>
             <p class="section-kicker is-hidden" id="library-kicker" style="display:none !important;">Personal library</p>
             <p id="library-description" class="is-hidden" style="display:none !important;">Movies waiting for your decision.</p>
           </div>
           <div class="section-heading-meta">
-            <div class="shelf-view-toggle is-hidden" id="shelf-view-toggle" role="group" aria-label="Browse mode">
-              <button type="button" class="view-toggle-btn is-active" id="view-mode-paged" data-mode="paged" title="Paginated view">
-                <span>Pages</span>
-              </button>
-              <button type="button" class="view-toggle-btn" id="view-mode-continuous" data-mode="continuous" title="Continuous scroll view">
-                <span>Continuous</span>
-              </button>
-            </div>
-            <span class="shelf-movie-count" id="shelf-count"></span>
+            <span class="shelf-movie-count" id="legacy-shelf-count" style="display:none !important;"></span>
           </div>
         </div>
 
         <div class="notice is-hidden" id="notice" role="status"></div>
 
+                <!-- Floating Nope Mode Indicator (Activated via 'X' key) -->
+        <div class="nope-mode-floating-banner is-hidden" id="nope-mode-toggle" role="status" aria-live="polite">
+          <span class="nope-indicator" aria-hidden="true">✕</span>
+          <span class="nope-label">Nope Mode Active</span>
+          <span class="nope-banner-desc">Click any poster to exclude</span>
+          <span class="nope-undo-counter is-hidden" id="nope-undo-counter" title="Press Ctrl+Z to undo (up to 3)">Undo (0)</span>
+          <span class="nope-banner-hint">Esc or Alt+N to exit</span>
+        </div>
         <div class="movie-grid is-compact" id="movie-grid" aria-live="polite"></div>
 
         <nav class="pagination is-hidden" id="pagination" aria-label="Movie result pages"></nav>
@@ -929,7 +972,7 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
     <header class="detail-page-header">
       <div class="detail-header-left">
         <button class="detail-back" id="dialog-close" type="button">
-          <span aria-hidden="true">←</span>
+          <svg class="detail-back-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
           <span id="detail-back-label">Back to movies</span>
         </button>
         <nav class="detail-trail" id="detail-trail" aria-label="Movie exploration trail"></nav>
@@ -944,8 +987,6 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
           Next <span aria-hidden="true">›</span>
         </button>
       </div>
-
-      <span class="detail-brand">NOPE</span>
     </header>
 
     <div class="dialog-loading" id="dialog-loading">
@@ -960,67 +1001,94 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
         </div>
 
         <div class="dialog-body">
-          <p class="dialog-kicker" id="dialog-kicker">Movie details</p>
-          <h1 id="dialog-title"></h1>
+          <p class="dialog-kicker" id="dialog-kicker">
+            <span class="kicker-icon" aria-hidden="true">✦</span>
+            <span class="kicker-text">Movie details</span>
+          </p>
+          <div class="detail-title-wrap">
+            <h1 id="dialog-title"></h1>
+            <button class="favorite-button" id="favorite-button" type="button" aria-label="Add to favourites" title="Toggle Favourite (F)">
+              <span aria-hidden="true">♥</span>
+            </button>
+          </div>
           <div class="detail-meta-row">
             <div class="dialog-meta" id="dialog-meta"></div>
             <div class="tag-list dialog-genres" id="dialog-genres"></div>
           </div>
           <p class="dialog-overview" id="dialog-overview"></p>
           <div class="credits-lines">
-            <p><strong>Director:</strong> <span id="dialog-directors">—</span></p>
-            <p><strong>Actors:</strong> <span id="dialog-actors">—</span></p>
+            <p><span class="credit-label">Director:</span> <span id="dialog-directors">—</span></p>
+            <p><span class="credit-label">Actors:</span> <span id="dialog-actors">—</span></p>
           </div>
 
-          <div class="personal-panel">
-            <div class="status-control">
-              <label for="status-select" title="Shortcuts: U Untracked · D New Discovery · L Watch Later · W Watched · R Rewatch · X Nope · F Favourite">Status</label>
-              <div class="select-row">
-                <select id="status-select" title="Shortcuts: U (Untracked), D (New discovery), L (Watch later), W (Watched), R (Rewatch), X (Nope)">
-                  <option value="untracked">Untracked (U)</option>
-                  <option value="new_discovery">New discovery (D)</option>
-                  <option value="watch_later">Watch later (L)</option>
-                  <option value="watched">Watched (W)</option>
-                  <option value="rewatch">Rewatch (R)</option>
-                  <option value="excluded">Nope (X)</option>
-                </select>
-                <button id="save-status" type="button">Save</button>
-                <button class="favorite-button" id="favorite-button" type="button" aria-label="Add to favourites" title="Toggle Favourite (F)">
-                  <span aria-hidden="true">♥</span>
-                </button>
-              </div>
-              <p class="inline-feedback" id="status-feedback" aria-live="polite"></p>
+          <!-- Unified 2-Tier Action Cockpit -->
+          <div class="personal-panel" data-role="action-cockpit" id="detail-action-cockpit">
+            <!-- Tier 1: Instant-toggle Shelf Pills -->
+            <div class="cockpit-shelf-row" id="cockpit-shelf-row" role="radiogroup" aria-label="Movie shelf status">
+              <button type="button" class="cockpit-shelf-pill" data-status="new_discovery" title="Shortcut: D">
+                <svg class="cockpit-pill-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                <span>Discovery</span>
+              </button>
+              <button type="button" class="cockpit-shelf-pill" data-status="watch_later" title="Shortcut: L">
+                <svg class="cockpit-pill-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>Watch later</span>
+              </button>
+              <button type="button" class="cockpit-shelf-pill" data-status="watched" title="Shortcut: W">
+                <svg class="cockpit-pill-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span>Watched</span>
+              </button>
+              <button type="button" class="cockpit-shelf-pill" data-status="rewatch" title="Shortcut: R">
+                <svg class="cockpit-pill-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+                <span>Rewatch</span>
+              </button>
+              <button type="button" class="cockpit-shelf-pill" data-status="excluded" title="Shortcut: X">
+                <svg class="cockpit-pill-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                <span>Nope</span>
+              </button>
             </div>
+
+            <!-- Invisible compatibility hooks for tests & shortcuts -->
+            <div class="is-hidden" style="display:none !important;">
+              <select id="status-select" title="Shortcuts: U, D, L, W, R, X">
+                <option value="untracked">Untracked (U)</option>
+                <option value="new_discovery">New discovery (D)</option>
+                <option value="watch_later">Watch later (L)</option>
+                <option value="watched">Watched (W)</option>
+                <option value="rewatch">Rewatch (R)</option>
+                <option value="excluded">Nope (X)</option>
+              </select>
+              <button id="save-status" type="button">Save</button>
+              <button id="clear-verdict" type="button">Clear</button>
+            </div>
+
+            <div class="cockpit-divider" aria-hidden="true"></div>
+
+            <!-- Tier 2: 10-Star Rating Control -->
+            <div class="cockpit-rating-row">
+              <div class="star-rating" id="verdict-stars" role="radiogroup" aria-label="My verdict out of 10"></div>
+              <span class="verdict-score-badge is-hidden" id="verdict-score-badge">0.0</span>
+            </div>
+
+            <p class="inline-feedback" id="status-feedback" aria-live="polite"></p>
+            <p class="inline-feedback" id="verdict-feedback" aria-live="polite"></p>
           </div>
 
-          <section class="verdict-panel">
-            <div class="panel-heading"><h2>My Verdict</h2><button id="clear-verdict" type="button">Clear</button></div>
-            <div class="star-rating" id="verdict-stars" role="radiogroup" aria-label="My verdict out of 10"></div>
-            <p class="inline-feedback" id="verdict-feedback" aria-live="polite"></p>
-          </section>
-
-          <details class="notes-panel detail-notes" id="notes-panel" open>
-            <summary>
-              <span>Personal Memory</span>
-              <span class="notes-header-actions">
-                <span class="notes-status-indicator" id="notes-feedback" aria-live="polite"></span>
-                <span class="summary-action">Minimize</span>
-              </span>
-            </summary>
+          <!-- Zen Notes Canvas -->
+          <div class="detail-notes-card" id="notes-panel">
+            <div class="detail-notes-header">
+              <span class="notes-status-indicator" id="notes-feedback" aria-live="polite"></span>
+            </div>
             <label class="sr-only" for="movie-notes">Movie notes</label>
             <textarea
               id="movie-notes"
-              rows="6"
-              placeholder="Private thoughts, observations, or anything worth remembering..."
+              rows="4"
+              placeholder="Thoughts, observations, or anything worth remembering..."
             ></textarea>
-          </details>
+          </div>
 
           <section class="related-panel" id="related-panel">
             <div class="related-heading">
-              <div>
-                <p class="filter-kicker">Keep exploring</p>
-                <h2>Related Movies</h2>
-              </div>
+              <h2>Related Movies</h2>
               <button class="related-familiar-toggle is-hidden" id="related-familiar-toggle" type="button"></button>
             </div>
             <div class="related-movies" id="related-movies" aria-live="polite"></div>

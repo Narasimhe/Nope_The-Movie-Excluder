@@ -52,7 +52,7 @@ def get_connection() -> sqlite3.Connection:
 
 
 def _create_user_movie_data_table(connection: sqlite3.Connection) -> None:
-    connection.execute(
+    connection.executescript(
         f"""
         CREATE TABLE IF NOT EXISTS user_movie_data (
             tmdb_id INTEGER PRIMARY KEY,
@@ -79,7 +79,10 @@ def _create_user_movie_data_table(connection: sqlite3.Connection) -> None:
                 ),
             updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (tmdb_id) REFERENCES movies (tmdb_id)
-        )
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_user_movie_status
+        ON user_movie_data (status, updated_at DESC);
         """
     )
 
@@ -207,6 +210,15 @@ def _create_movie_metadata_tables(
                 REFERENCES movies (tmdb_id)
                 ON DELETE CASCADE
         );
+
+        CREATE INDEX IF NOT EXISTS idx_movie_keywords_keyword
+        ON movie_keywords (keyword_id);
+
+        CREATE INDEX IF NOT EXISTS idx_movie_genres_genre
+        ON movie_genres (tmdb_genre_id);
+
+        CREATE INDEX IF NOT EXISTS idx_movie_credits_person
+        ON movie_credits (tmdb_person_id);
         """
     )
 
@@ -470,6 +482,8 @@ def _migrate_legacy_user_movie_data(
 
 def initialize_database() -> None:
     with get_connection() as connection:
+        connection.execute("PRAGMA journal_mode = WAL")
+        connection.execute("PRAGMA synchronous = NORMAL")
         connection.execute(
             """
             CREATE TABLE IF NOT EXISTS movies (

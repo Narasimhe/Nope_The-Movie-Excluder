@@ -132,13 +132,6 @@ class GeneralEntryRepository:
             return None
         return self.get_entry(entry_id)
 
-    def count_drafts(self) -> int:
-        with get_connection() as connection:
-            row = connection.execute(
-                "SELECT COUNT(*) FROM general_entries WHERE is_deleted = 0 AND status = 'draft'"
-            ).fetchone()
-            return row[0] if row else 0
-
     def delete_entry(self, entry_id: int) -> bool:
         self._validate_entry_id(entry_id)
         with get_connection() as connection:

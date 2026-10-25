@@ -142,21 +142,6 @@ class SearchPreferenceRepository:
 
         return self._row_to_preference(row)
 
-    def get_preference_by_name(self, name: str) -> dict | None:
-        cleaned_name = self._clean_name(name)
-
-        with get_connection() as connection:
-            row = connection.execute(
-                """
-                SELECT *
-                FROM search_preferences
-                WHERE name = ? COLLATE NOCASE
-                """,
-                (cleaned_name,),
-            ).fetchone()
-
-        return self._row_to_preference(row)
-
     def get_default_preference(self) -> dict | None:
         with get_connection() as connection:
             row = connection.execute(

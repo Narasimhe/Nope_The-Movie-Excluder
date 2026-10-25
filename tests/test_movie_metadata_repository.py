@@ -41,6 +41,13 @@ class MovieMetadataRepositoryTests(unittest.TestCase):
 
         self.repository = MovieMetadataRepository()
 
+    def _custom_keywords(self, tmdb_id: int) -> list[dict]:
+        return [
+            keyword
+            for keyword in self.repository.get_movie_keywords(tmdb_id)
+            if keyword["is_custom"]
+        ]
+
     def test_genres_have_a_many_to_many_relationship(self) -> None:
         science_fiction = {"id": 878, "name": "Science Fiction"}
         drama = {"id": 18, "name": "Drama"}
@@ -198,11 +205,11 @@ class MovieMetadataRepositoryTests(unittest.TestCase):
 
         self.assertTrue(removed)
         self.assertEqual(
-            self.repository.get_custom_keywords(101),
+            self._custom_keywords(101),
             [],
         )
         self.assertEqual(
-            len(self.repository.get_custom_keywords(202)),
+            len(self._custom_keywords(202)),
             1,
         )
 
@@ -220,11 +227,11 @@ class MovieMetadataRepositoryTests(unittest.TestCase):
         self.assertEqual(deleted["name"], "cold ambience")
         self.assertEqual(deleted["affected_movie_count"], 2)
         self.assertEqual(
-            self.repository.get_custom_keywords(101),
+            self._custom_keywords(101),
             [],
         )
         self.assertEqual(
-            self.repository.get_custom_keywords(202),
+            self._custom_keywords(202),
             [],
         )
 
@@ -264,11 +271,11 @@ class MovieMetadataRepositoryTests(unittest.TestCase):
         )
         self.assertEqual(renamed["affected_movie_count"], 2)
         self.assertEqual(
-            self.repository.get_custom_keywords(101)[0]["name"],
+            self._custom_keywords(101)[0]["name"],
             "wintry atmosphere",
         )
         self.assertEqual(
-            self.repository.get_custom_keywords(202)[0]["name"],
+            self._custom_keywords(202)[0]["name"],
             "wintry atmosphere",
         )
 
@@ -300,10 +307,10 @@ class MovieMetadataRepositoryTests(unittest.TestCase):
         self.assertEqual(merged["affected_movie_count"], 2)
 
         first_movie_keywords = (
-            self.repository.get_custom_keywords(101)
+            self._custom_keywords(101)
         )
         second_movie_keywords = (
-            self.repository.get_custom_keywords(202)
+            self._custom_keywords(202)
         )
 
         self.assertEqual(len(first_movie_keywords), 1)

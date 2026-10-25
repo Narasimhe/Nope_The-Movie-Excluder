@@ -181,9 +181,6 @@ class GeneralEntryRepositoryTests(unittest.TestCase):
         self.assertEqual(draft_list["total_results"], 1)
         self.assertEqual(draft_list["results"][0]["title"], "Draft Essay")
 
-        # Count drafts
-        self.assertEqual(self.repository.count_drafts(), 1)
-
         # Tags summary includes draft count
         summary = self.repository.get_tags_summary()
         self.assertEqual(summary["draft_entries"], 1)
@@ -194,8 +191,7 @@ class GeneralEntryRepositoryTests(unittest.TestCase):
         self.assertIsNotNone(promoted)
         self.assertEqual(promoted["status"], "published")
 
-        # Now published count is 2 and draft count is 0
-        self.assertEqual(self.repository.count_drafts(), 0)
+        # Now published count is 2
         self.assertEqual(self.repository.list_entries()["total_results"], 2)
 
 

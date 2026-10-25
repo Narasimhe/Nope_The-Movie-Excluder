@@ -183,7 +183,7 @@ class MovieServiceMetadataIntegrationTests(unittest.TestCase):
 
         self.assertTrue(removed)
         self.assertEqual(
-            self.metadata_repository.get_custom_keywords(329865),
+            [k for k in self.metadata_repository.get_movie_keywords(329865) if k["is_custom"]],
             [],
         )
 
