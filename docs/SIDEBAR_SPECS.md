@@ -106,21 +106,29 @@
 ### 3. Category Accordion Headers (Collapsed by Default)
 - **Container Item**: `border: none; border-bottom: none; margin-bottom: 0; padding: 0; width: 100%;`.
 - **Trigger Button**:
-  - `background: transparent; border: none; padding: 10px 0; width: 100%; display: flex; justify-content: space-between; align-items: center; cursor: pointer;`.
-  - Left side: `14px` icon (`#9CA3AF`) + `13px` title (`#D1D5DB`, regular weight `400`).
+  - `background: transparent; border: none; padding: 8px 0; width: 100%; display: flex; justify-content: space-between; align-items: center; cursor: pointer;`.
+  - Left side: `14px` icon (`#8E8468`, muted antique gold/grey) + `13px` title (`#D1D5DB`, medium weight `500`).
   - Right side: Dim chevron `▾` (`#6B7280`, `11px`).
   - Left alignment: Pixel 0 of content area (flush with `FILTERS` and left edge of `See results`).
   - Yellow notification numbers (`.pill-badge`) are completely hidden.
 - **Default State**: All 11 sections start **COLLAPSED** on page load (`display: none !important;`). Only expands on user click.
-- **Hover State**: No rectangular background box; text brightens to `#FFFFFF`, icon to `#E5E7EB`.
-- **Open State (`.is-open`)**: No rectangular background box; text `#FFFFFF` (medium weight `500`), icon lights up in warm gold `#FACC15`, chevron rotates 180° to `▴`.
+- **Hover State**: No rectangular background box; text brightens to `#FFFFFF`, icon to `#DEC68B`.
+- **Open State (`.is-open`)**: No rectangular background box; text `#FFFFFF` (medium weight `500`), icon stays subtle antique gold `#8E8468`, chevron rotates 180° to `▴` (`#9CA3AF`).
 
-### 4. Unified Flat Zen Pills (Sort, Genres, Languages, Countries, Library Status, Presets)
+### 4. Unified Flat Zen Pills & Tri-State Mechanic
 - **Flat Surface**: All `box-shadow` (including inset) and gradients removed; 100% flat surface.
 - **Geometry**: `border-radius: 999px`, `height: 28px`, `padding: 0 10px`, `font-size: 12px`.
-- **Default (Unselected)**: `background: rgba(255, 255, 255, 0.02)`, `border: 1px solid rgba(255, 255, 255, 0.08)`, `color: #9CA3AF`.
-- **Included / Active (Gold)**: `background: rgba(250, 204, 21, 0.05); border: 1px solid rgba(250, 204, 21, 0.40); color: #FACC15; box-shadow: none;`
-- **Excluded (Crimson)**: `background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.40); color: #F87171; box-shadow: none;`
+- **State 0 — Neutral (Default)**: `background: rgba(255, 255, 255, 0.02)`, `border: 1px solid rgba(255, 255, 255, 0.08)`, `color: #9CA3AF`. No prefix.
+- **State 1 — Included (`+`)**: `background: rgba(212, 175, 55, 0.06)`, `border: 1px solid rgba(212, 175, 55, 0.32)`.
+  - **Split Contrast**: Prefix `+` in warm gold `#D4AF37` (font-weight 600), label text in soft cream `#E6D5B8`.
+- **State 2 — Excluded (`-`)**: `background: rgba(190, 80, 80, 0.06)`, `border: 1px solid rgba(190, 80, 80, 0.30)`.
+  - **Split Contrast**: Prefix `-` in dusty rose `#D06B6B` (font-weight 600), label text in muted rose-grey `#D8A8A8`.
+- **3-State Cycle Interaction**:
+  - Regular click: `Neutral (off)` $\rightarrow$ `Included (+)` $\rightarrow$ `Excluded (-)` $\rightarrow$ `Neutral (off)`.
+  - Power-user shortcut: Alt-click or Right-click toggles straight to `Excluded (-)` / `Neutral (off)`.
+  - Applied to: **Genres**, **Languages**, **Countries**.
+- **2-State Single-Select Radio**: **Sort Results** (Warm gold active, no `+` symbol).
+- **2-State Multi-Select Toggle**: **Library Status** (Warm gold active, 50/50 2-column grid, no `+` symbol).
 
 ### 5. Sort Results
 - **Layout**: 50/50 2-column grid (`grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px 0;`).
@@ -132,19 +140,20 @@
   - **Languages**: Default top 8 (English, French, Spanish, Korean, Japanese, German, Italian, Hindi).
   - All 35+ non-primary countries and languages remain cleanly accessible via the `+` chip-adder button.
 - **Inline Dismiss Action (`.chip-unpin`)**:
-  - Reveals a subtle inline `×` on hover (`opacity: 0.7`, brightening to `1.0` and `#F87171` on hover).
+  - Reveals a subtle inline `×` on hover (`opacity: 0.7`, brightening to `1.0` and `#CE8484` on hover).
   - `background: transparent; border: none; padding: 0; margin-left: 5px;` (zero circular grey button background).
   - Dismissing any chip cleanly hides it from the default cloud.
 
 ### 7. Clean Keyword & Theme Tag Pills
 - **Geometry**: Height `28px`, font size `12px`, padding `0 10px`, `border-radius: 999px`.
-- **Surface**: Matches the unified flat active gold (`rgba(250, 204, 21, 0.05)`) or excluded crimson (`rgba(239, 68, 68, 0.05)`).
-- **Remove Button**: Murky grey circle removed (`background: transparent; border: none; padding: 0; margin-left: 4px;`). Inline glyph `×` with `opacity: 0.6` brightening to `1.0` and `#FACC15` / `#F87171` on hover.
+- **Surface**: Matches the unified flat active gold (`rgba(212, 175, 55, 0.06)`) or excluded rose (`rgba(190, 80, 80, 0.06)`).
+- **Split Contrast**: Prefix `+`/`-` in `#D4AF37` / `#D06B6B`, label text in `#E6D5B8` / `#D8A8A8`.
+- **Remove Button**: Murky grey circle removed (`background: transparent; border: none; padding: 0; margin-left: 4px;`). Inline glyph `×` with `opacity: 0.6` brightening to `1.0` and `#DEC68B` / `#CE8484` on hover.
 
 ### 8. Numeric & Range Inputs (Rating, Minimum Votes, Release Year)
 - **Geometry**: Compact `32px` uniform height, `6px` border-radius.
 - **Surface**: `background: rgba(255, 255, 255, 0.03)`, `border: 1px solid rgba(255, 255, 255, 0.08)`, `color: #D1D5DB`, `font-size: 12px`.
-- **Focus**: `border-color: rgba(250, 204, 21, 0.5)`, `background: rgba(255, 255, 255, 0.05)`, outline removed.
+- **Focus**: `border-color: rgba(212, 175, 55, 0.4)`, `background: rgba(255, 255, 255, 0.05)`, outline removed.
 - **Placeholders**: In-box faded placeholders (`#6B7280`).
 - **Spinner Arrows**: Removed via `-webkit-appearance: none` and `-moz-appearance: textfield`.
 - **Range Rows (Rating, Release Year)**: 2 inputs aligned on one row with centered `–` separator (`#6B7280`).
@@ -152,25 +161,25 @@
 ### 9. 22px Icon-Only Poster Corner Badges
 - **Container**: Standardized `22px × 22px` rounded-square badge (`background: rgba(10, 10, 12, 0.88)`, `border: 1px solid rgba(255, 255, 255, 0.14)`, `backdrop-filter: blur(4px)`, `border-radius: 6px`).
 - **Semantic Glyphs**:
-  - **New Discovery**: Soft Gold sparkle/star (`#FACC15`)
+  - **New Discovery**: Warm Gold sparkle/star (`#DEC68B`)
   - **Watched**: Emerald checkmark (`#4ADE80`, 2.5px stroke)
   - **Watch Later**: Sky Blue clock (`#38BDF8`)
   - **Rewatch**: Amber loop arrow (`#FB923C`)
-  - **Nope**: Crimson ban icon (`#F87171`)
+  - **Nope**: Dusty Rose ban icon (`#CE8484`)
 - **Library Shelves**: Permanently suppressed across all personal library shelf views.
 
 ---
 
 ## 4. Color & Token Map
 
-| Element | Background | Border | Text |
+| Element | Background | Border | Text / Accent |
 | :--- | :--- | :--- | :--- |
 | **Card Container** | `rgba(15, 15, 18, 0.6)` | `1px solid rgba(255, 255, 255, 0.07)` | `#E5E7EB` |
 | **See Results (Default)** | `rgba(255, 255, 255, 0.04)` | `1px solid rgba(255, 255, 255, 0.1)` | `#E5E7EB` |
-| **See Results (Dirty)** | `rgba(250, 204, 21, 0.05)` | `1px solid rgba(250, 204, 21, 0.40)` | `#FACC15` |
-| **Category Header** | `transparent` | `none` | `#D1D5DB` (Hover: `#FFF`) |
-| **All Pills (Default)** | `rgba(255, 255, 255, 0.02)` | `1px solid rgba(255, 255, 255, 0.08)` | `#9CA3AF` |
-| **All Pills (Included / Active)** | `rgba(250, 204, 21, 0.05)` | `1px solid rgba(250, 204, 21, 0.40)` | `#FACC15` |
-| **All Pills (Excluded)** | `rgba(239, 68, 68, 0.05)` | `1px solid rgba(239, 68, 68, 0.40)` | `#F87171` |
+| **See Results (Dirty)** | `rgba(212, 175, 55, 0.06)` | `1px solid rgba(212, 175, 55, 0.32)` | `#DEC68B` |
+| **Category Header** | `transparent` | `none` | Title: `#D1D5DB`, Icon: `#8E8468` |
+| **All Pills (Default State 0)** | `rgba(255, 255, 255, 0.02)` | `1px solid rgba(255, 255, 255, 0.08)` | `#9CA3AF` |
+| **Included / Active (State 1)** | `rgba(212, 175, 55, 0.06)` | `1px solid rgba(212, 175, 55, 0.32)` | Symbol: `#D4AF37`, Text: `#E6D5B8` |
+| **Excluded (State 2)** | `rgba(190, 80, 80, 0.06)` | `1px solid rgba(190, 80, 80, 0.30)` | Symbol: `#D06B6B`, Text: `#D8A8A8` |
 | **Inputs (Numeric / Text)** | `rgba(255, 255, 255, 0.03)` | `1px solid rgba(255, 255, 255, 0.08)` | `#D1D5DB` |
 | **Poster Badges (22px)** | `rgba(10, 10, 12, 0.88)` | `1px solid rgba(255, 255, 255, 0.14)` | Status Tone |

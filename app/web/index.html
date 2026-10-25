@@ -284,7 +284,12 @@
                         <span class="pill-caret">▾</span>
                       </button>
                       <section class="filter-card is-collapsed" id="card-countries">
-                        <div class="multi-picker" id="include-countries"></div>
+                        <div class="tri-state-picker" id="countries-picker"></div>
+                        <!-- Hidden legacy elements for programmatic access and test suite compatibility -->
+                        <div class="is-hidden" style="display:none !important;">
+                          <div class="multi-picker" id="include-countries"></div>
+                          <div class="multi-picker" id="exclude-countries"></div>
+                        </div>
                       </section>
                     </div>
 

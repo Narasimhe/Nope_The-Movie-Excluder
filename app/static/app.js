@@ -77,7 +77,8 @@ const PICKER_CONFIG = {
   "exclude-genres": { options: GENRE_OPTIONS, opposite: "include-genres" },
   "include-languages": { options: LANGUAGE_OPTIONS, opposite: "exclude-languages" },
   "exclude-languages": { options: LANGUAGE_OPTIONS, opposite: "include-languages" },
-  "include-countries": { options: COUNTRY_OPTIONS },
+  "include-countries": { options: COUNTRY_OPTIONS, opposite: "exclude-countries" },
+  "exclude-countries": { options: COUNTRY_OPTIONS, opposite: "include-countries" },
 };
 
 const DEFAULT_SYSTEM_FILTERS = {
@@ -876,6 +877,12 @@ const TRI_PICKER_CONFIG = {
     excludeId: "exclude-languages",
     numeric: false,
   },
+  "countries-picker": {
+    options: COUNTRY_OPTIONS,
+    includeId: "include-countries",
+    excludeId: "exclude-countries",
+    numeric: false,
+  },
 };
 
 function buildTriStatePicker(containerId, config) {
@@ -904,18 +911,32 @@ function buildTriStatePicker(containerId, config) {
 
     chip.addEventListener("click", (e) => {
       e.preventDefault();
-      const current = chip.dataset.state;
+      const current = chip.dataset.state || "off";
       let next = "off";
-      if (containerId === "genres-picker") {
-        const mode = state.genreMode || "exclude";
-        if (mode === "exclude") {
-          next = current === "exclude" ? "off" : "exclude";
-        } else {
-          next = current === "include" ? "off" : "include";
-        }
+      if (e.altKey) {
+        next = current === "exclude" ? "off" : "exclude";
       } else {
-        next = current === "off" ? "exclude" : current === "exclude" ? "include" : "off";
+        // Standard 3-State Click Cycle: Neutral (off) -> Include (+) -> Exclude (-) -> Neutral (off)
+        if (current === "off") {
+          next = "include";
+        } else if (current === "include") {
+          next = "exclude";
+        } else {
+          next = "off";
+        }
       }
+      setTriChipState(chip, next, config);
+      markAdvancedSearchDirty();
+      updateFilterPillBadges();
+      renderActiveFilterTags();
+      scheduleSearchStateSave();
+    });
+
+    chip.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      const current = chip.dataset.state || "off";
+      // Right-click shortcut: Jump directly to exclude (-) or toggle back to neutral
+      const next = current === "exclude" ? "off" : "exclude";
       setTriChipState(chip, next, config);
       markAdvancedSearchDirty();
       updateFilterPillBadges();
@@ -1004,16 +1025,16 @@ const COMPACT_CLOUD_CONFIG = [
     backgroundHint: (value) => (BACKGROUND_EXCLUDED_LANGUAGES.has(value) ? "excluded by default" : ""),
   },
   {
-    hostSelector: "#include-countries",
-    cloudSelector: ".chip-cloud",
-    chipSelector: ".filter-chip",
+    hostSelector: "#countries-picker",
+    cloudSelector: ".tri-chip-cloud",
+    chipSelector: ".tri-chip",
     kind: "countries",
     noun: "country",
     options: COUNTRY_OPTIONS,
     primary: PRIMARY_COUNTRY_CODES,
-    valueOf: (chip) => chip.querySelector("input")?.value,
-    isActive: (chip) => Boolean(chip.querySelector("input")?.checked),
-    isBackground: () => false,
+    valueOf: (chip) => chip.dataset.value,
+    isActive: (chip) => chip.dataset.state && chip.dataset.state !== "off",
+    isBackground: (chip) => chip.dataset.state === "exclude" && DEFAULT_SYSTEM_FILTERS.exclude_origin_countries.includes(chip.dataset.value),
     backgroundHint: (value) => (DEFAULT_SYSTEM_FILTERS.exclude_origin_countries.includes(value) ? "excluded by default" : ""),
   },
   {
@@ -1103,6 +1124,10 @@ function refreshCompactCloud(config) {
         event.stopPropagation();
         if (config.kind === "languages") {
           setTriChipState(chip, "off", TRI_PICKER_CONFIG["languages-picker"]);
+        } else if (config.kind === "countries") {
+          setTriChipState(chip, "off", TRI_PICKER_CONFIG["countries-picker"]);
+        } else if (config.kind === "genres") {
+          setTriChipState(chip, "off", TRI_PICKER_CONFIG["genres-picker"]);
         } else {
           const input = chip.querySelector("input");
           if (input) input.checked = false;
@@ -1678,6 +1703,7 @@ function collectAdvancedFilters() {
     include_origin_countries: getPickerValues("include-countries"),
     exclude_origin_countries: [
       ...new Set([
+        ...getPickerValues("exclude-countries"),
         ...(state.profilePassthroughFilters.exclude_origin_countries || DEFAULT_SYSTEM_FILTERS.exclude_origin_countries),
       ]),
     ],
@@ -1895,12 +1921,14 @@ function updateFilterPillBadges() {
 
   // Countries badge
   const incCountry = getPickerValues("include-countries").length;
+  const excCountry = getPickerValues("exclude-countries").length;
+  const countryCount = incCountry + excCountry;
   const badgeCountry = document.querySelector("#badge-countries");
   if (badgeCountry) {
-    badgeCountry.textContent = String(incCountry);
-    badgeCountry.classList.toggle("is-hidden", incCountry === 0);
+    badgeCountry.textContent = String(countryCount);
+    badgeCountry.classList.toggle("is-hidden", countryCount === 0);
   }
-  document.querySelector("#pill-countries")?.classList.toggle("has-filters", incCountry > 0);
+  document.querySelector("#pill-countries")?.classList.toggle("has-filters", countryCount > 0);
 
   // Cast & Crew badge
   const actors = state.selectedEntities?.actors?.length || 0;
@@ -1998,15 +2026,40 @@ function renderActiveFilterTags() {
     });
   });
 
-  // Countries
+  // Countries Include & Exclude
   getPickerValues("include-countries").forEach((code) => {
     const pair = COUNTRY_OPTIONS.find((item) => item[0] === code);
     const name = pair ? pair[1] : code;
     chips.push({
-      label: name,
+      label: `+ ${name}`,
       onRemove: () => {
-        const input = document.querySelector(`#include-countries input[value="${code}"]`);
-        if (input) input.checked = false;
+        const chip = document.querySelector(`#countries-picker .tri-chip[data-value="${code}"]`);
+        if (chip && TRI_PICKER_CONFIG["countries-picker"]) {
+          setTriChipState(chip, "off", TRI_PICKER_CONFIG["countries-picker"]);
+        } else {
+          const input = document.querySelector(`#include-countries input[value="${code}"]`);
+          if (input) input.checked = false;
+        }
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  });
+  getPickerValues("exclude-countries").forEach((code) => {
+    const pair = COUNTRY_OPTIONS.find((item) => item[0] === code);
+    const name = pair ? pair[1] : code;
+    chips.push({
+      label: `- ${name}`,
+      isExcluded: true,
+      onRemove: () => {
+        const chip = document.querySelector(`#countries-picker .tri-chip[data-value="${code}"]`);
+        if (chip && TRI_PICKER_CONFIG["countries-picker"]) {
+          setTriChipState(chip, "off", TRI_PICKER_CONFIG["countries-picker"]);
+        } else {
+          const input = document.querySelector(`#exclude-countries input[value="${code}"]`);
+          if (input) input.checked = false;
+        }
         updateFilterPillBadges();
         renderActiveFilterTags();
         runDiscoverySearch();

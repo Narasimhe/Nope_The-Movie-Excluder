@@ -2354,10 +2354,11 @@ footer span {
   color: #fff;
 }
 .sort-chip.is-active {
-  background: rgba(242, 201, 76, 0.16) !important;
-  border-color: #f2c94c !important;
-  color: #f2c94c !important;
-  font-weight: 600;
+  background: rgba(212, 175, 55, 0.06) !important;
+  border-color: rgba(212, 175, 55, 0.32) !important;
+  color: #DEC68B !important;
+  font-weight: 500;
+  box-shadow: none !important;
 }
 .sidebar-accordion-trigger .pill-badge {
   display: inline-flex;
@@ -3753,19 +3754,21 @@ footer {
 }
 .filter-chip.is-active,
 .filter-chip:has(input:checked) {
-  background: rgba(242, 201, 76, 0.16) !important;
-  border-color: #f2c94c !important;
-  color: #f2c94c !important;
-  font-weight: 600;
+  background: rgba(212, 175, 55, 0.06) !important;
+  border-color: rgba(212, 175, 55, 0.32) !important;
+  color: #DEC68B !important;
+  font-weight: 500;
+  box-shadow: none !important;
 }
 #exclude-genres .filter-chip.is-active,
 #exclude-genres .filter-chip:has(input:checked),
 #exclude-languages .filter-chip.is-active,
 #exclude-languages .filter-chip:has(input:checked) {
-  background: rgba(239, 68, 68, 0.16) !important;
-  border-color: #ef4444 !important;
-  color: #ef4444 !important;
-  font-weight: 600;
+  background: rgba(190, 80, 80, 0.06) !important;
+  border-color: rgba(190, 80, 80, 0.30) !important;
+  color: #CE8484 !important;
+  font-weight: 500;
+  box-shadow: none !important;
 }
 
 /* Tri-State Clickable Chip Cloud (Tap: Include [+] / Exclude [−]) */
@@ -3813,18 +3816,20 @@ footer {
 
 /* Include state: Gold with + */
 .tri-chip.is-included {
-  background: rgba(242, 201, 76, 0.16) !important;
-  border-color: #f2c94c !important;
-  color: #f2c94c !important;
-  font-weight: 600;
+  background: rgba(212, 175, 55, 0.06) !important;
+  border-color: rgba(212, 175, 55, 0.32) !important;
+  color: #DEC68B !important;
+  font-weight: 500;
+  box-shadow: none !important;
 }
 
 /* Exclude state: Red with − */
 .tri-chip.is-excluded {
-  background: rgba(239, 68, 68, 0.16) !important;
-  border-color: #ef4444 !important;
-  color: #ef4444 !important;
-  font-weight: 600;
+  background: rgba(190, 80, 80, 0.06) !important;
+  border-color: rgba(190, 80, 80, 0.30) !important;
+  color: #CE8484 !important;
+  font-weight: 500;
+  box-shadow: none !important;
 }
 .entity-picker {
   position: relative;
@@ -7759,44 +7764,51 @@ body.grey-docked-open .entry-list.is-list-mode {
   margin-bottom: 0 !important;
   padding: 0 !important;
 }
+
 .sidebar-accordion-trigger {
   display: flex !important;
-  justify-content: space-between !important;
   align-items: center !important;
+  justify-content: space-between !important;
   width: 100% !important;
-  box-sizing: border-box !important;
-  padding: 10px 0 !important;
+  min-height: 34px !important;
+  padding: 8px 0 !important;
+  background: transparent !important;
   border: none !important;
   border-radius: 0 !important;
-  background: transparent !important;
-  color: #D1D5DB !important;
-  font-size: 13px !important;
-  font-weight: 400 !important;
-  text-align: left !important;
   cursor: pointer !important;
-  white-space: nowrap !important;
-  transition: color 140ms ease !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transition: all 140ms ease !important;
 }
+
 .sidebar-accordion-trigger .pill-title {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 8px !important;
-  margin-left: 0 !important;
-  padding-left: 0 !important;
+  gap: 9px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #E5E7EB !important;
+  letter-spacing: 0.01em !important;
 }
+
+/* Subtle, desaturated antique gold/grey accordion icons so they don't compete with active filter chips */
 .sidebar-accordion-trigger .pill-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   width: 14px !important;
   height: 14px !important;
-  color: #9CA3AF !important;
+  color: #8E8468 !important;
   flex-shrink: 0 !important;
   transition: color 140ms ease !important;
 }
+
 .sidebar-accordion-trigger .pill-text {
-  font-size: 13px !important;
   color: #D1D5DB !important;
-  font-weight: 400 !important;
-  transition: color 140ms ease !important;
+  font-weight: 500 !important;
+  font-size: 13px !important;
 }
+
 .sidebar-accordion-trigger .pill-caret {
   color: #6B7280 !important;
   font-size: 11px !important;
@@ -7813,7 +7825,7 @@ body.grey-docked-open .entry-list.is-list-mode {
   color: #FFFFFF !important;
 }
 .sidebar-accordion-trigger:hover .pill-icon {
-  color: #E5E7EB !important;
+  color: #DEC68B !important;
 }
 .sidebar-accordion-trigger:hover .pill-caret {
   color: #9CA3AF !important;
@@ -7827,10 +7839,10 @@ body.grey-docked-open .entry-list.is-list-mode {
   font-weight: 500 !important;
 }
 .sidebar-accordion-trigger.is-open .pill-icon {
-  color: #FACC15 !important;
+  color: #8E8468 !important;
 }
 .sidebar-accordion-trigger.is-open .pill-caret {
-  color: #E5E7EB !important;
+  color: #9CA3AF !important;
   transform: rotate(180deg) !important;
 }
 
@@ -7878,15 +7890,18 @@ body.grey-docked-open .entry-list.is-list-mode {
   display: none !important;
 }
 
+/* Base Neutral Pill (State 0: Neutral / Inactive) */
 .tri-chip,
 .filter-chip,
 .profile-workshop-chip,
-.chip-adder {
+.chip-adder,
+.status-options label {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 5px !important;
+  gap: 4px !important;
   height: 28px !important;
+  min-height: 28px !important;
   padding: 0 10px !important;
   border-radius: 999px !important;
   background: rgba(255, 255, 255, 0.02) !important;
@@ -7903,34 +7918,71 @@ body.grey-docked-open .entry-list.is-list-mode {
   background-image: none !important;
   transition: all 140ms ease !important;
 }
+
 .tri-chip:hover,
 .filter-chip:hover,
 .profile-workshop-chip:hover,
-.chip-adder:hover {
+.chip-adder:hover,
+.status-options label:hover {
   background: rgba(255, 255, 255, 0.05) !important;
   border-color: rgba(255, 255, 255, 0.16) !important;
   color: #E5E7EB !important;
 }
 
-/* Standardized Whisper-Clean Gold State */
-.tri-chip.is-included,
-.filter-chip.is-active,
-.profile-workshop-chip.is-active {
-  background: rgba(250, 204, 21, 0.05) !important;
-  border: 1px solid rgba(250, 204, 21, 0.40) !important;
-  color: #FACC15 !important;
-  box-shadow: none !important;
+/* Split Contrast for Tri-State Chips (+ / -) */
+.tri-chip .tri-chip-icon {
+  display: inline-block !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+  margin-right: 1px !important;
+  transition: color 140ms ease !important;
+}
+.tri-chip .tri-chip-icon:empty {
+  display: none !important;
 }
 
-/* Standardized Whisper-Clean Crimson State */
+/* State 1: Included Warm Gold (+) */
+.tri-chip.is-included {
+  background: rgba(212, 175, 55, 0.06) !important;
+  border: 1px solid rgba(212, 175, 55, 0.32) !important;
+  box-shadow: none !important;
+}
+.tri-chip.is-included .tri-chip-icon {
+  color: #D4AF37 !important;
+  font-weight: 600 !important;
+}
+.tri-chip.is-included .tri-chip-label {
+  color: #E6D5B8 !important;
+  font-weight: 400 !important;
+}
+
+/* State 2: Excluded Dusty Rose (-) */
 .tri-chip.is-excluded {
-  background: rgba(239, 68, 68, 0.05) !important;
-  border: 1px solid rgba(239, 68, 68, 0.40) !important;
-  color: #F87171 !important;
+  background: rgba(190, 80, 80, 0.06) !important;
+  border: 1px solid rgba(190, 80, 80, 0.30) !important;
+  box-shadow: none !important;
+}
+.tri-chip.is-excluded .tri-chip-icon {
+  color: #D06B6B !important;
+  font-weight: 600 !important;
+}
+.tri-chip.is-excluded .tri-chip-label {
+  color: #D8A8A8 !important;
+  font-weight: 400 !important;
+}
+
+/* 2-State Active Pills (Library Status, Workshop Profiles) */
+.filter-chip.is-active,
+.filter-chip:has(input:checked),
+.profile-workshop-chip.is-active,
+.status-options label:has(input:checked) {
+  background: rgba(212, 175, 55, 0.06) !important;
+  border: 1px solid rgba(212, 175, 55, 0.32) !important;
+  color: #DEC68B !important;
   box-shadow: none !important;
 }
 
-/* Search Profile Presets: Hide delete × until hovered, remove star icon */
+/* Search Profile Presets: Hide delete x until hovered, remove star icon */
 .profile-workshop-chip .chip-pin-btn {
   display: none !important;
 }
@@ -7953,10 +8005,10 @@ body.grey-docked-open .entry-list.is-list-mode {
 }
 .profile-workshop-chip .chip-del-btn:hover {
   opacity: 1 !important;
-  color: #F87171 !important;
+  color: #CE8484 !important;
 }
 
-/* Clean inline unpin/dismiss × on hover (no grey circular box) */
+/* Clean inline unpin/dismiss x on hover for Languages & Countries (no grey circular box) */
 .chip-unpin {
   display: inline-flex !important;
   align-items: center !important;
@@ -7972,6 +8024,7 @@ body.grey-docked-open .entry-list.is-list-mode {
   font-size: 13px !important;
   line-height: 1 !important;
   opacity: 0 !important;
+  pointer-events: none !important;
   cursor: pointer !important;
   transition: opacity 120ms ease, color 120ms ease !important;
 }
@@ -7980,10 +8033,11 @@ body.grey-docked-open .entry-list.is-list-mode {
 .tri-chip:focus-within .chip-unpin,
 .filter-chip:focus-within .chip-unpin {
   opacity: 0.7 !important;
+  pointer-events: auto !important;
 }
 .chip-unpin:hover {
   opacity: 1 !important;
-  color: #F87171 !important;
+  color: #CE8484 !important;
   background: transparent !important;
 }
 
@@ -8019,10 +8073,18 @@ body.grey-docked-open .entry-list.is-list-mode {
   color: #E5E7EB !important;
 }
 .sort-chip.is-active {
-  background: rgba(250, 204, 21, 0.05) !important;
-  border: 1px solid rgba(250, 204, 21, 0.40) !important;
-  color: #FACC15 !important;
+  background: rgba(212, 175, 55, 0.06) !important;
+  border: 1px solid rgba(212, 175, 55, 0.32) !important;
+  color: #DEC68B !important;
   box-shadow: none !important;
+}
+
+/* Library Status: 50/50 2-Column Grid of Symmetrical 999px Pills */
+.status-options {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 6px !important;
+  padding: 4px 0 !important;
 }
 
 /* 6. Clean Keyword & Theme Tag Pills */
@@ -8047,17 +8109,31 @@ body.grey-docked-open .entry-list.is-list-mode {
   font-size: 12px !important;
   font-weight: 400 !important;
   box-sizing: border-box !important;
-  background: rgba(250, 204, 21, 0.05) !important;
-  border: 1px solid rgba(250, 204, 21, 0.40) !important;
-  color: #FACC15 !important;
+  background: rgba(212, 175, 55, 0.06) !important;
+  border: 1px solid rgba(212, 175, 55, 0.32) !important;
+  color: #DEC68B !important;
   box-shadow: none !important;
   transition: all 140ms ease !important;
 }
+.selected-entity .entity-mode-toggle {
+  color: #D4AF37 !important;
+  font-weight: 600 !important;
+}
+.selected-entity > span:not(.entity-mode-toggle) {
+  color: #E6D5B8 !important;
+}
 .selected-entity.is-excluded {
-  background: rgba(239, 68, 68, 0.05) !important;
-  border: 1px solid rgba(239, 68, 68, 0.40) !important;
-  color: #F87171 !important;
+  background: rgba(190, 80, 80, 0.06) !important;
+  border: 1px solid rgba(190, 80, 80, 0.30) !important;
+  color: #CE8484 !important;
   box-shadow: none !important;
+}
+.selected-entity.is-excluded .entity-mode-toggle {
+  color: #D06B6B !important;
+  font-weight: 600 !important;
+}
+.selected-entity.is-excluded > span:not(.entity-mode-toggle) {
+  color: #D8A8A8 !important;
 }
 .selected-entity button {
   background: transparent !important;
@@ -8067,7 +8143,7 @@ body.grey-docked-open .entry-list.is-list-mode {
   margin-left: 4px !important;
   width: auto !important;
   height: auto !important;
-  color: rgba(250, 204, 21, 0.6) !important;
+  color: rgba(212, 175, 55, 0.6) !important;
   font-size: 13px !important;
   line-height: 1 !important;
   cursor: pointer !important;
@@ -8076,14 +8152,14 @@ body.grey-docked-open .entry-list.is-list-mode {
   transition: color 120ms ease !important;
 }
 .selected-entity button:hover {
-  color: #FACC15 !important;
+  color: #DEC68B !important;
   background: transparent !important;
 }
 .selected-entity.is-excluded button {
-  color: rgba(248, 113, 113, 0.6) !important;
+  color: rgba(190, 80, 80, 0.6) !important;
 }
 .selected-entity.is-excluded button:hover {
-  color: #F87171 !important;
+  color: #CE8484 !important;
   background: transparent !important;
 }
 
@@ -8127,7 +8203,7 @@ body.grey-docked-open .entry-list.is-list-mode {
 .sidebar-number-grid input:focus,
 .accordion-content input:focus {
   outline: none !important;
-  border-color: rgba(250, 204, 21, 0.5) !important;
+  border-color: rgba(212, 175, 55, 0.4) !important;
   background: rgba(255, 255, 255, 0.05) !important;
 }
 .range-separator {
@@ -8172,8 +8248,8 @@ input[type="number"] {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5) !important;
 }
 .status-badge[data-status="new_discovery"] {
-  color: #FACC15 !important;
-  border-color: rgba(250, 204, 21, 0.35) !important;
+  color: #DEC68B !important;
+  border-color: rgba(212, 175, 55, 0.35) !important;
 }
 .status-badge[data-status="watched"] {
   color: #4ADE80 !important;
@@ -8188,8 +8264,8 @@ input[type="number"] {
   border-color: rgba(251, 146, 60, 0.35) !important;
 }
 .status-badge[data-status="excluded"] {
-  color: #F87171 !important;
-  border-color: rgba(248, 113, 113, 0.35) !important;
+  color: #CE8484 !important;
+  border-color: rgba(190, 80, 80, 0.35) !important;
 }
 /* In personal library shelves, status badges remain hidden */
 [data-view="watched"] .status-badge,

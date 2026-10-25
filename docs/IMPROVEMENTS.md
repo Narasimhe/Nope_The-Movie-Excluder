@@ -16,6 +16,13 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Zen Sidebar Palette, Tri-State Click Mechanics & Split-Contrast Pills**
+  * **Desaturated Warm Zen Palette**: Replaced harsh neon yellow (`#FACC15`) and coral red (`#F87171`) with a warm, calm Zen palette: warm sand/ochre (`rgba(212, 175, 55, 0.06)` background, `rgba(212, 175, 55, 0.32)` border) and muted dusty rose/terracotta (`rgba(190, 80, 80, 0.06)` background, `rgba(190, 80, 80, 0.30)` border).
+  * **3-State Click Cycle (Genres, Languages, Countries)**: Clicking cycles sequentially through State 0 (Neutral `#9CA3AF`), State 1 (Included `+` in warm gold), State 2 (Excluded `-` in dusty rose), and back to Neutral. Right-click or Alt-click jumps directly to Excluded in one click.
+  * **Split-Contrast Pill Typography**: On `+ Crime`, `+` glyph renders in `#D4AF37` and the word in soft warm cream `#E6D5B8`. On `- Animation`, `-` glyph renders in `#D06B6B` and the word in soft dusty rose-grey `#D8A8A8`.
+  * **Hover Dismissal for Countries & Languages**: Trimmed default display to core 10 countries and 8 languages, revealing a clean inline `×` on hover (`color: #9CA3AF`, hover `#CE8484`, no circular grey box) to unpin/dismiss chips.
+  * **Muted Accordion Header Icons**: Changed category header icons (`⇅`, `📺`, etc.) to a subtle antique gold/grey (`#8E8468`), keeping the focus on active content.
+  * **Zero Inner Glow & Consistent Library Status**: Removed all inset/box shadows across all sidebar chips. Standardized Library Status pills to the identical 28px height, 12px font, and 999px pill geometry.
 - [x] **Zen Design Refinements Batch: Header, Pagination, Badges, Scope & Toasts**
   * **Vertical Axis Alignment & Gap Tightening**: Synchronized topbar navigation with main content column on the exact same vertical x-axis. Shaved 18px of dead space out of the sidebar-to-canvas canyon, achieving a cohesive 24px visual gap.
   * **Icon-Only 22px Poster Badges (Task 14)**: Replaced wide all-caps text banners with compact 22px rounded-square frosted badges (✦, ✓, ↻, ◷, ✕) with distinct muted tones, preserving 100% of movie title art visibility.
