@@ -1229,14 +1229,17 @@ button {
   border: none;
   border-radius: 0;
   background: transparent;
-  color: #8b8893;
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  color: #9CA3AF;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: color 180ms ease;
+  transition: color 160ms ease;
   user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 .master-tab:hover {
   color: #ffffff;
@@ -1247,7 +1250,7 @@ button {
   color: #ffffff;
   background: transparent;
   box-shadow: none;
-  font-weight: 800;
+  font-weight: 600;
 }
 .master-tab.is-active::after {
   content: "";
@@ -1255,21 +1258,22 @@ button {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 2px;
-  background: #f2c94c;
-  box-shadow: 0 0 10px rgba(242, 201, 76, 0.65), 0 0 2px #f2c94c;
-  border-radius: 2px 2px 0 0;
+  height: 1px;
+  background: #DEC68B;
+  box-shadow: none;
+  border-radius: 0;
 }
 .master-tab-icon {
   font-size: 0.92rem;
   line-height: 1;
   color: currentColor;
-  opacity: 0.85;
+  opacity: 0.75;
+  transition: opacity 160ms ease, color 160ms ease;
 }
 .master-tab.is-active .master-tab-icon {
   opacity: 1;
-  color: #f2c94c;
-  filter: drop-shadow(0 0 6px rgba(242, 201, 76, 0.5));
+  color: #DEC68B;
+  filter: none;
 }
 .topbar-end {
   min-width: 120px;

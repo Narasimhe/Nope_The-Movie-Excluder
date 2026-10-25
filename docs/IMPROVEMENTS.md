@@ -16,6 +16,10 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Refined Header Master Navigation (Crisp Typography, Hairline Underline & Toned-Down Gold Icons)**
+  * **Crisp Header Titles**: Reduced font-weight from chunky 700/800 to a clean SemiBold 600 with subpixel antialiasing and balanced 0.09em letter-spacing, eliminating text bleed and blur across DISCOVER, LIBRARY, and NOTES.
+  * **Hairline Underline Indicator (Zero Glow)**: Replaced the 2px glowing highlighter with a razor-sharp 1px hairline indicator in warm cinema gold (#DEC68B), completely removing the neon box-shadow blur.
+  * **Toned-Down Navigation Icons**: Removed the harsh yellow (#f2c94c) and fuzzy drop-shadow filter from active icons, replacing it with quiet, muted cinema gold (#DEC68B) and razor-sharp rendering.
 - [x] **Unboxed Personal Action Lenses (Notes & Heart) with Balanced Proportions**
   * **Unenclosed Floating Icons**: Removed squircle box containers, borders, and backgrounds from the Personal Notes (#shelf-notes-lens-btn) and Favourites Heart (.shelf-favorites-btn) action lenses in the library shelf ribbon row, rendering them as borderless, transparent standalone icons.
   * **Optical Mass & Proportion Balance**: Increased Personal Notes icon SVG size to 18px to optically balance the 16px Heart icon.
