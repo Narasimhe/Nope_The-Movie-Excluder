@@ -16,6 +16,11 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Movie Detail Strict Zen Alignment & Single-Row Ergonomics**
+  * **Locked Top Nav to Content Edges**: Aligned the inner container of `.detail-page-header` (`.detail-header-inner`, width `min(938px, calc(100% - 32px))`) strictly with `.detail-hero` below it. The left edge of `← Back to results` sits on the exact same vertical x-axis as the left edge of the movie poster, and the right edge of `< Prev | Next >` aligns with the right edge of the 670px main column (Action Bar / Notes box / 6th Related Movie).
+  * **Neutral Calm Surface on Nav Pills**: Neutralized the yellow/gold tint on `← Back to results`; styled both `← Back to results` and `< Prev | Next >` with `background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.10); color: #D1D5DB; border-radius: 8px;`.
+  * **Tightened Inline Credits Gap**: Tightened the spacing between `Director:` / `Actors:` labels and their values to `8px` (`color: #9CA3AF` for labels, `#E5E7EB` with subtle underline for names) eliminating the wide tab gap.
+  * **Subtle Circular Favourite Heart Toggle**: Wrapped the Favourite heart (`♥`) next to the movie title in a circular toggle button (`width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: rgba(251, 113, 133, 0.08); border: 1px solid rgba(251, 113, 133, 0.28);`).
 - [x] **Refined Title, Heart & Metadata Vertical Spacing**
   * **Snug Title-to-Heart Alignment**: Tightened the horizontal gap between the movie title and the heart icon from 14px/19px down to a snug 6px with an unpadded 20px button container, eliminating floating distance.
   * **Balanced Vertical Breathing Room**: Increased the bottom margin of the title wrap to 14px, providing clean vertical separation between the title and the metadata row below.

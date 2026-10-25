@@ -8792,50 +8792,163 @@ footer {
    MOVIE DETAIL PAGE - ZEN CANVAS PARITY & PROPORTIONS
    ============================================================ */
 
-/* 1. Full Canvas Geometry: Match Library and Discover */
+/* 1. Top Navigation Bar: Locked to Content Edges (Left: Poster, Right: 670px Column) */
 .detail-page-header,
 .movie-detail-page .detail-page-header {
-  width: min(100% - 32px, 1536px) !important;
-  max-width: 1536px !important;
-  margin: 0 auto !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 30 !important;
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
   padding: 10px 16px !important;
+  background: rgba(9, 9, 11, 0.94) !important;
+  backdrop-filter: blur(16px) !important;
+  border-bottom: 1px solid var(--line) !important;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35) !important;
   box-sizing: border-box !important;
-  min-height: 64px !important;
+  min-height: 60px !important;
+  display: block !important;
+}
+
+.detail-header-inner {
+  width: min(938px, calc(100% - 32px)) !important;
+  max-width: 938px !important;
+  margin: 0 auto !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-}
-
-.detail-header-left {
-  width: 310px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-end !important;
-}
-
-.movie-detail-page .detail-page-content {
-  width: min(100% - 32px, 1536px) !important;
-  max-width: 1536px !important;
-  margin: 0 auto !important;
-  padding: 24px 16px 72px 16px !important;
+  min-height: 40px !important;
   box-sizing: border-box !important;
 }
 
-/* 2. Hero Layout & Proportions: Poster in place of 310px sidebar, Body in Main Canvas */
+.detail-header-left {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: auto !important;
+}
+
+/* Neutral Calm Surface for Both Nav Pills (Back button & Stepper) */
+.detail-back {
+  display: inline-flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 14px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  color: #D1D5DB !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-family: var(--font-ui) !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+  transition: all 140ms ease !important;
+}
+
+.detail-back svg,
+.detail-back .detail-back-icon {
+  stroke: #9CA3AF !important;
+  transition: stroke 140ms ease !important;
+}
+
+.detail-back span,
+.detail-back #detail-back-label {
+  color: #D1D5DB !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.detail-back:hover,
+.detail-back:focus-visible {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.20) !important;
+  color: #FFFFFF !important;
+}
+
+.detail-back:hover svg,
+.detail-back:hover .detail-back-icon {
+  stroke: #FFFFFF !important;
+}
+
+.detail-back:hover span,
+.detail-back:hover #detail-back-label {
+  color: #FFFFFF !important;
+}
+
+.detail-nav-stepper {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  padding: 0 3px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  border-radius: 8px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+.detail-nav-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 10px !important;
+  border: none !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  color: #D1D5DB !important;
+  font-family: var(--font-ui) !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+}
+
+.detail-nav-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: #FFFFFF !important;
+}
+
+.detail-nav-divider {
+  display: inline-block !important;
+  width: 1px !important;
+  height: 14px !important;
+  background: rgba(255, 255, 255, 0.10) !important;
+  margin: 0 2px !important;
+}
+
+/* 2. Main Two-Column Layout (240px Poster + 28px Gap + 670px Main Column = 938px) */
+.movie-detail-page .detail-page-content {
+  width: min(938px, calc(100% - 32px)) !important;
+  max-width: 938px !important;
+  margin: 0 auto !important;
+  padding: 24px 0 72px 0 !important;
+  box-sizing: border-box !important;
+}
+
 .detail-hero {
   display: grid !important;
-  grid-template-columns: 310px 670px !important;
-  gap: 20px !important;
+  grid-template-columns: 240px 670px !important;
+  gap: 28px !important;
   align-items: start !important;
   justify-content: start !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 auto !important;
 }
 
 .detail-poster-column {
-  width: 310px !important;
-  min-width: 0 !important;
+  width: 240px !important;
+  min-width: 240px !important;
   display: flex !important;
   flex-direction: column !important;
-  align-items: flex-end !important;
+  align-items: flex-start !important;
   box-sizing: border-box !important;
   padding: 0 !important;
 }
@@ -8849,14 +8962,14 @@ footer {
   border-radius: 10px !important;
   overflow: hidden !important;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
-  margin-left: auto !important;
+  margin: 0 !important;
 }
 
 .poster-keywords {
   width: 240px !important;
   max-width: 240px !important;
-  margin-left: auto !important;
-  justify-content: flex-end !important;
+  margin: 0 !important;
+  justify-content: flex-start !important;
 }
 
 .movie-detail-page .dialog-body {
@@ -9121,41 +9234,40 @@ footer {
   display: inline !important;
 }
 
-/* Standalone Unboxed Heart (No enclosing circle) */
+/* Subtle Circular Heart Toggle Button */
 .movie-detail-page .favorite-button,
 .favorite-button {
-  width: 20px !important;
-  height: 20px !important;
-  min-width: 20px !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  border-radius: 50% !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  background: rgba(251, 113, 133, 0.08) !important;
+  border: 1px solid rgba(251, 113, 133, 0.28) !important;
   margin: 0 !important;
   padding: 0 !important;
-  border: none !important;
-  background: transparent !important;
   box-shadow: none !important;
-  border-radius: 0 !important;
   cursor: pointer !important;
   flex-shrink: 0 !important;
-  transition: transform 140ms ease, opacity 140ms ease !important;
+  transition: transform 140ms ease, background 140ms ease, border-color 140ms ease !important;
   vertical-align: middle !important;
 }
 
 .movie-detail-page .favorite-button:hover,
 .favorite-button:hover {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  transform: scale(1.15) !important;
+  background: rgba(251, 113, 133, 0.16) !important;
+  border-color: rgba(251, 113, 133, 0.50) !important;
+  transform: scale(1.08) !important;
 }
 
 .movie-detail-page .favorite-button span,
 .favorite-button span {
-  font-size: 1.35rem !important;
+  font-size: 1.08rem !important;
   line-height: 1 !important;
   color: transparent !important;
-  -webkit-text-stroke: 1.5px #ff656a !important;
+  -webkit-text-stroke: 1.3px #ff656a !important;
   display: block !important;
   margin: 0 !important;
   padding: 0 !important;
@@ -9164,8 +9276,8 @@ footer {
 
 .movie-detail-page .favorite-button.is-favorite,
 .favorite-button.is-favorite {
-  background: transparent !important;
-  border: none !important;
+  background: rgba(240, 79, 85, 0.18) !important;
+  border-color: #f04f55 !important;
 }
 
 .movie-detail-page .favorite-button.is-favorite span,
@@ -9272,19 +9384,28 @@ footer {
 
 .credits-lines .credit-label {
   font-weight: 600 !important;
-  color: #E5E7EB !important;
+  color: #9CA3AF !important;
   margin-right: 8px !important;
-  display: inline-block !important;
-  min-width: 68px !important;
+  display: inline !important;
+  min-width: unset !important;
 }
 
 .credits-lines a,
 .credit-link {
   color: #E5E7EB !important;
-  text-decoration: none !important;
+  text-decoration: underline !important;
+  text-decoration-color: rgba(255, 255, 255, 0.28) !important;
+  text-underline-offset: 3px !important;
   border-bottom: none !important;
   font-weight: 500 !important;
-  transition: color 140ms ease !important;
+  transition: color 140ms ease, text-decoration-color 140ms ease !important;
+}
+
+.credits-lines a:hover,
+.credit-link:hover {
+  color: #DEC68B !important;
+  text-decoration: underline !important;
+  text-decoration-color: #DEC68B !important;
 }
 
 .credits-lines a:hover,

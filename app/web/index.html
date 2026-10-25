@@ -11,8 +11,8 @@
   >
   <title>NOPE</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/styles.css?v=20261026_zen_153">
-  <script src="/static/app.js?v=20261026_zen_153" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261026_zen_154">
+  <script src="/static/app.js?v=20261026_zen_154" defer></script>
 </head>
 <body data-active-view="discover">
   <div class="site-shell" id="app-shell">
@@ -975,22 +975,24 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
 
   <section class="movie-detail-page is-hidden" id="movie-detail-page" tabindex="-1">
     <header class="detail-page-header">
-      <div class="detail-header-left">
-        <button class="detail-back" id="dialog-close" type="button">
-          <svg class="detail-back-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
-          <span id="detail-back-label">Back to movies</span>
-        </button>
-        <nav class="detail-trail" id="detail-trail" aria-label="Movie exploration trail"></nav>
-      </div>
+      <div class="detail-header-inner">
+        <div class="detail-header-left">
+          <button class="detail-back" id="dialog-close" type="button">
+            <svg class="detail-back-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+            <span id="detail-back-label">Back to movies</span>
+          </button>
+          <nav class="detail-trail" id="detail-trail" aria-label="Movie exploration trail"></nav>
+        </div>
 
-      <div class="detail-nav-stepper is-hidden" id="detail-nav-stepper" aria-label="Movie navigation">
-        <button class="detail-nav-btn" id="detail-prev-btn" type="button" aria-label="Previous movie" title="Previous movie (←)">
-          <span aria-hidden="true">‹</span> Prev
-        </button>
-        <span class="detail-nav-divider" aria-hidden="true"></span>
-        <button class="detail-nav-btn" id="detail-next-btn" type="button" aria-label="Next movie" title="Next movie (→)">
-          Next <span aria-hidden="true">›</span>
-        </button>
+        <div class="detail-nav-stepper is-hidden" id="detail-nav-stepper" aria-label="Movie navigation">
+          <button class="detail-nav-btn" id="detail-prev-btn" type="button" aria-label="Previous movie" title="Previous movie (←)">
+            <span aria-hidden="true">‹</span> Prev
+          </button>
+          <span class="detail-nav-divider" aria-hidden="true"></span>
+          <button class="detail-nav-btn" id="detail-next-btn" type="button" aria-label="Next movie" title="Next movie (→)">
+            Next <span aria-hidden="true">›</span>
+          </button>
+        </div>
       </div>
     </header>
 
