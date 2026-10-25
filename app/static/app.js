@@ -4545,43 +4545,44 @@ function renderProfileRibbon() {
 
 function renderProfileWorkshop() {
   const ribbonCloud = document.querySelector("#ribbon-profiles-cloud");
-  const reserveCloud = document.querySelector("#reserve-profiles-cloud");
   const countEl = document.querySelector("#ribbon-slots-count");
-  if (!ribbonCloud || !reserveCloud) return;
+  if (!ribbonCloud) return;
 
   const ribbonKeys = new Set(getRibbonProfiles().map(Number));
   const allProfiles = getAllProfilesList();
-
-  const ribbonList = [];
-  const reserveList = [];
-
-  allProfiles.forEach((p) => {
-    if (ribbonKeys.has(Number(p.id))) {
-      ribbonList.push(p);
-    } else {
-      reserveList.push(p);
-    }
-  });
+  const activeProfileId = elements.profileSelect?.value ? Number(elements.profileSelect.value) : null;
 
   if (countEl) {
-    countEl.textContent = `${ribbonList.length}/6`;
+    const pinnedCount = allProfiles.filter((p) => ribbonKeys.has(Number(p.id))).length;
+    countEl.textContent = `${pinnedCount}/6`;
   }
 
-  // Active Ribbon chips
   ribbonCloud.replaceChildren();
-  ribbonList.forEach((prof) => {
+  allProfiles.forEach((prof) => {
+    const isPinned = ribbonKeys.has(Number(prof.id));
+    const isActive = activeProfileId === Number(prof.id);
     const chip = document.createElement("div");
-    chip.className = "profile-workshop-chip is-pinned";
+    chip.className = `profile-workshop-chip${isPinned ? " is-pinned" : ""}${isActive ? " is-active" : ""}`;
+    chip.dataset.profileId = String(prof.id);
 
     const pinBtn = document.createElement("button");
     pinBtn.type = "button";
     pinBtn.className = "chip-pin-btn";
-    pinBtn.textContent = "★";
-    pinBtn.title = "Demote to Reserve";
+    pinBtn.textContent = isPinned ? "★" : "☆";
+    pinBtn.title = isPinned ? "Unpin from top ribbon" : "Pin to top ribbon (max 6)";
+    pinBtn.setAttribute("aria-label", isPinned ? `Unpin ${prof.name}` : `Pin ${prof.name}`);
     pinBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      const updated = getRibbonProfiles().filter((k) => Number(k) !== Number(prof.id));
-      saveRibbonProfiles(updated);
+      const current = getRibbonProfiles();
+      if (isPinned) {
+        saveRibbonProfiles(current.filter((k) => Number(k) !== Number(prof.id)));
+      } else {
+        if (current.length >= 6) {
+          showNotice("Ribbon is full (max 6). Unpin a profile first.");
+          return;
+        }
+        saveRibbonProfiles([...current, Number(prof.id)]);
+      }
     });
 
     const nameSpan = document.createElement("span");
@@ -4592,13 +4593,15 @@ function renderProfileWorkshop() {
       applySelectedProfile();
       clearDiscoveryCache();
       runDiscoverySearch();
+      renderProfileWorkshop();
     });
 
     const delBtn = document.createElement("button");
     delBtn.type = "button";
     delBtn.className = "chip-del-btn";
-    delBtn.textContent = "✕";
-    delBtn.title = "Delete profile";
+    delBtn.textContent = "×";
+    delBtn.title = `Delete ${prof.name}`;
+    delBtn.setAttribute("aria-label", `Delete ${prof.name}`);
     delBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
       elements.profileSelect.value = String(prof.id);
@@ -4609,54 +4612,6 @@ function renderProfileWorkshop() {
 
     chip.append(pinBtn, nameSpan, delBtn);
     ribbonCloud.append(chip);
-  });
-
-  // Reserve chips
-  reserveCloud.replaceChildren();
-  reserveList.forEach((prof) => {
-    const chip = document.createElement("div");
-    chip.className = "profile-workshop-chip";
-
-    const pinBtn = document.createElement("button");
-    pinBtn.type = "button";
-    pinBtn.className = "chip-pin-btn";
-    pinBtn.textContent = "☆";
-    pinBtn.title = "Promote to Ribbon";
-    pinBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const current = getRibbonProfiles();
-      if (current.length >= 6) {
-        showNotice("Ribbon is full (max 6). Unpin (★) a profile first.");
-        return;
-      }
-      saveRibbonProfiles([...current, Number(prof.id)]);
-    });
-
-    const nameSpan = document.createElement("span");
-    nameSpan.className = "chip-name";
-    nameSpan.textContent = prof.name;
-    nameSpan.addEventListener("click", () => {
-      elements.profileSelect.value = String(prof.id);
-      applySelectedProfile();
-      clearDiscoveryCache();
-      runDiscoverySearch();
-    });
-
-    const delBtn = document.createElement("button");
-    delBtn.type = "button";
-    delBtn.className = "chip-del-btn";
-    delBtn.textContent = "✕";
-    delBtn.title = "Delete profile";
-    delBtn.addEventListener("click", async (e) => {
-      e.stopPropagation();
-      elements.profileSelect.value = String(prof.id);
-      await deleteSelectedProfile();
-      const updated = getRibbonProfiles().filter((k) => Number(k) !== Number(prof.id));
-      saveRibbonProfiles(updated);
-    });
-
-    chip.append(pinBtn, nameSpan, delBtn);
-    reserveCloud.append(chip);
   });
 }
 

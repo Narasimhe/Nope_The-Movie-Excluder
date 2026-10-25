@@ -23,6 +23,7 @@
   * **Hover Dismissal for Countries & Languages**: Trimmed default display to core 10 countries and 8 languages, revealing a clean inline `×` on hover (`color: #9CA3AF`, hover `#CE8484`, no circular grey box) to unpin/dismiss chips.
   * **Muted Accordion Header Icons**: Changed category header icons (`⇅`, `📺`, etc.) to a subtle antique gold/grey (`#8E8468`), keeping the focus on active content.
   * **Zero Inner Glow & Consistent Library Status**: Removed all inset/box shadows across all sidebar chips. Standardized Library Status pills to the identical 28px height, 12px font, and 999px pill geometry.
+  * **Search Profiles Uniformity & Ribbon Pinning**: Standardized Search Profile chips to the exact same 12px font size, 28px height, and 999px squircle/pill geometry as Languages and Themes. Restored the inline star pin button (`★`/`☆`) to pin/unpin profiles to the top ribbon, and replaced the oversized delete glyph with the standardized thin 13px `×` (U+00D7).
 - [x] **Zen Design Refinements Batch: Header, Pagination, Badges, Scope & Toasts**
   * **Vertical Axis Alignment & Gap Tightening**: Synchronized topbar navigation with main content column on the exact same vertical x-axis. Shaved 18px of dead space out of the sidebar-to-canvas canyon, achieving a cohesive 24px visual gap.
   * **Icon-Only 22px Poster Badges (Task 14)**: Replaced wide all-caps text banners with compact 22px rounded-square frosted badges (✦, ✓, ↻, ◷, ✕) with distinct muted tones, preserving 100% of movie title art visibility.

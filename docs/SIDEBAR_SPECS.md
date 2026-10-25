@@ -130,9 +130,13 @@
 - **2-State Single-Select Radio**: **Sort Results** (Warm gold active, no `+` symbol).
 - **2-State Multi-Select Toggle**: **Library Status** (Warm gold active, 50/50 2-column grid, no `+` symbol).
 
-### 5. Sort Results
-- **Layout**: 50/50 2-column grid (`grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px 0;`).
-- **Chips**: 999px pills, 28px height, matching genre pill surface and typography.
+### 5. Sort Results & Search Profiles
+- **Sort Results Layout**: 50/50 2-column grid (`grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px 0;`).
+- **Sort Results Chips**: 999px pills, 28px height, matching genre pill surface and typography.
+- **Search Profiles Chips**:
+  - Full consistency with Languages and Themes: 999px pill geometry, `28px` height, `12px` font size, `padding: 0 10px`, `gap: 5px`.
+  - **Inline Ribbon Pin Button**: Shows `★` in warm gold (`#D4AF37`) when pinned to the top ribbon, and `☆` in muted grey (`#6B7280`) when in reserve, toggling pin status on click.
+  - **Standardized Delete "×"**: Uses the exact same thin 13px glyph `×` (U+00D7) and hover reveal behavior (`opacity: 0` default, `opacity: 0.7` on chip hover, `#CE8484` on button hover) as Languages and Themes.
 
 ### 6. Trimmed Countries & Languages + Clean Inline Hover "×"
 - **Trimmed Core Lists**:
