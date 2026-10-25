@@ -4926,14 +4926,46 @@ function markSelectedProfileModified() {
   scheduleSearchStateSave();
 }
 
-function appendMetaItem(text) {
-  if (!text) {
+function appendMetaItem(content, isHtml = false) {
+  if (!content) {
     return;
   }
 
   const item = document.createElement("span");
-  item.textContent = text;
+  if (isHtml) {
+    item.innerHTML = content;
+    item.className = "meta-item-with-icon";
+  } else {
+    item.textContent = content;
+  }
   elements.dialogMeta.append(item);
+}
+
+function updateDialogKicker(movie, overrideStatus = null) {
+  if (!elements.dialogKicker) return;
+  const status = overrideStatus !== null ? overrideStatus : (getStatus(movie) || "untracked");
+  elements.dialogKicker.dataset.status = status;
+
+  const STATUS_ICONS = {
+    new_discovery: `<svg class="kicker-status-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>`,
+    watch_later: `<svg class="kicker-status-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+    watched: `<svg class="kicker-status-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+    rewatch: `<svg class="kicker-status-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>`,
+    excluded: `<svg class="kicker-status-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+    untracked: `<svg class="kicker-status-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/></svg>`,
+  };
+
+  const icon = STATUS_ICONS[status] || STATUS_ICONS.untracked;
+  const label = STATUS_LABELS[status] || (status === "untracked" ? "Untracked" : status);
+  elements.dialogKicker.innerHTML = `<span class="kicker-icon-wrap" aria-hidden="true">${icon}</span><span class="kicker-label-text">${label}</span>`;
+
+  if (movie?.is_offline_preview) {
+    const offlinePill = document.createElement("span");
+    offlinePill.className = "offline-preview-pill";
+    offlinePill.textContent = "Offline Preview";
+    offlinePill.title = "Viewing cached preview data while offline. Shelving and notes remain fully functional.";
+    elements.dialogKicker.append(offlinePill);
+  }
 }
 
 function renderTags(container, tags, customAware = false) {
@@ -5252,6 +5284,9 @@ function renderVerdict(value) {
     star.addEventListener("click", () => saveSelectedVerdict(rating));
     elements.verdictStars.append(star);
   }
+  if (elements.clearVerdict) {
+    elements.clearVerdict.classList.toggle("is-hidden", selected <= 0);
+  }
 }
 
 function feedback(element, message, kind = "success") {
@@ -5292,9 +5327,7 @@ async function searchKeywordMovies(query, page = 1) {
 function renderPersonalControls(movie) {
   const userData = movie.user_data || null;
   const status = userData?.status || "untracked";
-  if (elements.dialogKicker) {
-    elements.dialogKicker.dataset.status = status;
-  }
+  updateDialogKicker(movie, status);
   document.querySelectorAll(".cockpit-shelf-pill").forEach((pill) => {
     pill.classList.toggle("is-active", pill.dataset.status === status);
   });
@@ -5340,19 +5373,7 @@ function renderMovieDetails(movie) {
   state.selectedMovie = movie;
   updateGreyContext();
   elements.dialogPoster.replaceChildren(createPoster(movie));
-  const mStatus = getStatus(movie) || "untracked";
-  elements.dialogKicker.dataset.status = mStatus;
-  elements.dialogKicker.textContent = getStatus(movie)
-    ? STATUS_LABELS[getStatus(movie)]
-    : "Untracked movie";
-
-  if (movie.is_offline_preview) {
-    const offlinePill = document.createElement("span");
-    offlinePill.className = "offline-preview-pill";
-    offlinePill.textContent = "Offline Preview";
-    offlinePill.title = "Viewing cached preview data while offline. Shelving and notes remain fully functional.";
-    elements.dialogKicker.append(offlinePill);
-  }
+  updateDialogKicker(movie);
   elements.dialogTitle.textContent =
     movie.title || movie.original_title || "Untitled movie";
   elements.dialogMeta.replaceChildren();
@@ -5362,8 +5383,14 @@ function renderMovieDetails(movie) {
   const rating = getMovieRating(movie);
 
   if (rating) {
+    const starSvg = `<svg class="meta-star-icon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+    appendMetaItem(`${starSvg} <span>${rating}</span>`, true);
+
     const voteCountStr = formatVoteCount(movie.vote_count);
-    appendMetaItem(voteCountStr ? `★ ${rating} TMDB (${voteCountStr})` : `★ ${rating} TMDB`);
+    if (voteCountStr) {
+      const voteSvg = `<svg class="meta-vote-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>`;
+      appendMetaItem(`${voteSvg} <span>(${voteCountStr})</span>`, true);
+    }
   }
 
   elements.dialogOverview.textContent =
@@ -5759,7 +5786,7 @@ async function saveSelectedStatus() {
       updateVisibleMovie(null);
       clearDiscoveryCache();
       renderPersonalControls(state.selectedMovie);
-      elements.dialogKicker.textContent = "Untracked";
+      updateDialogKicker(state.selectedMovie, "untracked");
       elements.saveStatus.textContent = "✓ Saved";
       elements.saveStatus.classList.add("save-success");
       feedback(elements.statusFeedback, "Untracked (removed from shelves).", "success");
@@ -5771,7 +5798,7 @@ async function saveSelectedStatus() {
       updateVisibleMovie(response.user_movie_data);
       clearDiscoveryCache();
       renderPersonalControls(state.selectedMovie);
-      elements.dialogKicker.textContent = STATUS_LABELS[status];
+      updateDialogKicker(state.selectedMovie, status);
       elements.saveStatus.textContent = "✓ Saved";
       elements.saveStatus.classList.add("save-success");
       feedback(elements.statusFeedback, `${STATUS_LABELS[status]} saved.`, "success");
@@ -9681,7 +9708,7 @@ async function sendGreyMessage(query) {
             elements.statusSelect.value = status;
             if (!state.selectedMovie.user_data) state.selectedMovie.user_data = {};
             state.selectedMovie.user_data.status = status;
-            elements.dialogKicker.textContent = STATUS_LABELS[status] || status;
+            updateDialogKicker(state.selectedMovie, status);
             feedback(elements.statusFeedback, `${STATUS_LABELS[status] || status} saved.`, "success");
           }
           renderPersonalControls(state.selectedMovie);
@@ -9699,7 +9726,7 @@ async function sendGreyMessage(query) {
             elements.statusSelect.value = status;
             if (!state.selectedMovie.user_data) state.selectedMovie.user_data = {};
             state.selectedMovie.user_data.status = status;
-            elements.dialogKicker.textContent = STATUS_LABELS[status] || status;
+            updateDialogKicker(state.selectedMovie, status);
           }
           renderPersonalControls(state.selectedMovie);
         }

@@ -16,6 +16,14 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Movie Detail Zen Hierarchy Reordering, Liberated Cockpit & Icon Refinement**
+  * **Status Kicker Scale & Tone**: Enlarged the status kicker to 14px with status icons in a muted tone and status label in regular muted white (`#D1D5DB`).
+  * **Title & Enlarged Heart in Enclosed Circle**: Vertically aligned the title with the heart button (`gap: 12px`), with the heart glyph enlarged (`1.35rem`) inside the circular toggle button (`width: 32px; height: 32px; border-radius: 50%`).
+  * **Strict Hierarchy Reordering**: Restructured the movie header layout: Movie Title → Genre chips directly under title (`#dialog-genres`) → Year, language, star rating (`★ 7.5`), and vote count with icon (`[vote icon] (1.1k votes)`) directly under genres without "TMDB" text (`#dialog-meta`).
+  * **Neutral Status Selector Pills**: Removed gaudy/neon colored borders from shelf selector pills; active pills now take a calm neutral border (`1px solid rgba(255, 255, 255, 0.22)`) with icons retaining their color in a muted tone.
+  * **Clear Star Rating Action**: Added a clear icon button (`✕`, `#clear-verdict`) in the 10-star rating row that appears when a movie is rated, enabling 1-click rating reset back to unrated.
+  * **Liberated Action Cockpit & Natural Text Alignment**: Removed the enclosing card box around the status pills and stars (`.personal-panel` background, border, shadow set to none; zero padding), allowing shelf selector chips and star rating to align naturally with the text of the movie descriptions.
+  * **Suppressed Remnant Feedback Notifications**: Eradicated lingering feedback messages (`Watched saved.`, `✓ 8/10 saved.`) so status and verdict updates remain silent and clean.
 - [x] **Movie Detail Strict Zen Alignment & Single-Row Ergonomics**
   * **Locked Top Nav to Content Edges**: Aligned the inner container of `.detail-page-header` (`.detail-header-inner`, width `min(938px, calc(100% - 32px))`) strictly with `.detail-hero` below it. The left edge of `← Back to results` sits on the exact same vertical x-axis as the left edge of the movie poster, and the right edge of `< Prev | Next >` aligns with the right edge of the 670px main column (Action Bar / Notes box / 6th Related Movie).
   * **Neutral Calm Surface on Nav Pills**: Neutralized the yellow/gold tint on `← Back to results`; styled both `← Back to results` and `< Prev | Next >` with `background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.10); color: #D1D5DB; border-radius: 8px;`.

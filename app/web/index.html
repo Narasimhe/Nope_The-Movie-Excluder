@@ -11,8 +11,8 @@
   >
   <title>NOPE</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/styles.css?v=20261026_zen_154">
-  <script src="/static/app.js?v=20261026_zen_154" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261026_zen_155">
+  <script src="/static/app.js?v=20261026_zen_155" defer></script>
 </head>
 <body data-active-view="discover">
   <div class="site-shell" id="app-shell">
@@ -1018,10 +1018,8 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
               <span aria-hidden="true">♥</span>
             </button>
           </div>
-          <div class="detail-meta-row">
-            <div class="dialog-meta" id="dialog-meta"></div>
-            <div class="tag-list dialog-genres" id="dialog-genres"></div>
-          </div>
+          <div class="tag-list dialog-genres" id="dialog-genres"></div>
+          <div class="dialog-meta" id="dialog-meta"></div>
           <p class="dialog-overview" id="dialog-overview"></p>
           <div class="credits-lines">
             <p><span class="credit-label">Director:</span> <span id="dialog-directors">—</span></p>
@@ -1065,14 +1063,12 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
                 <option value="excluded">Nope (X)</option>
               </select>
               <button id="save-status" type="button">Save</button>
-              <button id="clear-verdict" type="button">Clear</button>
             </div>
-
-            <div class="cockpit-divider" aria-hidden="true"></div>
 
             <!-- Tier 2: 10-Star Rating Control -->
             <div class="cockpit-rating-row">
               <div class="star-rating" id="verdict-stars" role="radiogroup" aria-label="My verdict out of 10"></div>
+              <button id="clear-verdict" class="clear-verdict-btn is-hidden" type="button" aria-label="Clear rating" title="Clear rating">✕</button>
               <span class="verdict-score-badge is-hidden" id="verdict-score-badge">0.0</span>
             </div>
 

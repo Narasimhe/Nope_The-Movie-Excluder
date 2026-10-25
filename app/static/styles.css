@@ -9059,168 +9059,62 @@ footer {
 
 /* 4. Semantic Status Kicker */
 .movie-detail-page .dialog-kicker {
-  display: flex !important;
+  display: inline-flex !important;
   align-items: center !important;
-  gap: 6px !important;
-  margin: 0 0 6px !important;
-  font-size: 0.78rem !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.1em !important;
-  text-transform: uppercase !important;
-  color: #9CA3AF !important;
-}
-.movie-detail-page .dialog-kicker[data-status="watched"] {
-  color: #4ADE80 !important;
-}
-.movie-detail-page .dialog-kicker[data-status="watch_later"] {
-  color: #38BDF8 !important;
-}
-.movie-detail-page .dialog-kicker[data-status="rewatch"] {
-  color: #FB923C !important;
-}
-.movie-detail-page .dialog-kicker[data-status="excluded"] {
-  color: #EF4444 !important;
-}
-.movie-detail-page .dialog-kicker[data-status="new_discovery"] {
-  color: #DEC68B !important;
-}
-
-/* 5. Action Cockpit Shelf Pills */
-.movie-detail-page .personal-panel {
-  max-width: 670px !important;
-  width: 670px !important;
-  background: rgba(20, 20, 24, 0.6) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 12px !important;
-  padding: 16px 18px !important;
-  margin-top: 24px !important;
-}
-
-.cockpit-shelf-row {
-  display: flex !important;
-  flex-wrap: wrap !important;
   gap: 8px !important;
-  align-items: center !important;
-  margin: 0 0 12px 0 !important;
+  margin: 0 0 10px 0 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: capitalize !important;
+  line-height: 1.2 !important;
 }
 
-.cockpit-shelf-pill {
+.movie-detail-page .dialog-kicker .kicker-icon-wrap {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 6px !important;
-  height: 28px !important;
-  padding: 0 12px !important;
-  border-radius: 8px !important;
-  background: transparent !important;
-  border: 1.25px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.movie-detail-page .dialog-kicker .kicker-status-icon {
+  width: 15px !important;
+  height: 15px !important;
+  color: #9CA3AF !important;
+  transition: color 140ms ease !important;
+}
+
+.movie-detail-page .dialog-kicker[data-status="watched"] .kicker-status-icon {
+  color: rgba(74, 222, 128, 0.75) !important;
+}
+.movie-detail-page .dialog-kicker[data-status="watch_later"] .kicker-status-icon {
+  color: rgba(56, 189, 248, 0.75) !important;
+}
+.movie-detail-page .dialog-kicker[data-status="rewatch"] .kicker-status-icon {
+  color: rgba(251, 146, 60, 0.75) !important;
+}
+.movie-detail-page .dialog-kicker[data-status="excluded"] .kicker-status-icon {
+  color: rgba(239, 68, 68, 0.75) !important;
+}
+.movie-detail-page .dialog-kicker[data-status="new_discovery"] .kicker-status-icon {
+  color: rgba(222, 198, 139, 0.75) !important;
+}
+.movie-detail-page .dialog-kicker[data-status="untracked"] .kicker-status-icon {
+  color: #6B7280 !important;
+}
+
+.movie-detail-page .dialog-kicker .kicker-label-text {
   color: #D1D5DB !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
   font-weight: 500 !important;
-  cursor: pointer !important;
-  transition: all 140ms ease !important;
-  box-shadow: none !important;
-  user-select: none !important;
-}
-
-.cockpit-shelf-pill:hover {
-  background: transparent !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-  color: #FFFFFF !important;
-}
-
-.cockpit-shelf-pill.is-active[data-status="watched"] {
-  border: 1.75px solid #4ADE80 !important;
-  color: #FFFFFF !important;
-  background: transparent !important;
-}
-.cockpit-shelf-pill.is-active[data-status="watched"] .cockpit-pill-icon {
-  color: #4ADE80 !important;
-}
-
-.cockpit-shelf-pill.is-active[data-status="watch_later"] {
-  border: 1.75px solid #38BDF8 !important;
-  color: #FFFFFF !important;
-  background: transparent !important;
-}
-.cockpit-shelf-pill.is-active[data-status="watch_later"] .cockpit-pill-icon {
-  color: #38BDF8 !important;
-}
-
-.cockpit-shelf-pill.is-active[data-status="new_discovery"] {
-  border: 1.75px solid #DEC68B !important;
-  color: #FFFFFF !important;
-  background: transparent !important;
-}
-.cockpit-shelf-pill.is-active[data-status="new_discovery"] .cockpit-pill-icon {
-  color: #DEC68B !important;
-}
-
-.cockpit-shelf-pill.is-active[data-status="rewatch"] {
-  border: 1.75px solid #FB923C !important;
-  color: #FFFFFF !important;
-  background: transparent !important;
-}
-.cockpit-shelf-pill.is-active[data-status="rewatch"] .cockpit-pill-icon {
-  color: #FB923C !important;
-}
-
-.cockpit-shelf-pill.is-active[data-status="excluded"] {
-  border: 1.75px solid #EF4444 !important;
-  color: #FFFFFF !important;
-  background: transparent !important;
-}
-.cockpit-shelf-pill.is-active[data-status="excluded"] .cockpit-pill-icon {
-  color: #EF4444 !important;
-}
-
-/* 6. Notes Card & Overview Width */
-.movie-detail-page .dialog-overview {
-  max-width: 670px !important;
-  width: 670px !important;
-}
-
-.detail-notes-card,
-.movie-detail-page .detail-notes {
-  max-width: 670px !important;
-  width: 670px !important;
-}
-
-/* ============================================================
-   MOVIE DETAIL PAGE - UNIFIED TYPOGRAPHIC HARMONY & UNBOXED HEART
-   ============================================================ */
-
-/* All typography on detail page strictly inherits the primary font */
-.movie-detail-page,
-.movie-detail-page button,
-.movie-detail-page input,
-.movie-detail-page select,
-.movie-detail-page textarea {
-  font-family: var(--font-ui) !important;
-  -webkit-font-smoothing: antialiased !important;
-  -moz-osx-font-smoothing: grayscale !important;
-}
-
-/* Kicker: Status pill/label */
-.movie-detail-page .dialog-kicker {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  margin: 0 0 6px 0 !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  letter-spacing: 0.1em !important;
-  text-transform: uppercase !important;
-  line-height: 1 !important;
 }
 
 /* Movie Title & Inline Unboxed Heart */
 .detail-title-wrap {
   display: flex !important;
   align-items: center !important;
-  gap: 6px !important;
+  gap: 12px !important;
   flex-wrap: wrap !important;
-  margin: 0 0 14px 0 !important;
+  margin: 0 0 12px 0 !important;
 }
 
 .movie-detail-page .dialog-body h1,
@@ -9245,7 +9139,7 @@ footer {
   align-items: center !important;
   justify-content: center !important;
   background: rgba(251, 113, 133, 0.08) !important;
-  border: 1px solid rgba(251, 113, 133, 0.28) !important;
+  border: 1px solid rgba(251, 113, 133, 0.32) !important;
   margin: 0 !important;
   padding: 0 !important;
   box-shadow: none !important;
@@ -9257,14 +9151,14 @@ footer {
 
 .movie-detail-page .favorite-button:hover,
 .favorite-button:hover {
-  background: rgba(251, 113, 133, 0.16) !important;
-  border-color: rgba(251, 113, 133, 0.50) !important;
+  background: rgba(251, 113, 133, 0.18) !important;
+  border-color: rgba(251, 113, 133, 0.55) !important;
   transform: scale(1.08) !important;
 }
 
 .movie-detail-page .favorite-button span,
 .favorite-button span {
-  font-size: 1.08rem !important;
+  font-size: 1.35rem !important;
   line-height: 1 !important;
   color: transparent !important;
   -webkit-text-stroke: 1.3px #ff656a !important;
@@ -9276,7 +9170,7 @@ footer {
 
 .movie-detail-page .favorite-button.is-favorite,
 .favorite-button.is-favorite {
-  background: rgba(240, 79, 85, 0.18) !important;
+  background: rgba(240, 79, 85, 0.20) !important;
   border-color: #f04f55 !important;
 }
 
@@ -9299,40 +9193,13 @@ footer {
   -webkit-text-stroke: 1.2px #6b7280 !important;
 }
 
-/* Metadata Row (Year, Language, TMDB Rating, Genres) */
-.detail-meta-row,
-.movie-detail-page .detail-meta-row {
-  display: flex !important;
-  align-items: center !important;
-  gap: 16px !important;
-  flex-wrap: wrap !important;
-  margin: 8px 0 14px 0 !important;
-  font-size: 13px !important;
-  color: #9CA3AF !important;
-  line-height: 1.4 !important;
-}
-
-.movie-detail-page .dialog-meta {
-  display: flex !important;
-  align-items: center !important;
-  gap: 0 !important;
-  font-size: 13px !important;
-  color: #9CA3AF !important;
-  font-weight: 450 !important;
-}
-
-.movie-detail-page .dialog-meta span + span::before {
-  content: "•" !important;
-  margin: 0 8px !important;
-  color: #6B7280 !important;
-}
-
-/* Genre chips */
+/* Hierarchy: Genre chips directly below title */
 .movie-detail-page .dialog-genres {
-  display: inline-flex !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
   align-items: center !important;
   gap: 6px !important;
-  margin: 0 !important;
+  margin: 0 0 10px 0 !important;
 }
 
 .movie-detail-page .dialog-genres .tag {
@@ -9341,13 +9208,193 @@ footer {
   height: 22px !important;
   padding: 0 8px !important;
   border-radius: 6px !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
-  background: transparent !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
   color: #D1D5DB !important;
-  font-size: 11px !important;
+  font-size: 11.5px !important;
   font-weight: 500 !important;
   text-transform: none !important;
   letter-spacing: 0.01em !important;
+}
+
+/* Hierarchy: Meta row directly below genre chips */
+.movie-detail-page .dialog-meta {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 0 !important;
+  margin: 0 0 16px 0 !important;
+  font-size: 13.5px !important;
+  color: #9CA3AF !important;
+  font-weight: 450 !important;
+  line-height: 1.4 !important;
+}
+
+.movie-detail-page .dialog-meta span + span::before {
+  content: "•" !important;
+  margin: 0 8px !important;
+  color: #6B7280 !important;
+}
+
+.movie-detail-page .dialog-meta .meta-item-with-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+.movie-detail-page .dialog-meta .meta-star-icon {
+  color: #F2CA52 !important;
+  flex-shrink: 0 !important;
+  vertical-align: middle !important;
+}
+
+.movie-detail-page .dialog-meta .meta-vote-icon {
+  color: #9CA3AF !important;
+  flex-shrink: 0 !important;
+  vertical-align: middle !important;
+}
+
+/* Liberated Action Cockpit: Liberated from box, natural alignment */
+.movie-detail-page .personal-panel,
+#detail-action-cockpit {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin-top: 24px !important;
+  margin-bottom: 24px !important;
+  max-width: 670px !important;
+  width: 100% !important;
+}
+
+.cockpit-shelf-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  align-items: center !important;
+  margin: 0 0 14px 0 !important;
+  padding: 0 !important;
+}
+
+.cockpit-shelf-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 28px !important;
+  padding: 0 12px !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  color: #9CA3AF !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+  box-shadow: none !important;
+  user-select: none !important;
+}
+
+.cockpit-shelf-pill:hover {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.20) !important;
+  color: #E5E7EB !important;
+}
+
+/* Active status pill: neutral calm border, no gaudy colored borders */
+.cockpit-shelf-pill.is-active,
+.cockpit-shelf-pill.is-active[data-status="watched"],
+.cockpit-shelf-pill.is-active[data-status="watch_later"],
+.cockpit-shelf-pill.is-active[data-status="new_discovery"],
+.cockpit-shelf-pill.is-active[data-status="rewatch"],
+.cockpit-shelf-pill.is-active[data-status="excluded"] {
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: #FFFFFF !important;
+}
+
+/* Pill icons retain color in a muted tone */
+.cockpit-shelf-pill .cockpit-pill-icon {
+  color: #9CA3AF !important;
+  transition: color 140ms ease !important;
+}
+
+.cockpit-shelf-pill.is-active[data-status="watched"] .cockpit-pill-icon {
+  color: rgba(74, 222, 128, 0.75) !important;
+}
+
+.cockpit-shelf-pill.is-active[data-status="watch_later"] .cockpit-pill-icon {
+  color: rgba(56, 189, 248, 0.75) !important;
+}
+
+.cockpit-shelf-pill.is-active[data-status="new_discovery"] .cockpit-pill-icon {
+  color: rgba(222, 198, 139, 0.75) !important;
+}
+
+.cockpit-shelf-pill.is-active[data-status="rewatch"] .cockpit-pill-icon {
+  color: rgba(251, 146, 60, 0.75) !important;
+}
+
+.cockpit-shelf-pill.is-active[data-status="excluded"] .cockpit-pill-icon {
+  color: rgba(239, 68, 68, 0.75) !important;
+}
+
+.cockpit-divider {
+  display: none !important;
+}
+
+/* Liberated 10-Star Rating Row */
+.cockpit-rating-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.star-rating {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  margin: 0 !important;
+}
+
+/* Clear Verdict Button */
+.clear-verdict-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 22px !important;
+  height: 22px !important;
+  border-radius: 50% !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #9CA3AF !important;
+  cursor: pointer !important;
+  margin-left: 6px !important;
+  padding: 0 !important;
+  font-size: 11px !important;
+  line-height: 1 !important;
+  transition: all 140ms ease !important;
+}
+
+.clear-verdict-btn:hover {
+  background: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.40) !important;
+  color: #EF4444 !important;
+  transform: scale(1.08) !important;
+}
+
+.clear-verdict-btn.is-hidden {
+  display: none !important;
+}
+
+/* Suppress Remnant Notifications */
+#status-feedback,
+#verdict-feedback,
+.movie-detail-page #status-feedback,
+.movie-detail-page #verdict-feedback {
+  display: none !important;
 }
 
 /* Overview / Plot */
