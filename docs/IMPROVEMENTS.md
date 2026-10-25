@@ -16,6 +16,13 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Universal 8px Squircle Chips & Nope 'X' Icon Consistency**
+  * **8px Squircles Everywhere (No Ellipsoids)**: Replaced 999px pill/capsule radii with clean 8px squircles across all chips: preset ribbon chips, library shelf ribbon chips, scope/target toggles, sidebar tri-chips, filter chips, profile workshop chips, sort chips, status chips, and selected entity tags.
+  * **Nope Icon Standardization to 'X'**: Replaced prohibition/ban circle ('dont' circle-slash) with a crisp 'X' across the entire interface: Material Symbols glyph set to 'close' (on poster badges and sidebar status filter) and inline SVG vectors updated to clean crossed lines (in library shelf ribbon and movie detail cockpit).
+- [x] **Zen Discovery Search Bar, Ribbon Chips & 102px Header Parity**
+  * **Zen Search Bar (.toolbar-search)**: Standardized to 36px height, 670px width (flush with 6-column movie grid), sleek borderless dark fill (rgba(20, 20, 25, 0.92)), subtle border (rgba(255, 255, 255, 0.08)), 8px squircle radius, quiet 14px magnifying icon, clean placeholder in #8E8B97, and zero-glow gold hairline on focus.
+  * **Preset & Library Ribbon Chips (.ribbon-chip)**: Standardized to 28px height, 12px font size, 999px geometry, max-width: 120px with ellipsis overflow, soft warm cream active text (#E6D5B8), subtle warm gold border (rgba(212, 175, 55, 0.28)), dark fill (rgba(212, 175, 55, 0.05)), and zero glow.
+  * **Zero-Shift 102px Vertical Geometry Parity**: Unified Row 1 (36px search bar), 14px inter-row gap, Row 2 (32px ribbon), and 20px bottom margin identically across both Discover and Personal Library canvases for seamless view transitions.
 - [x] **Material Symbols Poster Parity, Favourite Hearts Removal & Unified Pill Harmony**
   * **Material Symbols on Posters**: Standardized 22px poster corner badges to use the exact same Material Symbols glyphs (uto_awesome, check, schedule, 
 eplay, lock) as the sidebar. Untracked movies receive no badge.

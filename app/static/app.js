@@ -104,7 +104,7 @@ const STATUS_GLYPH_NAMES = {
   watched: "check",
   watch_later: "schedule",
   rewatch: "replay",
-  excluded: "block",
+  excluded: "close",
 };
 
 function getStatusBadgeElement(status) {
@@ -4554,7 +4554,10 @@ function renderProfileRibbon() {
     chip.type = "button";
     chip.className = "ribbon-chip";
     chip.dataset.profile = String(prof.id);
-    chip.textContent = prof.name;
+    const label = document.createElement("span");
+    label.className = "ribbon-chip-text";
+    label.textContent = prof.name;
+    chip.append(label);
     chip.title = prof.name;
     chip.addEventListener("click", () => {
       if (elements.query) {

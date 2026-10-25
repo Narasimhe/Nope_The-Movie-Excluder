@@ -203,7 +203,7 @@
   gap: 6px;
   height: 28px;
   padding: 0 11px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: rgba(242, 201, 76, 0.08);
   border: 1px solid rgba(242, 201, 76, 0.28);
   color: #efece4;
@@ -2289,7 +2289,7 @@ footer span {
   display: inline-flex;
   align-items: center;
   padding: 5px 12px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: #181820;
   border: 1px solid rgba(255, 255, 255, 0.09);
   color: #c5c2cb;
@@ -2543,85 +2543,232 @@ footer span {
   color: #fff;
 }
 
-/* Discover Canvas Header & Toolbar */
-.discover-canvas-header {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  margin-bottom: 28px;
-}
-.discover-toolbar-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.toolbar-search {
-  display: grid;
-  grid-template-columns: 24px 1fr auto;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  max-width: 440px;
-  min-width: 250px;
-  margin: 0;
-  padding: 4px 4px 4px 14px;
-  border: 1px solid var(--line-strong);
-  border-radius: 9px;
-  background: rgba(21, 21, 27, 0.88);
-  box-shadow: none;
-}
-.toolbar-search input {
-  padding: 7px 4px;
-  font-size: 0.95rem;
-}
-.toolbar-search button {
-  min-height: 34px;
-  padding: 0 16px;
-  border-radius: 7px;
-  font-size: 0.88rem;
-  font-weight: 700;
+/* Discover & Library Canvas Header & Toolbar (Zen Parity) */
+.discover-canvas-header,
+.library-canvas-header {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+  margin-bottom: 20px !important;
+  width: 100% !important;
 }
 
-/* Top Profile Ribbon */
-.profile-ribbon {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  overflow-x: auto;
-  padding: 4px 0 8px;
-  scrollbar-width: none;
+.discover-toolbar-row,
+.library-toolbar-row {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  flex-wrap: nowrap !important;
+  gap: 16px !important;
 }
-.profile-ribbon::-webkit-scrollbar {
-  display: none;
+
+.discover-search-cluster,
+.library-search-cluster {
+  width: 670px !important;
+  max-width: 670px !important;
+  flex-shrink: 0 !important;
 }
+
+.toolbar-search {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+  max-width: 670px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  margin: 0 !important;
+  padding: 0 12px !important;
+  gap: 8px !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  background: rgba(20, 20, 25, 0.92) !important;
+  box-sizing: border-box !important;
+  box-shadow: none !important;
+  transition: border-color 140ms ease !important;
+}
+
+.toolbar-search:focus-within {
+  border-color: rgba(212, 175, 55, 0.35) !important;
+  box-shadow: none !important;
+}
+
+.toolbar-search .search-icon {
+  position: relative !important;
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  border: 1.5px solid #8E8B97 !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.toolbar-search .search-icon::after {
+  position: absolute !important;
+  right: -4px !important;
+  bottom: -3px !important;
+  width: 6px !important;
+  height: 1.5px !important;
+  background: #8E8B97 !important;
+  border-radius: 1px !important;
+  content: "" !important;
+  transform: rotate(45deg) !important;
+}
+
+.toolbar-search input {
+  flex: 1 1 auto !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  color: #E5E7EB !important;
+  font-size: 13px !important;
+  line-height: 36px !important;
+  box-shadow: none !important;
+}
+
+.toolbar-search input::placeholder {
+  color: #8E8B97 !important;
+  font-size: 13px !important;
+}
+
+.toolbar-search button[type="submit"] {
+  display: none !important;
+}
+
+.library-search-pills {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+}
+
+.library-scope-toggle-btn,
+.library-target-toggle-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  height: 24px !important;
+  padding: 0 8px !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  color: #9CA3AF !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+  white-space: nowrap !important;
+}
+
+.library-scope-toggle-btn:hover,
+.library-target-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #E5E7EB !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+.result-count,
+.shelf-movie-count {
+  margin-left: auto !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: #8E8B97 !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  white-space: nowrap !important;
+  line-height: 1 !important;
+}
+
+/* Preset & Library Shelves Ribbon (Zen Parity) */
+.profile-ribbon,
+.library-shelf-ribbon {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  height: 32px !important;
+  min-height: 32px !important;
+  max-width: 670px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow-x: auto !important;
+  scrollbar-width: none !important;
+}
+
+.profile-ribbon::-webkit-scrollbar,
+.library-shelf-ribbon::-webkit-scrollbar {
+  display: none !important;
+}
+
 .ribbon-chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 14px;
-  border-radius: 999px;
-  background: rgba(22, 22, 26, 0.72);
-  border: 1px solid rgba(242, 201, 76, 0.22);
-  color: #c5c2cc;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: all 160ms ease;
-  white-space: nowrap;
-  user-select: none;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  padding: 0 12px !important;
+  max-width: 130px !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #9CA3AF !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  letter-spacing: 0.01em !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: all 140ms ease !important;
 }
+
+.ribbon-chip > span,
+.ribbon-chip-text {
+  display: inline-block !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  text-align: left !important;
+}
+
 .ribbon-chip:hover {
-  background: rgba(28, 28, 34, 0.9);
-  color: #fff;
-  border-color: rgba(242, 201, 76, 0.45);
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  color: #E5E7EB !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
+
 .ribbon-chip.is-active {
-  background: rgba(242, 201, 76, 0.14);
-  border-color: #f2c94c;
-  color: #f2c94c;
-  box-shadow: 0 0 16px rgba(242, 201, 76, 0.2);
+  background: rgba(212, 175, 55, 0.05) !important;
+  border: 1px solid rgba(212, 175, 55, 0.28) !important;
+  color: #E6D5B8 !important;
+  box-shadow: none !important;
+}
+
+.ribbon-chip .shelf-chip-icon {
+  width: 13px !important;
+  height: 13px !important;
+  color: #6B7280 !important;
+  flex-shrink: 0 !important;
+  transition: color 140ms ease !important;
+}
+
+.ribbon-chip:hover .shelf-chip-icon {
+  color: #E5E7EB !important;
+}
+
+.ribbon-chip.is-active .shelf-chip-icon {
+  color: #DEC68B !important;
 }
 
 /* Navigation links in Library and Notes panes */
@@ -3680,7 +3827,7 @@ footer {
   display: inline-flex;
   align-items: center;
   padding: 5px 11px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: #181820;
   border: 1px solid rgba(255, 255, 255, 0.09);
   color: #c5c2cb;
@@ -3744,7 +3891,7 @@ footer {
   align-items: center;
   gap: 4px;
   padding: 5px 11px;
-  border-radius: 999px;
+  border-radius: 8px;
   background: #181820;
   border: 1px solid rgba(255, 255, 255, 0.09);
   color: #c5c2cb;
@@ -7854,7 +8001,7 @@ body.grey-docked-open .entry-list.is-list-mode {
   height: 28px !important;
   min-height: 28px !important;
   padding: 0 10px !important;
-  border-radius: 999px !important;
+  border-radius: 8px !important;
   background: rgba(255, 255, 255, 0.02) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: #9CA3AF !important;
@@ -7948,7 +8095,7 @@ body.grey-docked-open .entry-list.is-list-mode {
   height: 28px !important;
   min-height: 28px !important;
   padding: 0 10px !important;
-  border-radius: 999px !important;
+  border-radius: 8px !important;
   background: rgba(255, 255, 255, 0.02) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: #9CA3AF !important;
@@ -8075,7 +8222,7 @@ body.grey-docked-open .entry-list.is-list-mode {
   gap: 8px !important;
   height: 28px !important;
   padding: 0 12px !important;
-  border-radius: 999px !important;
+  border-radius: 8px !important;
   background: rgba(255, 255, 255, 0.02) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: #9CA3AF !important;
@@ -8163,7 +8310,7 @@ body[data-active-view="discover"] .favorite-mark {
   align-items: center !important;
   height: 28px !important;
   padding: 0 10px !important;
-  border-radius: 999px !important;
+  border-radius: 8px !important;
   font-size: 12px !important;
   font-weight: 400 !important;
   box-sizing: border-box !important;
