@@ -16,6 +16,15 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Movie Detail Unified Typography Hierarchy & Standalone Unboxed Heart**
+  * **Unified Typography Hierarchy**: Standardized all typography across the movie detail cockpit under --font-ui (Plus Jakarta Sans) with balanced font scaling (Title: ~30px 700, Overview: 14.5px 1.65 line-height, Credits: 13.5px with clean non-underlined links, Meta: 13px, Badges/Tags: 11px, Notes: 13.5px), eradicating size and font inconsistencies.
+  * **Standalone Unboxed Heart**: Removed the enclosing circle, borders, and backgrounds from the detail page Heart button (#favorite-button), leaving a crisp, floating standalone heart icon beside the title that fills with solid red when favorited.
+- [x] **Movie Detail Page Canvas Parity, Inline Heart & Typography Proportions**
+  * **Main Canvas Geometry Parity**: Expanded the single movie detail page header and content from the cramped 1080px box to the exact full canvas bounds of Discover and Library (width: min(100% - 32px, 1536px)), eliminating layout pinching.
+  * **Title & Inline Heart**: Placed the 32px circular Heart toggle directly beside the movie title (.detail-title-wrap), removing awkward vertical dead space.
+  * **Reduced Title Scale**: Reduced movie title font-size from oversized 3.45rem (~55px) to a balanced, cinematic clamp(1.65rem, 2.5vw, 2.2rem) with crisp 1.15 line-height.
+  * **Interactive Cockpit Shelf Pills**: Wired the status pills (Discovery, Watch later, Watched, Rewatch, Nope) with instant 1-click status toggling and semantic status borders matching the Zen chip design system.
+  * **Dynamic Kicker Status Colors**: Set the header kicker to dynamically reflect the movie's status color (Emerald for Watched, Sky Blue for Watch Later, Amber for Rewatch, Crimson for Nope, Cinema Gold for New Discovery).
 - [x] **Passive Unclickable Heart in Library Shelf Ribbon**
   * **Unclickable Heart**: Converted the ribbon heart (.shelf-favorites-btn) from an interactive button into a passive indicator (<span> with pointer-events: none !important; cursor: default !important; user-select: none !important), disallowing clicks while retaining active reflection when viewing Favourites.
 - [x] **Eradicated Inner Glow & Shading Across Sidebar Filter Chips (Languages, Genres, Countries, Entities)**

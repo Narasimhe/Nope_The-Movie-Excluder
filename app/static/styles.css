@@ -8782,3 +8782,524 @@ footer {
 .nope-mode-floating-banner {
   display: none !important;
 }
+
+/* ============================================================
+   MOVIE DETAIL PAGE - ZEN CANVAS PARITY & PROPORTIONS
+   ============================================================ */
+
+/* 1. Full Canvas Geometry: Match Library and Discover */
+.detail-page-header,
+.movie-detail-page .detail-page-header {
+  width: 100% !important;
+  max-width: 1536px !important;
+  margin: 0 auto !important;
+  padding-left: max(32px, calc((100vw - 1536px) / 2 + 16px)) !important;
+  padding-right: max(32px, calc((100vw - 1536px) / 2 + 16px)) !important;
+  box-sizing: border-box !important;
+  min-height: 64px !important;
+}
+
+.movie-detail-page .detail-page-content {
+  width: min(100% - 32px, 1536px) !important;
+  max-width: 1536px !important;
+  margin: 0 auto !important;
+  padding: 24px 16px 72px !important;
+  box-sizing: border-box !important;
+}
+
+/* 2. Hero Layout & Proportions */
+.detail-hero {
+  display: grid !important;
+  grid-template-columns: 240px minmax(0, 1fr) !important;
+  gap: 36px !important;
+  align-items: start !important;
+}
+
+.movie-detail-page .dialog-poster-wrap {
+  width: 240px !important;
+  height: 360px !important;
+  max-height: none !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* 3. Title & Inline Heart */
+.detail-title-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  flex-wrap: wrap !important;
+  margin: 0 0 8px 0 !important;
+}
+
+.movie-detail-page .dialog-body h1,
+.detail-title-wrap h1 {
+  font-size: clamp(1.65rem, 2.5vw, 2.2rem) !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.025em !important;
+  font-weight: 750 !important;
+  margin: 0 !important;
+  display: inline !important;
+}
+
+.movie-detail-page .favorite-button,
+.favorite-button {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(244, 79, 83, 0.4) !important;
+  background: rgba(244, 79, 83, 0.04) !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: all 140ms ease !important;
+  vertical-align: middle !important;
+}
+
+.movie-detail-page .favorite-button:hover,
+.favorite-button:hover {
+  background: rgba(244, 79, 83, 0.14) !important;
+  border-color: rgba(244, 79, 83, 0.7) !important;
+  transform: scale(1.08) !important;
+}
+
+.movie-detail-page .favorite-button span,
+.favorite-button span {
+  font-size: 1.1rem !important;
+  line-height: 1 !important;
+  color: transparent !important;
+  -webkit-text-stroke: 1.4px #ff656a !important;
+  display: block !important;
+}
+
+.movie-detail-page .favorite-button.is-favorite,
+.favorite-button.is-favorite {
+  background: rgba(240, 79, 85, 0.16) !important;
+  border-color: #f04f55 !important;
+}
+
+.movie-detail-page .favorite-button.is-favorite span,
+.favorite-button.is-favorite span {
+  color: #f04f55 !important;
+  -webkit-text-stroke: 0 !important;
+}
+
+.movie-detail-page .favorite-button:disabled,
+.favorite-button:disabled {
+  opacity: 0.3 !important;
+  cursor: not-allowed !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+.movie-detail-page .favorite-button:disabled span,
+.favorite-button:disabled span {
+  -webkit-text-stroke: 1.2px #6b7280 !important;
+}
+
+/* 4. Semantic Status Kicker */
+.movie-detail-page .dialog-kicker {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin: 0 0 6px !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  color: #9CA3AF !important;
+}
+.movie-detail-page .dialog-kicker[data-status="watched"] {
+  color: #4ADE80 !important;
+}
+.movie-detail-page .dialog-kicker[data-status="watch_later"] {
+  color: #38BDF8 !important;
+}
+.movie-detail-page .dialog-kicker[data-status="rewatch"] {
+  color: #FB923C !important;
+}
+.movie-detail-page .dialog-kicker[data-status="excluded"] {
+  color: #EF4444 !important;
+}
+.movie-detail-page .dialog-kicker[data-status="new_discovery"] {
+  color: #DEC68B !important;
+}
+
+/* 5. Action Cockpit Shelf Pills */
+.movie-detail-page .personal-panel {
+  max-width: 720px !important;
+  background: rgba(20, 20, 24, 0.6) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 12px !important;
+  padding: 14px 16px !important;
+  margin-top: 16px !important;
+}
+
+.cockpit-shelf-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+  align-items: center !important;
+  margin: 0 0 12px 0 !important;
+}
+
+.cockpit-shelf-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 28px !important;
+  padding: 0 12px !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  border: 1.25px solid rgba(255, 255, 255, 0.15) !important;
+  color: #D1D5DB !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+  box-shadow: none !important;
+  user-select: none !important;
+}
+
+.cockpit-shelf-pill:hover {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: #FFFFFF !important;
+}
+
+.cockpit-shelf-pill.is-active[data-status="watched"] {
+  border: 1.75px solid #4ADE80 !important;
+  color: #FFFFFF !important;
+  background: transparent !important;
+}
+.cockpit-shelf-pill.is-active[data-status="watched"] .cockpit-pill-icon {
+  color: #4ADE80 !important;
+}
+
+.cockpit-shelf-pill.is-active[data-status="watch_later"] {
+  border: 1.75px solid #38BDF8 !important;
+  color: #FFFFFF !important;
+  background: transparent !important;
+}
+.cockpit-shelf-pill.is-active[data-status="watch_later"] .cockpit-pill-icon {
+  color: #38BDF8 !important;
+}
+
+.cockpit-shelf-pill.is-active[data-status="new_discovery"] {
+  border: 1.75px solid #DEC68B !important;
+  color: #FFFFFF !important;
+  background: transparent !important;
+}
+.cockpit-shelf-pill.is-active[data-status="new_discovery"] .cockpit-pill-icon {
+  color: #DEC68B !important;
+}
+
+.cockpit-shelf-pill.is-active[data-status="rewatch"] {
+  border: 1.75px solid #FB923C !important;
+  color: #FFFFFF !important;
+  background: transparent !important;
+}
+.cockpit-shelf-pill.is-active[data-status="rewatch"] .cockpit-pill-icon {
+  color: #FB923C !important;
+}
+
+.cockpit-shelf-pill.is-active[data-status="excluded"] {
+  border: 1.75px solid #EF4444 !important;
+  color: #FFFFFF !important;
+  background: transparent !important;
+}
+.cockpit-shelf-pill.is-active[data-status="excluded"] .cockpit-pill-icon {
+  color: #EF4444 !important;
+}
+
+/* 6. Notes Card & Overview Width */
+.movie-detail-page .dialog-overview {
+  max-width: 720px !important;
+}
+
+.detail-notes-card,
+.movie-detail-page .detail-notes {
+  max-width: 720px !important;
+}
+
+/* ============================================================
+   MOVIE DETAIL PAGE - UNIFIED TYPOGRAPHIC HARMONY & UNBOXED HEART
+   ============================================================ */
+
+/* All typography on detail page strictly inherits the primary font */
+.movie-detail-page,
+.movie-detail-page button,
+.movie-detail-page input,
+.movie-detail-page select,
+.movie-detail-page textarea {
+  font-family: var(--font-ui) !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* Kicker: Status pill/label */
+.movie-detail-page .dialog-kicker {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin: 0 0 6px 0 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase !important;
+  line-height: 1 !important;
+}
+
+/* Movie Title & Inline Unboxed Heart */
+.detail-title-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+  margin: 0 0 8px 0 !important;
+}
+
+.movie-detail-page .dialog-body h1,
+.detail-title-wrap h1 {
+  font-size: clamp(1.65rem, 2.5vw, 2.2rem) !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.025em !important;
+  font-weight: 700 !important;
+  color: #FFFFFF !important;
+  margin: 0 !important;
+  display: inline !important;
+}
+
+/* Standalone Unboxed Heart (No enclosing circle) */
+.movie-detail-page .favorite-button,
+.favorite-button {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  cursor: pointer !important;
+  flex-shrink: 0 !important;
+  transition: transform 140ms ease, opacity 140ms ease !important;
+  vertical-align: middle !important;
+}
+
+.movie-detail-page .favorite-button:hover,
+.favorite-button:hover {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  transform: scale(1.15) !important;
+}
+
+.movie-detail-page .favorite-button span,
+.favorite-button span {
+  font-size: 1.35rem !important;
+  line-height: 1 !important;
+  color: transparent !important;
+  -webkit-text-stroke: 1.5px #ff656a !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transition: color 140ms ease, -webkit-text-stroke 140ms ease !important;
+}
+
+.movie-detail-page .favorite-button.is-favorite,
+.favorite-button.is-favorite {
+  background: transparent !important;
+  border: none !important;
+}
+
+.movie-detail-page .favorite-button.is-favorite span,
+.favorite-button.is-favorite span {
+  color: #f04f55 !important;
+  -webkit-text-stroke: 0 !important;
+}
+
+.movie-detail-page .favorite-button:disabled,
+.favorite-button:disabled {
+  opacity: 0.25 !important;
+  cursor: not-allowed !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+.movie-detail-page .favorite-button:disabled span,
+.favorite-button:disabled span {
+  -webkit-text-stroke: 1.2px #6b7280 !important;
+}
+
+/* Metadata Row (Year, Language, TMDB Rating, Genres) */
+.detail-meta-row,
+.movie-detail-page .detail-meta-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+  flex-wrap: wrap !important;
+  margin: 8px 0 14px 0 !important;
+  font-size: 13px !important;
+  color: #9CA3AF !important;
+  line-height: 1.4 !important;
+}
+
+.movie-detail-page .dialog-meta {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+  font-size: 13px !important;
+  color: #9CA3AF !important;
+  font-weight: 450 !important;
+}
+
+.movie-detail-page .dialog-meta span + span::before {
+  content: "•" !important;
+  margin: 0 8px !important;
+  color: #6B7280 !important;
+}
+
+/* Genre chips */
+.movie-detail-page .dialog-genres {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin: 0 !important;
+}
+
+.movie-detail-page .dialog-genres .tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 22px !important;
+  padding: 0 8px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  background: transparent !important;
+  color: #D1D5DB !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: 0.01em !important;
+}
+
+/* Overview / Plot */
+.movie-detail-page .dialog-overview {
+  max-width: 720px !important;
+  margin: 0 0 16px 0 !important;
+  font-size: 14.5px !important;
+  line-height: 1.65 !important;
+  font-weight: 400 !important;
+  color: #D1D5DB !important;
+  letter-spacing: 0.005em !important;
+}
+
+/* Credits Lines (Director & Actors) */
+.credits-lines,
+.movie-detail-page .credits-lines {
+  max-width: 720px !important;
+  margin: 0 0 18px 0 !important;
+  font-size: 13.5px !important;
+  line-height: 1.6 !important;
+  color: #9CA3AF !important;
+}
+
+.credits-lines p,
+.movie-detail-page .credits-lines p {
+  margin: 4px 0 !important;
+}
+
+.credits-lines .credit-label {
+  font-weight: 600 !important;
+  color: #E5E7EB !important;
+  margin-right: 6px !important;
+}
+
+.credits-lines a {
+  color: #D1D5DB !important;
+  text-decoration: none !important;
+  font-weight: 450 !important;
+  transition: color 140ms ease !important;
+}
+
+.credits-lines a:hover {
+  color: #DEC68B !important;
+  text-decoration: underline !important;
+  text-underline-offset: 3px !important;
+}
+
+/* Keyword chips below poster */
+.poster-keywords {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  padding: 12px 0 0 0 !important;
+  max-width: 240px !important;
+}
+
+.poster-keywords .tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 22px !important;
+  padding: 0 8px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: transparent !important;
+  color: #9CA3AF !important;
+  font-size: 11px !important;
+  font-weight: 450 !important;
+  line-height: 1 !important;
+}
+
+/* Notes & Grey Review Card */
+.detail-notes-card,
+.movie-detail-page .detail-notes {
+  max-width: 720px !important;
+  margin-top: 14px !important;
+}
+
+#movie-notes,
+.movie-detail-page .detail-notes textarea {
+  width: 100% !important;
+  min-height: 120px !important;
+  padding: 12px 14px !important;
+  border-radius: 10px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(18, 18, 22, 0.7) !important;
+  color: #D1D5DB !important;
+  font-family: var(--font-ui) !important;
+  font-size: 13.5px !important;
+  line-height: 1.6 !important;
+  font-weight: 400 !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+  resize: vertical !important;
+}
+
+#movie-notes:focus {
+  border-color: rgba(212, 175, 55, 0.5) !important;
+}
+
+/* Related Movies Header */
+.related-heading,
+.related-panel h2 {
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  color: #FFFFFF !important;
+  letter-spacing: -0.01em !important;
+}
+
+.related-familiar-toggle {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  color: #9CA3AF !important;
+}

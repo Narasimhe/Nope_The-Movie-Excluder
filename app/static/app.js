@@ -5298,6 +5298,12 @@ async function searchKeywordMovies(query, page = 1) {
 function renderPersonalControls(movie) {
   const userData = movie.user_data || null;
   const status = userData?.status || "untracked";
+  if (elements.dialogKicker) {
+    elements.dialogKicker.dataset.status = status;
+  }
+  document.querySelectorAll(".cockpit-shelf-pill").forEach((pill) => {
+    pill.classList.toggle("is-active", pill.dataset.status === status);
+  });
   const canFavorite = status === "watched" || status === "rewatch";
   const isFavorite = Boolean(userData?.is_favorite);
 
@@ -5340,6 +5346,8 @@ function renderMovieDetails(movie) {
   state.selectedMovie = movie;
   updateGreyContext();
   elements.dialogPoster.replaceChildren(createPoster(movie));
+  const mStatus = getStatus(movie) || "untracked";
+  elements.dialogKicker.dataset.status = mStatus;
   elements.dialogKicker.textContent = getStatus(movie)
     ? STATUS_LABELS[getStatus(movie)]
     : "Untracked movie";
@@ -8318,6 +8326,15 @@ elements.returnToOrigin.addEventListener("click", () => {
 });
 
 elements.saveStatus.addEventListener("click", saveSelectedStatus);
+document.querySelectorAll(".cockpit-shelf-pill").forEach((pill) => {
+  pill.addEventListener("click", () => {
+    if (!state.selectedMovie) return;
+    const curStatus = state.selectedMovie.user_data?.status || "untracked";
+    const targetStatus = pill.dataset.status === curStatus ? "untracked" : pill.dataset.status;
+    elements.statusSelect.value = targetStatus;
+    saveSelectedStatus();
+  });
+});
 elements.favoriteButton.addEventListener("click", toggleSelectedFavorite);
 elements.relatedFamiliarToggle.addEventListener("click", () => {
   if (!state.selectedMovie) return;
