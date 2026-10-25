@@ -917,6 +917,7 @@ function buildTriStatePicker(containerId, config) {
         next = current === "off" ? "exclude" : current === "exclude" ? "include" : "off";
       }
       setTriChipState(chip, next, config);
+      markAdvancedSearchDirty();
       updateFilterPillBadges();
       renderActiveFilterTags();
       scheduleSearchStateSave();
@@ -1431,6 +1432,7 @@ function addSelectedEntity(key, entity) {
   });
   if (!alreadySelected) {
     state.selectedEntities[key].push(entity);
+    if (!key.startsWith("lib")) markAdvancedSearchDirty();
     renderSelectedEntities(key);
     updateFilterPillBadges();
     renderActiveFilterTags();
@@ -1788,6 +1790,10 @@ function updateFilterPillStates() {
   });
 }
 
+function markAdvancedSearchDirty() {
+  document.querySelector("#run-advanced-search")?.classList.add("is-dirty");
+}
+
 function updateFilterPillBadges() {
   // Genres badge
   const genres = getPickerValues("include-genres").length;
@@ -1903,6 +1909,26 @@ function updateFilterPillBadges() {
   const rewatchChecked = document.querySelector('input[name="included-status"][value="rewatch"]')?.checked;
   const nopeChecked = document.querySelector('input[name="included-status"][value="excluded"]')?.checked;
   document.querySelector("#pill-library")?.classList.toggle("has-filters", Boolean(watchedChecked || rewatchChecked || nopeChecked));
+
+  const hasActiveFilters = Boolean(
+    genres > 0 ||
+    ratingCount > 0 ||
+    votesCount > 0 ||
+    isCustomSort ||
+    yearCount > 0 ||
+    keywordCount > 0 ||
+    langCount > 0 ||
+    incCountry > 0 ||
+    peopleCount > 0 ||
+    companyCount > 0 ||
+    watchedChecked ||
+    rewatchChecked ||
+    nopeChecked
+  );
+  const resetBtn = document.querySelector("#reset-filters");
+  if (resetBtn) {
+    resetBtn.classList.toggle("is-dimmed", !hasActiveFilters);
+  }
 }
 
 function renderActiveFilterTags() {
@@ -2183,8 +2209,14 @@ function setupFilterPills() {
   }
 
   elements.advancedForm?.addEventListener("change", () => {
+    document.querySelector("#run-advanced-search")?.classList.add("is-dirty");
     updateFilterPillBadges();
     renderActiveFilterTags();
+  });
+
+  elements.advancedForm?.addEventListener("input", () => {
+    document.querySelector("#run-advanced-search")?.classList.add("is-dirty");
+    updateFilterPillBadges();
   });
 
   updateFilterPillBadges();
@@ -2916,6 +2948,18 @@ function updateLibraryFilterBadges() {
   const peopleCount = (state.selectedEntities.libDirectors || []).length + (state.selectedEntities.libActors || []).length;
   setBadge(elements.badgeLibPeople, peopleCount);
   setBadge(elements.badgeLibLanguages, state.libSelectedLanguages.size);
+
+  const hasAnyLibFilter = Boolean(
+    state.libSelectedGenres.size > 0 ||
+    yearCount > 0 ||
+    (state.selectedEntities.libKeywords || []).length > 0 ||
+    peopleCount > 0 ||
+    state.libSelectedLanguages.size > 0 ||
+    elements.libraryFilterQuery?.value?.trim()
+  );
+  if (elements.resetLibraryFilters) {
+    elements.resetLibraryFilters.classList.toggle("is-dimmed", !hasAnyLibFilter);
+  }
 }
 
 function normalizeLibrarySearchText(text) {
@@ -4282,6 +4326,7 @@ async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } =
 }
 
 async function runDiscoverySearch({ forceRefresh = false } = {}) {
+  document.querySelector("#run-advanced-search")?.classList.remove("is-dirty");
   await executeDiscoverySearch(buildSearchSpec(), 1, { forceRefresh });
 }
 
@@ -4558,6 +4603,7 @@ async function applySelectedProfile() {
 }
 
 function resetAdvancedFilters({ notify = true } = {}) {
+  document.querySelector("#run-advanced-search")?.classList.remove("is-dirty");
   elements.advancedForm.reset();
   elements.profileSelect.value = "";
   state.profilePassthroughFilters = {};
