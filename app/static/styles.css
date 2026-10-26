@@ -341,7 +341,7 @@
 .movie-detail-page {
   min-height: 100vh;
   padding: 0 0 3rem;
-  background: radial-gradient(circle at 20% 15%, #181d20 0, #101114 42%, #0c0d0f 100%);
+  background: var(--bg);
 }
 .detail-page-header {
   width: 100%;
@@ -4543,7 +4543,7 @@ footer {
 .movie-detail-page {
   min-height: 100vh;
   padding: 0 0 3rem;
-  background: radial-gradient(circle at 20% 15%, #181d20 0, #101114 42%, #0c0d0f 100%);
+  background: var(--bg);
 }
 .movie-detail-page .detail-page-header {
   width: 100%;
@@ -8801,13 +8801,13 @@ footer {
   width: 100% !important;
   max-width: none !important;
   margin: 0 !important;
-  padding: 10px 16px !important;
-  background: rgba(9, 9, 11, 0.94) !important;
+  padding: 6px 16px !important;
+  background: rgba(9, 9, 11, 0.98) !important;
   backdrop-filter: blur(16px) !important;
-  border-bottom: 1px solid var(--line) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35) !important;
   box-sizing: border-box !important;
-  min-height: 60px !important;
+  min-height: 48px !important;
   display: block !important;
 }
 
@@ -8818,7 +8818,7 @@ footer {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  min-height: 40px !important;
+  min-height: 34px !important;
   box-sizing: border-box !important;
 }
 
@@ -8928,7 +8928,7 @@ footer {
   width: min(938px, calc(100% - 32px)) !important;
   max-width: 938px !important;
   margin: 0 auto !important;
-  padding: 24px 0 72px 0 !important;
+  padding: 12px 0 72px 0 !important;
   box-sizing: border-box !important;
 }
 
@@ -9057,17 +9057,85 @@ footer {
   -webkit-text-stroke: 1.2px #6b7280 !important;
 }
 
-/* 4. Semantic Status Kicker */
+/* ==========================================================================
+   MOVIE DETAIL PAGE - 2-ZONE GEOMETRIC ARCHITECTURE
+   Top Zone: Locked to exact poster height (360px)
+   Bottom Zone: Horizontally aligned keywords (left) + Action cockpit (right)
+   ========================================================================== */
+
+/* 1. Detail Hero Grid: Strict 240px / 670px Two-Column Grid */
+.detail-hero {
+  display: grid !important;
+  grid-template-columns: 240px 670px !important;
+  gap: 28px !important;
+  align-items: start !important;
+  justify-content: start !important;
+}
+
+.detail-poster-column {
+  width: 240px !important;
+  max-width: 240px !important;
+  min-width: 240px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.movie-detail-page .dialog-poster-wrap {
+  width: 240px !important;
+  height: 360px !important;
+  min-height: 360px !important;
+  max-height: 360px !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  flex-shrink: 0 !important;
+  background: #141519 !important;
+}
+
+.movie-detail-page .dialog-poster-wrap img,
+.movie-detail-page .dialog-poster-wrap .poster-fallback {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 10px !important;
+  display: block !important;
+}
+
+.movie-detail-page .dialog-body {
+  width: 670px !important;
+  max-width: 670px !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* 2. TOP INFO ZONE - Fixed 360px Poster Alignment & Predictable Structural Placement */
+.detail-top-info {
+  width: 670px !important;
+  max-width: 670px !important;
+  min-width: 540px !important;
+  min-height: 360px !important;
+  height: auto !important;
+  max-height: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  margin-bottom: 24px !important;
+}
+
+/* Status Kicker (Plain uppercase semantic text with breathing room) */
 .movie-detail-page .dialog-kicker {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 8px !important;
+  gap: 7px !important;
   margin: 0 0 10px 0 !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  letter-spacing: 0.02em !important;
-  text-transform: capitalize !important;
-  line-height: 1.2 !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  line-height: 1 !important;
 }
 
 .movie-detail-page .dialog-kicker .kicker-icon-wrap {
@@ -9077,49 +9145,54 @@ footer {
 }
 
 .movie-detail-page .dialog-kicker .kicker-status-icon {
-  width: 15px !important;
-  height: 15px !important;
+  width: 13px !important;
+  height: 13px !important;
   color: #9CA3AF !important;
   transition: color 140ms ease !important;
 }
 
-.movie-detail-page .dialog-kicker[data-status="watched"] .kicker-status-icon {
-  color: rgba(74, 222, 128, 0.75) !important;
-}
-.movie-detail-page .dialog-kicker[data-status="watch_later"] .kicker-status-icon {
-  color: rgba(56, 189, 248, 0.75) !important;
-}
-.movie-detail-page .dialog-kicker[data-status="rewatch"] .kicker-status-icon {
-  color: rgba(251, 146, 60, 0.75) !important;
-}
-.movie-detail-page .dialog-kicker[data-status="excluded"] .kicker-status-icon {
-  color: rgba(239, 68, 68, 0.75) !important;
-}
-.movie-detail-page .dialog-kicker[data-status="new_discovery"] .kicker-status-icon {
-  color: rgba(222, 198, 139, 0.75) !important;
-}
-.movie-detail-page .dialog-kicker[data-status="untracked"] .kicker-status-icon {
-  color: #6B7280 !important;
+.movie-detail-page .dialog-kicker[data-status="watched"] .kicker-status-icon,
+.movie-detail-page .dialog-kicker[data-status="watched"] .kicker-label-text {
+  color: #4ADE80 !important;
 }
 
-.movie-detail-page .dialog-kicker .kicker-label-text {
-  color: #D1D5DB !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
+.movie-detail-page .dialog-kicker[data-status="watch_later"] .kicker-status-icon,
+.movie-detail-page .dialog-kicker[data-status="watch_later"] .kicker-label-text {
+  color: #38BDF8 !important;
 }
 
-/* Movie Title & Inline Unboxed Heart */
+.movie-detail-page .dialog-kicker[data-status="rewatch"] .kicker-status-icon,
+.movie-detail-page .dialog-kicker[data-status="rewatch"] .kicker-label-text {
+  color: #FB923C !important;
+}
+
+.movie-detail-page .dialog-kicker[data-status="excluded"] .kicker-status-icon,
+.movie-detail-page .dialog-kicker[data-status="excluded"] .kicker-label-text {
+  color: #EF4444 !important;
+}
+
+.movie-detail-page .dialog-kicker[data-status="new_discovery"] .kicker-status-icon,
+.movie-detail-page .dialog-kicker[data-status="new_discovery"] .kicker-label-text {
+  color: #DEC68B !important;
+}
+
+.movie-detail-page .dialog-kicker[data-status="untracked"] .kicker-status-icon,
+.movie-detail-page .dialog-kicker[data-status="untracked"] .kicker-label-text {
+  color: #9CA3AF !important;
+}
+
+/* Movie Title & Inline Heart - Relaxed Spacing */
 .detail-title-wrap {
   display: flex !important;
   align-items: center !important;
   gap: 12px !important;
   flex-wrap: wrap !important;
-  margin: 0 0 12px 0 !important;
+  margin: 0 0 14px 0 !important;
 }
 
 .movie-detail-page .dialog-body h1,
 .detail-title-wrap h1 {
-  font-size: clamp(1.65rem, 2.5vw, 2.2rem) !important;
+  font-size: clamp(1.85rem, 2.7vw, 2.35rem) !important;
   line-height: 1.15 !important;
   letter-spacing: -0.025em !important;
   font-weight: 700 !important;
@@ -9193,31 +9266,31 @@ footer {
   -webkit-text-stroke: 1.2px #6b7280 !important;
 }
 
-/* Hierarchy: Genre chips directly below title */
+/* Hierarchy: Genre chips directly below title - Breathing Room */
 .movie-detail-page .dialog-genres {
   display: flex !important;
   flex-wrap: wrap !important;
   align-items: center !important;
-  gap: 6px !important;
-  margin: 0 0 10px 0 !important;
+  gap: 8px !important;
+  margin: 0 0 14px 0 !important;
 }
 
 .movie-detail-page .dialog-genres .tag {
   display: inline-flex !important;
   align-items: center !important;
-  height: 22px !important;
-  padding: 0 8px !important;
+  height: 25px !important;
+  padding: 0 10px !important;
   border-radius: 6px !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   background: rgba(255, 255, 255, 0.03) !important;
   color: #D1D5DB !important;
-  font-size: 11.5px !important;
+  font-size: 12px !important;
   font-weight: 500 !important;
   text-transform: none !important;
   letter-spacing: 0.01em !important;
 }
 
-/* Hierarchy: Meta row directly below genre chips */
+/* Hierarchy: Meta row directly below genre chips - Balanced Gap */
 .movie-detail-page .dialog-meta {
   display: flex !important;
   align-items: center !important;
@@ -9227,7 +9300,7 @@ footer {
   font-size: 13.5px !important;
   color: #9CA3AF !important;
   font-weight: 450 !important;
-  line-height: 1.4 !important;
+  line-height: 1.45 !important;
 }
 
 .movie-detail-page .dialog-meta span + span::before {
@@ -9254,14 +9327,122 @@ footer {
   vertical-align: middle !important;
 }
 
-/* Liberated Action Cockpit: Liberated from box, natural alignment */
+/* Credits Lines (Director & Cast) - Fixed structural position directly below Meta */
+.credits-lines,
+.movie-detail-page .credits-lines {
+  max-width: 670px !important;
+  width: 670px !important;
+  margin-top: 0 !important;
+  margin-bottom: 12px !important;
+  font-size: 13.5px !important;
+  line-height: 1.5 !important;
+  color: #9CA3AF !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+/* Overview / Plot - Dynamic natural text flow, starts in same place, never clamped */
+.dialog-overview,
+.movie-detail-page .dialog-overview {
+  max-width: 670px !important;
+  width: 670px !important;
+  min-width: 540px !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  margin: 0 !important;
+  font-size: 14.5px !important;
+  line-height: 1.62 !important;
+  font-weight: 400 !important;
+  color: #D1D5DB !important;
+  letter-spacing: 0.005em !important;
+  display: block !important;
+  white-space: normal !important;
+}
+
+.dialog-overview::-webkit-scrollbar,
+.movie-detail-page .dialog-overview::-webkit-scrollbar {
+  display: none !important;
+}
+
+.credits-lines p,
+.movie-detail-page .credits-lines p {
+  margin: 0 !important;
+  line-height: 1.5 !important;
+}
+
+.credits-lines .credit-label {
+  font-weight: 600 !important;
+  color: #9CA3AF !important;
+  margin-right: 8px !important;
+  display: inline !important;
+  min-width: unset !important;
+}
+
+.credits-lines a,
+.credit-link {
+  color: #E5E7EB !important;
+  text-decoration: underline !important;
+  text-decoration-color: rgba(255, 255, 255, 0.28) !important;
+  text-underline-offset: 3px !important;
+  border-bottom: none !important;
+  font-weight: 500 !important;
+  transition: color 140ms ease, text-decoration-color 140ms ease !important;
+}
+
+.credits-lines a:hover,
+.credit-link:hover {
+  color: #DEC68B !important;
+  text-decoration: underline !important;
+  text-decoration-color: #DEC68B !important;
+}
+
+/* ==========================================================================
+   3. BOTTOM ZONE: ALIGNED KEYWORDS (LEFT) + ACTIONS (RIGHT)
+   ========================================================================== */
+
+/* Left: Poster Keywords */
+.poster-keywords,
+.movie-detail-page .poster-keywords {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  margin-top: 24px !important;
+  padding: 0 !important;
+  width: 240px !important;
+  max-width: 240px !important;
+  box-sizing: border-box !important;
+}
+
+.poster-keywords .tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 22px !important;
+  padding: 0 8px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: #9CA3AF !important;
+  font-size: 11px !important;
+  font-weight: 450 !important;
+  line-height: 1 !important;
+  transition: all 140ms ease !important;
+}
+
+.poster-keywords .tag:hover {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #FFFFFF !important;
+}
+
+/* Right: Action Cockpit (Shelf status pills & 10-star rating) */
 .movie-detail-page .personal-panel,
 #detail-action-cockpit {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
-  margin-top: 24px !important;
+  margin-top: 0 !important;
   margin-bottom: 24px !important;
   max-width: 670px !important;
   width: 100% !important;
@@ -9293,6 +9474,7 @@ footer {
   transition: all 140ms ease !important;
   box-shadow: none !important;
   user-select: none !important;
+  white-space: nowrap !important;
 }
 
 .cockpit-shelf-pill:hover {
@@ -9301,7 +9483,7 @@ footer {
   color: #E5E7EB !important;
 }
 
-/* Active status pill: neutral calm border, no gaudy colored borders */
+/* Active status pill: neutral calm border, zero gaudy neon borders */
 .cockpit-shelf-pill.is-active,
 .cockpit-shelf-pill.is-active[data-status="watched"],
 .cockpit-shelf-pill.is-active[data-status="watch_later"],
@@ -9320,23 +9502,23 @@ footer {
 }
 
 .cockpit-shelf-pill.is-active[data-status="watched"] .cockpit-pill-icon {
-  color: rgba(74, 222, 128, 0.75) !important;
+  color: rgba(74, 222, 128, 0.85) !important;
 }
 
 .cockpit-shelf-pill.is-active[data-status="watch_later"] .cockpit-pill-icon {
-  color: rgba(56, 189, 248, 0.75) !important;
+  color: rgba(56, 189, 248, 0.85) !important;
 }
 
 .cockpit-shelf-pill.is-active[data-status="new_discovery"] .cockpit-pill-icon {
-  color: rgba(222, 198, 139, 0.75) !important;
+  color: rgba(222, 198, 139, 0.85) !important;
 }
 
 .cockpit-shelf-pill.is-active[data-status="rewatch"] .cockpit-pill-icon {
-  color: rgba(251, 146, 60, 0.75) !important;
+  color: rgba(251, 146, 60, 0.85) !important;
 }
 
 .cockpit-shelf-pill.is-active[data-status="excluded"] .cockpit-pill-icon {
-  color: rgba(239, 68, 68, 0.75) !important;
+  color: rgba(239, 68, 68, 0.85) !important;
 }
 
 .cockpit-divider {
@@ -9397,106 +9579,18 @@ footer {
   display: none !important;
 }
 
-/* Overview / Plot */
-.movie-detail-page .dialog-overview {
-  max-width: 670px !important;
-  width: 670px !important;
-  margin: 14px 0 20px 0 !important;
-  font-size: 15px !important;
-  line-height: 1.72 !important;
-  font-weight: 400 !important;
-  color: #D1D5DB !important;
-  letter-spacing: 0.005em !important;
-}
-
-/* Credits Lines (Director & Actors) - Generous Breathing Room */
-.credits-lines,
-.movie-detail-page .credits-lines {
-  max-width: 670px !important;
-  width: 670px !important;
-  margin: 0 0 24px 0 !important;
-  font-size: 14px !important;
-  line-height: 1.65 !important;
-  color: #9CA3AF !important;
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 10px !important;
-}
-
-.credits-lines p,
-.movie-detail-page .credits-lines p {
-  margin: 0 !important;
-  line-height: 1.65 !important;
-}
-
-.credits-lines .credit-label {
-  font-weight: 600 !important;
-  color: #9CA3AF !important;
-  margin-right: 8px !important;
-  display: inline !important;
-  min-width: unset !important;
-}
-
-.credits-lines a,
-.credit-link {
-  color: #E5E7EB !important;
-  text-decoration: underline !important;
-  text-decoration-color: rgba(255, 255, 255, 0.28) !important;
-  text-underline-offset: 3px !important;
-  border-bottom: none !important;
-  font-weight: 500 !important;
-  transition: color 140ms ease, text-decoration-color 140ms ease !important;
-}
-
-.credits-lines a:hover,
-.credit-link:hover {
-  color: #DEC68B !important;
-  text-decoration: underline !important;
-  text-decoration-color: #DEC68B !important;
-}
-
-.credits-lines a:hover,
-.credit-link:hover {
-  color: #DEC68B !important;
-  text-decoration: underline !important;
-  text-underline-offset: 3px !important;
-  border-bottom: none !important;
-}
-
-/* Keyword chips below poster */
-.poster-keywords {
-  display: flex !important;
-  flex-wrap: wrap !important;
-  gap: 6px !important;
-  padding: 12px 0 0 0 !important;
-  max-width: 240px !important;
-}
-
-.poster-keywords .tag {
-  display: inline-flex !important;
-  align-items: center !important;
-  height: 22px !important;
-  padding: 0 8px !important;
-  border-radius: 6px !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: transparent !important;
-  color: #9CA3AF !important;
-  font-size: 11px !important;
-  font-weight: 450 !important;
-  line-height: 1 !important;
-}
-
 /* Suppress note icon on movie posters */
 .card-note-mark {
   display: none !important;
 }
 
-/* Notes & Grey Review Card */
+/* Notes & Grey Review Card (Personal Memory) */
 .detail-notes-card,
 .movie-detail-page .detail-notes {
   max-width: 670px !important;
   width: 670px !important;
-  margin-top: 20px !important;
+  margin-top: 24px !important;
+  box-sizing: border-box !important;
 }
 
 .detail-notes-header {
@@ -9538,7 +9632,16 @@ footer {
   border-color: rgba(212, 175, 55, 0.5) !important;
 }
 
-/* Related Movies Header */
+/* Related Movies Header - NO DIVIDER LINE */
+.related-panel {
+  width: 670px !important;
+  max-width: 670px !important;
+  margin-top: 28px !important;
+  padding-top: 0 !important;
+  border-top: none !important;
+  box-sizing: border-box !important;
+}
+
 .related-heading,
 .related-panel h2 {
   font-size: 0.95rem !important;
@@ -9775,4 +9878,9 @@ body.grey-docked-open .related-card {
   body.grey-docked-open .movie-detail-page .dialog-poster-wrap {
     max-width: 220px !important;
   }
+}
+
+/* Global Canvas Parity: Consistent #09090b background across entire site */
+.movie-detail-page {
+  background: var(--bg) !important;
 }

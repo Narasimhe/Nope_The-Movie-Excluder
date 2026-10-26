@@ -16,9 +16,25 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Movie Detail Color Parity, Spacing Tightening & Anchored Credits Architecture**
+  * **Unified Site & Header Canvas Color**: Standardized `.movie-detail-page` to identical `--bg` (`#09090b`), eliminating conflicting radial gradient overlays and ensuring total color harmony between `.detail-page-header`, the detail page canvas, and the rest of the application.
+  * **Reduced Header-to-Details Space**: Slimmed `.detail-page-header` from 60px to 48px (`padding: 6px 16px`) and tightened `.detail-page-content` top padding from 24px to 12px, connecting the header smoothly to the movie details.
+  * **Anchored Director & Cast Placement**: Positioned `Director:` and `Cast:` directly below the metadata row at the exact same vertical position across all movies, eliminating vertical jumping between movies.
+  * **Dynamic Description Loading**: Enabled full dynamic expansion for the overview description text without artificial height constraints or internal scrollbars.
+  * **Below-Poster Baseline Lock & Collision Prevention**: Configured `.detail-top-info` with `min-height: 360px` and a 24px vertical margin before `#detail-action-cockpit`, ensuring the shelf status pills always start below the 360px poster baseline across all movies with zero overlap onto cast or description lines.
+- [x] **Movie Detail Predictable Top Zone Placement & Below-Poster Status Lock**
+  * **Consistent Placement for Description, Director & Cast**: Standardized vertical positions for all movie details. The header stack (Kicker, Title, Genres, Meta) occupies the top with generous breathing room, the description loads dynamically in a clean scrollable zone, and `Director:` and `Cast:` sit anchored at the bottom of the 360px box.
+  * **Status Always Starts Below Poster**: The 360px top zone guarantees that the shelf status pills and 10-star rating row always begin strictly below the bottom baseline of the 240x360px poster across all movies.
+  * **Uncramped Header Hierarchy**: Relaxed spacing throughout the top stack: 10px kicker-to-title, 14px title-to-genres, 14px genres-to-meta, and 16px meta-to-description.
+  * **Removed Related Movies Divider**: Eradicated the divider line above `.related-panel` to keep the transition to Related Movies borderless.
+  * **Uncramped Header Hierarchy**: Relaxed spacing throughout the top info stack: 10px kicker-to-title, 14px title-to-genres, 14px genres-to-meta, and 16px meta-to-description, giving clean visual breathing room.
+  * **Eradicated Artificial Dead Space Beneath Description**: Removed rigid fixed height and `margin-top: auto` on credits; `Director:` and `Cast:` now sit naturally 18px below the description with consistent line-height (1.68) and relaxed 15px font sizing.
+  * **Removed Related Movies Divider**: Removed the top border line above `.related-panel` to keep the transition to Related Movies seamless and borderless.
+  * **Uppercase Semantic Status Kicker**: Formatted kicker to clean uppercase semantic text (`WATCHED`, `REWATCH`, `NEW DISCOVERY`, `WATCH LATER`, `NOPE`, `UNTRACKED`) with color-coded accents.
 - [x] **Movie Detail Zen Hierarchy Reordering, Liberated Cockpit & Icon Refinement**
   * **Status Kicker Scale & Tone**: Enlarged the status kicker to 14px with status icons in a muted tone and status label in regular muted white (`#D1D5DB`).
   * **Title & Enlarged Heart in Enclosed Circle**: Vertically aligned the title with the heart button (`gap: 12px`), with the heart glyph enlarged (`1.35rem`) inside the circular toggle button (`width: 32px; height: 32px; border-radius: 50%`).
+  * **Harmonious Typographic Spacing Rhythm**: Balanced vertical rhythm across the entire column: 8px kicker-to-title, 12px title-to-genres, 12px genres-to-meta, eliminated the 30px gap above overview down to a clean 16px, 16px between overview and director, 7px between credit lines, and eliminated the 48px gap above status pills down to a natural 18px flow directly beneath credits.
   * **Strict Hierarchy Reordering**: Restructured the movie header layout: Movie Title → Genre chips directly under title (`#dialog-genres`) → Year, language, star rating (`★ 7.5`), and vote count with icon (`[vote icon] (1.1k votes)`) directly under genres without "TMDB" text (`#dialog-meta`).
   * **Neutral Status Selector Pills**: Removed gaudy/neon colored borders from shelf selector pills; active pills now take a calm neutral border (`1px solid rgba(255, 255, 255, 0.22)`) with icons retaining their color in a muted tone.
   * **Clear Star Rating Action**: Added a clear icon button (`✕`, `#clear-verdict`) in the 10-star rating row that appears when a movie is rated, enabling 1-click rating reset back to unrated.

@@ -11,8 +11,8 @@
   >
   <title>NOPE</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/styles.css?v=20261026_zen_155">
-  <script src="/static/app.js?v=20261026_zen_155" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261026_zen_163">
+  <script src="/static/app.js?v=20261026_zen_163" defer></script>
 </head>
 <body data-active-view="discover">
   <div class="site-shell" id="app-shell">
@@ -1008,22 +1008,25 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
         </div>
 
         <div class="dialog-body">
-          <p class="dialog-kicker" id="dialog-kicker">
-            <span class="kicker-icon" aria-hidden="true">✦</span>
-            <span class="kicker-text">Movie details</span>
-          </p>
-          <div class="detail-title-wrap">
-            <h1 id="dialog-title"></h1>
-            <button class="favorite-button" id="favorite-button" type="button" aria-label="Add to favourites" title="Toggle Favourite (F)">
-              <span aria-hidden="true">♥</span>
-            </button>
-          </div>
-          <div class="tag-list dialog-genres" id="dialog-genres"></div>
-          <div class="dialog-meta" id="dialog-meta"></div>
-          <p class="dialog-overview" id="dialog-overview"></p>
-          <div class="credits-lines">
-            <p><span class="credit-label">Director:</span> <span id="dialog-directors">—</span></p>
-            <p><span class="credit-label">Actors:</span> <span id="dialog-actors">—</span></p>
+          <!-- Top Zone: Locked to exact poster height (360px) -->
+          <div class="detail-top-info" id="detail-top-info">
+            <p class="dialog-kicker" id="dialog-kicker">
+              <span class="kicker-icon" aria-hidden="true">✦</span>
+              <span class="kicker-text">Movie details</span>
+            </p>
+            <div class="detail-title-wrap">
+              <h1 id="dialog-title"></h1>
+              <button class="favorite-button" id="favorite-button" type="button" aria-label="Add to favourites" title="Toggle Favourite (F)">
+                <span aria-hidden="true">♥</span>
+              </button>
+            </div>
+            <div class="tag-list dialog-genres" id="dialog-genres"></div>
+            <div class="dialog-meta" id="dialog-meta"></div>
+            <div class="credits-lines">
+              <p><span class="credit-label">Director:</span> <span id="dialog-directors">—</span></p>
+              <p><span class="credit-label">Cast:</span> <span id="dialog-actors">—</span></p>
+            </div>
+            <p class="dialog-overview" id="dialog-overview"></p>
           </div>
 
           <!-- Unified 2-Tier Action Cockpit -->

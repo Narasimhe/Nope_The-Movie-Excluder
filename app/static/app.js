@@ -4956,7 +4956,7 @@ function updateDialogKicker(movie, overrideStatus = null) {
   };
 
   const icon = STATUS_ICONS[status] || STATUS_ICONS.untracked;
-  const label = STATUS_LABELS[status] || (status === "untracked" ? "Untracked" : status);
+  const label = (STATUS_LABELS[status] || (status === "untracked" ? "Untracked" : status)).toUpperCase();
   elements.dialogKicker.innerHTML = `<span class="kicker-icon-wrap" aria-hidden="true">${icon}</span><span class="kicker-label-text">${label}</span>`;
 
   if (movie?.is_offline_preview) {
