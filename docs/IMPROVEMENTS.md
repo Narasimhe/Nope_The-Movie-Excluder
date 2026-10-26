@@ -16,6 +16,18 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Movie Detail Typography & Information Hierarchy Overhaul**
+  * **Title with Inline Year & Language**: Title maintains prominent display sizing, followed inline by factual release metadata (• Year • Language) in a refined, muted 15px font.
+  * **Clean Text Genres (Pills Removed)**: Eliminated heavy bordered badge pills from genres, replacing them with clean inline editorial text separated by dot dividers (Crime • Drama).
+  * **User Judgment Placement**: Relocated star rating and vote count directly below genres and above the plot summary, logically grouping user-related rating data.
+  * **Underline-Free Interactive Credits**: Stripped underlines and border-bottom rules from director and actor clickable links. Added a leading dot (• ) and generous bullet spacers (  •  ) between cast members to eliminate crowding while preserving full clickability.
+  * **Suppressed Status Kicker**: Suppressed the kicker badge from the top of the title pending future prominent placement.
+- [x] **Movie Detail Left-Anchored Canvas (Halved Left Space & Poster/Button Alignment)**
+  * **Halved Left Dead Space**: Reduced the desktop left offset from ~140–155px centering margin down to a clean `64px` left padding, shifting the entire movie detail layout to the left as requested.
+  * **Strict Vertical Alignment**: Left-anchored both `.detail-header-inner` and `.detail-hero` at `margin: 0`, guaranteeing that the `[ ← Back to ... ]` button and the left edge of the poster are 100% vertically aligned on the exact same `64px` axis.
+- [x] **Movie Detail Cinematic Poster Scaling (270x405px)**
+  * **Proportional Poster Expansion**: Stepped the movie poster up from `240x360px` to `270x405px` (+12.5% increase in width and height, adhering to the 2:3 aspect ratio).
+  * **Harmonious Grid & Alignment Update**: Expanded `.detail-hero` grid column to `270px` (with `30px` gap), aligned `.detail-top-info` min-height to `405px`, and broadened container bounds to `970px` while maintaining complete fluidity for both normal and Grey docked modes.
 - [x] **Movie Detail Refresh-Resilient Hash Routing (#movie:ID)**
   * **Full Refresh Resistance**: Added `#movie:${id}` hash routing and session persistence to the single movie detail page. When pressing F5 (refresh), bookmarking, or sharing a direct movie URL, the app restores the background shelf context and re-opens the exact movie detail view instantly.
   * **Seamless Back Navigation & Browser History**: Closing the movie or clicking browser back cleanly transitions back to the origin shelf view (`#watched`, `#rewatch`, `#discover`, etc.) and keeps the history stack in perfect sync.

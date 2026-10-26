@@ -8804,7 +8804,7 @@ footer {
   height: 64px !important;
   min-height: 64px !important;
   max-height: 64px !important;
-  padding: 0 24px !important;
+  padding: 0 64px !important;
   background: rgba(9, 9, 11, 0.94) !important;
   backdrop-filter: blur(16px) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -8815,9 +8815,9 @@ footer {
 }
 
 .detail-header-inner {
-  width: min(938px, calc(100% - 32px)) !important;
-  max-width: 938px !important;
-  margin: 0 auto !important;
+  width: 100% !important;
+  max-width: 970px !important;
+  margin: 0 !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
@@ -8928,27 +8928,27 @@ footer {
 
 /* 2. Main Two-Column Layout (240px Poster + 28px Gap + 670px Main Column = 938px) */
 .movie-detail-page .detail-page-content {
-  width: min(938px, calc(100% - 32px)) !important;
-  max-width: 938px !important;
-  margin: 0 auto !important;
-  padding: 12px 0 72px 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 14px 64px 72px 64px !important;
   box-sizing: border-box !important;
 }
 
 .detail-hero {
   display: grid !important;
-  grid-template-columns: 240px 670px !important;
-  gap: 28px !important;
+  grid-template-columns: 270px 670px !important;
+  gap: 30px !important;
   align-items: start !important;
   justify-content: start !important;
   width: 100% !important;
-  max-width: 100% !important;
-  margin: 0 auto !important;
+  max-width: 970px !important;
+  margin: 0 !important;
 }
 
 .detail-poster-column {
-  width: 240px !important;
-  min-width: 240px !important;
+  width: 270px !important;
+  min-width: 270px !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: flex-start !important;
@@ -8957,10 +8957,10 @@ footer {
 }
 
 .movie-detail-page .dialog-poster-wrap {
-  width: 240px !important;
-  max-width: 240px !important;
-  height: 360px !important;
-  max-height: 360px !important;
+  width: 270px !important;
+  max-width: 270px !important;
+  height: 405px !important;
+  max-height: 405px !important;
   aspect-ratio: 2 / 3 !important;
   border-radius: 10px !important;
   overflow: hidden !important;
@@ -8969,8 +8969,8 @@ footer {
 }
 
 .poster-keywords {
-  width: 240px !important;
-  max-width: 240px !important;
+  width: 270px !important;
+  max-width: 270px !important;
   margin: 0 !important;
   justify-content: flex-start !important;
 }
@@ -9068,25 +9068,25 @@ footer {
 /* 1. Detail Hero Grid: Strict 240px / 670px Two-Column Grid */
 .detail-hero {
   display: grid !important;
-  grid-template-columns: 240px 670px !important;
-  gap: 28px !important;
+  grid-template-columns: 270px 670px !important;
+  gap: 30px !important;
   align-items: start !important;
   justify-content: start !important;
 }
 
 .detail-poster-column {
-  width: 240px !important;
-  max-width: 240px !important;
-  min-width: 240px !important;
+  width: 270px !important;
+  max-width: 270px !important;
+  min-width: 270px !important;
   display: flex !important;
   flex-direction: column !important;
 }
 
 .movie-detail-page .dialog-poster-wrap {
-  width: 240px !important;
-  height: 360px !important;
-  min-height: 360px !important;
-  max-height: 360px !important;
+  width: 270px !important;
+  height: 405px !important;
+  min-height: 405px !important;
+  max-height: 405px !important;
   border-radius: 10px !important;
   overflow: hidden !important;
   flex-shrink: 0 !important;
@@ -9117,7 +9117,7 @@ footer {
   width: 100% !important;
   max-width: 670px !important;
   min-width: 0 !important;
-  min-height: 360px !important;
+  min-height: 405px !important;
   height: auto !important;
   max-height: none !important;
   display: flex !important;
@@ -9127,9 +9127,14 @@ footer {
   margin-bottom: 22px !important;
 }
 
-/* Status Kicker (Plain uppercase semantic text with breathing room) */
+/* Status Kicker (suppressed from top of title; to be placed prominently later) */
+.movie-detail-page .dialog-kicker,
+#dialog-kicker {
+  display: none !important;
+}
+
 .movie-detail-page .dialog-kicker {
-  display: inline-flex !important;
+  display: none !important;
   align-items: center !important;
   gap: 8px !important;
   margin: 0 0 12px 0 !important;
@@ -9183,11 +9188,14 @@ footer {
   color: #9CA3AF !important;
 }
 
-/* Movie Title & Inline Heart - True Inline Flow (No 3rd Line Wrap) */
+/* Movie Title & Beneath-Title Metadata (Year & Language) */
 .detail-title-wrap {
-  display: block !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
   margin: 0 0 14px 0 !important;
-  line-height: 1.25 !important;
+  line-height: 1.2 !important;
 }
 
 .movie-detail-page .dialog-body h1,
@@ -9198,8 +9206,23 @@ footer {
   font-weight: 700 !important;
   color: #FFFFFF !important;
   margin: 0 !important;
-  display: inline !important;
-  vertical-align: middle !important;
+  display: block !important;
+  width: 100% !important;
+}
+
+.detail-title-meta {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+  font-size: 14.5px !important;
+  font-weight: 450 !important;
+  color: #9CA3AF !important;
+}
+
+.detail-title-meta .title-meta-item + .title-meta-item::before {
+  content: "•" !important;
+  margin: 0 8px !important;
+  color: #6B7280 !important;
 }
 
 /* Subtle Circular Heart Toggle Button */
@@ -9267,28 +9290,34 @@ footer {
   -webkit-text-stroke: 1.2px #6b7280 !important;
 }
 
-/* Hierarchy: Genre chips directly below title - Breathing Room */
+/* Hierarchy: Genres directly below title - Clean text with bullet dots (no pills) */
 .movie-detail-page .dialog-genres {
   display: flex !important;
   flex-wrap: wrap !important;
   align-items: center !important;
-  gap: 8px !important;
-  margin: 0 0 14px 0 !important;
+  gap: 0 !important;
+  margin: 0 0 10px 0 !important;
 }
 
 .movie-detail-page .dialog-genres .tag {
   display: inline-flex !important;
   align-items: center !important;
-  height: 25px !important;
-  padding: 0 10px !important;
-  border-radius: 6px !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  background: rgba(255, 255, 255, 0.03) !important;
-  color: #D1D5DB !important;
-  font-size: 12px !important;
+  height: auto !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  color: #9CA3AF !important;
+  font-size: 13.5px !important;
   font-weight: 500 !important;
   text-transform: none !important;
   letter-spacing: 0.01em !important;
+}
+
+.movie-detail-page .dialog-genres .tag + .tag::before {
+  content: "•" !important;
+  margin: 0 8px !important;
+  color: #6B7280 !important;
 }
 
 /* Hierarchy: Meta row directly below genre chips - Balanced Gap */
@@ -9333,11 +9362,11 @@ footer {
   color: #DEC68B !important;
 }
 
-/* Overview / Plot - Comfortable 510px reading measure (matched to Grey-mode wrap) */
+/* Overview / Plot - Full column width matching section elements */
 .dialog-overview,
 .movie-detail-page .dialog-overview {
   width: 100% !important;
-  max-width: 510px !important;
+  max-width: 100% !important;
   min-width: 0 !important;
   height: auto !important;
   max-height: none !important;
@@ -9355,11 +9384,11 @@ footer {
   box-sizing: border-box !important;
 }
 
-/* Credits Lines (Director & Cast) - Aligned to same 510px measure */
+/* Credits Lines (Director & Cast) - Full column width */
 .credits-lines,
 .movie-detail-page .credits-lines {
   width: 100% !important;
-  max-width: 510px !important;
+  max-width: 100% !important;
   min-width: 0 !important;
   overflow-wrap: break-word !important;
   word-break: normal !important;
@@ -9396,19 +9425,33 @@ footer {
 .credits-lines a,
 .credit-link {
   color: #E5E7EB !important;
-  text-decoration: underline !important;
-  text-decoration-color: rgba(255, 255, 255, 0.28) !important;
-  text-underline-offset: 3px !important;
-  border-bottom: none !important;
+  text-decoration: none !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
   font-weight: 500 !important;
-  transition: color 140ms ease, text-decoration-color 140ms ease !important;
+  cursor: pointer !important;
+  transition: color 140ms ease !important;
 }
 
 .credits-lines a:hover,
 .credit-link:hover {
   color: #DEC68B !important;
-  text-decoration: underline !important;
-  text-decoration-color: #DEC68B !important;
+  text-decoration: none !important;
+}
+
+.credit-lead-dot {
+  color: #6B7280 !important;
+  margin-right: 4px !important;
+  font-size: 11px !important;
+  user-select: none !important;
+}
+
+.credit-separator {
+  color: #6B7280 !important;
+  margin: 0 4px !important;
+  font-size: 11px !important;
+  user-select: none !important;
 }
 
 /* ==========================================================================
@@ -9423,8 +9466,8 @@ footer {
   gap: 6px !important;
   margin-top: 22px !important;
   padding: 0 !important;
-  width: 240px !important;
-  max-width: 240px !important;
+  width: 270px !important;
+  max-width: 270px !important;
   box-sizing: border-box !important;
 }
 
@@ -9794,7 +9837,7 @@ body.grey-docked-open .movie-detail-page .detail-page-header {
   height: 64px !important;
   min-height: 64px !important;
   max-height: 64px !important;
-  padding: 0 24px !important;
+  padding: 0 32px !important;
   box-sizing: border-box !important;
   display: flex !important;
   align-items: center !important;
@@ -9810,14 +9853,14 @@ body.grey-docked-open .movie-detail-page .detail-page-content {
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
-  padding: 20px 24px 64px !important;
+  padding: 14px 32px 64px 32px !important;
   box-sizing: border-box !important;
 }
 
 body.grey-docked-open .detail-hero,
 body.grey-docked-open .movie-detail-page .detail-hero {
   display: grid !important;
-  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr) !important;
+  grid-template-columns: minmax(190px, 270px) minmax(0, 1fr) !important;
   gap: 24px !important;
   align-items: start !important;
   justify-content: start !important;
@@ -9827,7 +9870,7 @@ body.grey-docked-open .movie-detail-page .detail-hero {
 
 body.grey-docked-open .detail-poster-column {
   width: 100% !important;
-  max-width: 240px !important;
+  max-width: 270px !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: flex-start !important;
@@ -9835,16 +9878,16 @@ body.grey-docked-open .detail-poster-column {
 
 body.grey-docked-open .movie-detail-page .dialog-poster-wrap {
   width: 100% !important;
-  max-width: 240px !important;
+  max-width: 270px !important;
   height: auto !important;
-  max-height: 360px !important;
+  max-height: 405px !important;
   aspect-ratio: 2 / 3 !important;
   margin-left: 0 !important;
 }
 
 body.grey-docked-open .poster-keywords {
   width: 100% !important;
-  max-width: 240px !important;
+  max-width: 270px !important;
   margin-left: 0 !important;
   justify-content: flex-start !important;
 }
@@ -9905,4 +9948,304 @@ body.grey-docked-open .related-card {
 /* Global Canvas Parity: Consistent #09090b background across entire site */
 .movie-detail-page {
   background: var(--bg) !important;
+}
+
+@media (max-width: 960px) {
+  .detail-page-header,
+  .movie-detail-page .detail-page-header {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+  .movie-detail-page .detail-page-content {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+}
+
+
+/* Movie Detail Page: Refined Typography & Credits Hierarchy */
+.movie-detail-page .credits-lines a,
+.movie-detail-page .credit-link,
+.movie-detail-page .credits-lines button {
+  color: #E5E7EB !important;
+  text-decoration: none !important;
+  border: none !important;
+  border-bottom: none !important;
+  outline: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: color 140ms ease !important;
+}
+
+.movie-detail-page .credits-lines a:hover,
+.movie-detail-page .credit-link:hover,
+.movie-detail-page .credits-lines button:hover,
+.movie-detail-page .credit-link:focus-visible,
+.movie-detail-page .credits-lines button:focus-visible {
+  color: #DEC68B !important;
+  text-decoration: none !important;
+  border: none !important;
+  border-bottom: none !important;
+  outline: none !important;
+}
+
+.movie-detail-page .credit-lead-dot {
+  color: #6B7280 !important;
+  margin-right: 6px !important;
+  font-size: 11px !important;
+  user-select: none !important;
+}
+
+.movie-detail-page .credit-separator {
+  color: #6B7280 !important;
+  margin: 0 8px !important;
+  font-size: 11px !important;
+  user-select: none !important;
+}
+
+
+/* ==========================================================================
+   Single Movie Detail: Complete Editorial Architecture & Poster Badges
+   ========================================================================== */
+
+/* 1. Poster Wrap & Top Overlays */
+.movie-detail-page .dialog-poster-wrap,
+.dialog-poster-wrap {
+  width: 270px !important;
+  max-width: 270px !important;
+  height: 405px !important;
+  max-height: 405px !important;
+  aspect-ratio: 2 / 3 !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  position: relative !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+.dialog-poster-img-wrap {
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+}
+
+.dialog-poster-img-wrap img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+}
+
+.poster-overlay-badges {
+  position: absolute !important;
+  top: 10px !important;
+  left: 10px !important;
+  right: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  z-index: 10 !important;
+  pointer-events: none !important;
+}
+
+.poster-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 4px 9px !important;
+  border-radius: 6px !important;
+  background: rgba(15, 15, 18, 0.85) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #DEC68B !important;
+  line-height: 1 !important;
+  letter-spacing: 0.01em !important;
+}
+
+.poster-rating-badge .poster-star-icon {
+  width: 13px !important;
+  height: 13px !important;
+  color: #DEC68B !important;
+  fill: currentColor !important;
+  flex-shrink: 0 !important;
+}
+
+.poster-votes-badge {
+  margin-left: auto !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  color: #DEC68B !important;
+}
+
+/* 2. Title & Beneath-Title Meta */
+.detail-title-wrap {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important;
+  gap: 6px !important;
+  margin: 0 0 14px 0 !important;
+  line-height: 1.2 !important;
+}
+
+.movie-detail-page .dialog-body h1,
+.detail-title-wrap h1 {
+  font-size: clamp(1.85rem, 2.7vw, 2.35rem) !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.025em !important;
+  font-weight: 700 !important;
+  color: #FFFFFF !important;
+  margin: 0 !important;
+  display: block !important;
+  width: 100% !important;
+}
+
+.detail-title-meta {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+  font-size: 14.5px !important;
+  font-weight: 450 !important;
+  color: #9CA3AF !important;
+}
+
+.detail-title-meta .title-meta-item + .title-meta-item::before {
+  content: "•" !important;
+  margin: 0 8px !important;
+  color: #6B7280 !important;
+}
+
+/* 3. Genres (Clean text, dot separators, no pills) */
+.movie-detail-page .dialog-genres {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 0 !important;
+  margin: 0 0 16px 0 !important;
+}
+
+.movie-detail-page .dialog-genres .tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: auto !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  color: #9CA3AF !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: 0.01em !important;
+}
+
+.movie-detail-page .dialog-genres .tag + .tag::before {
+  content: "•" !important;
+  margin: 0 8px !important;
+  color: #6B7280 !important;
+}
+
+/* 4. Description: Full Width Parity with Section (510px cap removed) */
+.dialog-overview,
+.movie-detail-page .dialog-overview {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+  margin: 0 0 16px 0 !important;
+  font-size: 14px !important;
+  line-height: 1.62 !important;
+  color: #D1D5DB !important;
+  white-space: normal !important;
+}
+
+/* 5. Credits Lines: Full Width */
+.credits-lines,
+.movie-detail-page .credits-lines {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
+  margin-top: 0 !important;
+  margin-bottom: 16px !important;
+  font-size: 13.5px !important;
+  line-height: 1.55 !important;
+  color: #9CA3AF !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  box-sizing: border-box !important;
+}
+
+/* 6. Keywords: Relocated Below Cast in Main Column */
+.poster-keywords,
+.movie-detail-page .poster-keywords,
+.detail-keywords-wrap {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  margin: 0 0 20px 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  justify-content: flex-start !important;
+}
+
+.poster-keywords .tag,
+.movie-detail-page .poster-keywords .tag {
+  display: inline-flex !important;
+  align-items: center !important;
+  height: 24px !important;
+  padding: 0 9px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: #9CA3AF !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: 0.01em !important;
+  transition: all 140ms ease !important;
+}
+
+.poster-keywords .tag:hover {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  color: #FFFFFF !important;
+}
+
+
+/* Preset Ribbon: Last Chip Clean Truncation with Ellipsis */
+.profile-ribbon {
+  overflow: hidden !important;
+  max-width: 670px !important;
+}
+
+.profile-ribbon .ribbon-chip {
+  flex-shrink: 0 !important;
+  max-width: 100% !important;
+}
+
+.profile-ribbon .ribbon-chip:last-child {
+  flex-shrink: 1 !important;
+  min-width: 48px !important;
+  overflow: hidden !important;
+}
+
+.profile-ribbon .ribbon-chip:last-child .ribbon-chip-text {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  display: block !important;
+  min-width: 0 !important;
 }

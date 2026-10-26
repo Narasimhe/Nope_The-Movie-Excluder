@@ -268,7 +268,7 @@ const elements = {
   detailNextBtn: document.querySelector("#detail-next-btn"),
   dialogLoading: document.querySelector("#dialog-loading"),
   dialogContent: document.querySelector("#dialog-content"),
-  dialogPoster: document.querySelector("#dialog-poster-wrap"),
+  dialogPoster: document.querySelector("#dialog-poster-img-wrap") || document.querySelector("#dialog-poster-wrap"),
   dialogKicker: document.querySelector("#dialog-kicker"),
   dialogTitle: document.querySelector("#dialog-title"),
   dialogMeta: document.querySelector("#dialog-meta"),
@@ -5028,9 +5028,20 @@ function renderPeople(container, people, entityKey) {
     return;
   }
 
+  const isActor = entityKey === "actors" || entityKey === "cast";
+  if (isActor) {
+    const leadDot = document.createElement("span");
+    leadDot.className = "credit-lead-dot";
+    leadDot.textContent = "• ";
+    container.append(leadDot);
+  }
+
   available.forEach((person, index) => {
     if (index > 0) {
-      container.append(document.createTextNode(", "));
+      const sep = document.createElement("span");
+      sep.className = "credit-separator";
+      sep.textContent = isActor ? "  •  " : ", ";
+      container.append(sep);
     }
     const button = document.createElement("button");
     button.type = "button";
@@ -5046,7 +5057,9 @@ function renderPeople(container, people, entityKey) {
 
 function saveCurrentSearchSnapshot(originInfo = null) {
   let title = "Discover";
-  if (state.currentView === "discover" || (!state.currentView && state.mode === "discovery")) {
+  if (originInfo && originInfo.fromMovieDetails) {
+    title = originInfo.title || "Movie";
+  } else if (state.currentView === "discover" || (!state.currentView && state.mode === "discovery")) {
     title = "Discover";
   } else if (state.currentView === "movie-notes") {
     title = "Movie Notes";
@@ -5061,6 +5074,7 @@ function saveCurrentSearchSnapshot(originInfo = null) {
   }
 
   state.savedSearchSnapshot = {
+    originInfo: originInfo,
     mode: state.mode,
     currentView: state.currentView,
     discoveryMode: state.discoveryMode,
@@ -5135,6 +5149,10 @@ async function restoreSearchSnapshot() {
   }
 
   window.scrollTo({ top: snap.scrollPosition || 0, behavior: "smooth" });
+
+  if (snap.originInfo && snap.originInfo.fromMovieDetails && snap.originInfo.id) {
+    openMovieDetails(snap.originInfo.id).catch(() => {});
+  }
 }
 
 function hideFilmographyToolbar() {
@@ -5195,7 +5213,7 @@ async function loadPersonFilmography(person, entityKey = "directors", department
   const headingBlock = document.querySelector("#section-heading-block");
   if (headingBlock) headingBlock.classList.add("is-hidden");
 
-  const previousTitle = state.savedSearchSnapshot?.title || "Discover";
+  const previousTitle = state.savedSearchSnapshot?.originInfo?.title || state.savedSearchSnapshot?.title || "Discover";
   if (elements.returnToOrigin) {
     elements.returnToOrigin.textContent = `← Return to ${previousTitle}`;
     elements.returnToOrigin.classList.remove("is-hidden");
@@ -5357,6 +5375,18 @@ function formatReleaseDate(value) {
     });
 }
 
+function formatBadgeVoteCount(count) {
+  const num = Number(count);
+  if (!num || isNaN(num) || num <= 0) return "";
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1).replace(/\.0$/, "")}M votes`;
+  }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1).replace(/\.0$/, "")}k votes`;
+  }
+  return `${num} ${num === 1 ? "vote" : "votes"}`;
+}
+
 function formatVoteCount(count) {
   const num = Number(count);
   if (!num || isNaN(num) || num <= 0) return "";
@@ -5376,20 +5406,53 @@ function renderMovieDetails(movie) {
   updateDialogKicker(movie);
   elements.dialogTitle.textContent =
     movie.title || movie.original_title || "Untitled movie";
-  elements.dialogMeta.replaceChildren();
-  appendMetaItem(getMovieYear(movie));
-  appendMetaItem(getMovieLanguage(movie));
 
+  const year = getMovieYear(movie);
+  const lang = getMovieLanguage(movie);
+  const titleMetaEl = document.querySelector("#detail-title-meta");
+  if (titleMetaEl) {
+    titleMetaEl.replaceChildren();
+    if (year) {
+      const yearSpan = document.createElement("span");
+      yearSpan.className = "title-meta-item title-meta-year";
+      yearSpan.textContent = year;
+      titleMetaEl.append(yearSpan);
+    }
+    if (lang) {
+      const langSpan = document.createElement("span");
+      langSpan.className = "title-meta-item title-meta-lang";
+      langSpan.textContent = lang;
+      titleMetaEl.append(langSpan);
+    }
+  }
+
+  // Clear obsolete dialogMeta
+  if (elements.dialogMeta) {
+    elements.dialogMeta.replaceChildren();
+  }
+
+  // Populate Poster Top Overlays (Rating Top-Left, Votes Top-Right)
   const rating = getMovieRating(movie);
+  const posterRatingBadge = document.querySelector("#poster-rating-badge");
+  if (posterRatingBadge) {
+    if (rating) {
+      const starSvg = `<svg class="poster-star-icon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
+      posterRatingBadge.innerHTML = `${starSvg} <span class="poster-rating-val">${rating}</span>`;
+      posterRatingBadge.style.display = "inline-flex";
+    } else {
+      posterRatingBadge.style.display = "none";
+    }
+  }
 
-  if (rating) {
-    const starSvg = `<svg class="meta-star-icon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
-    appendMetaItem(`${starSvg} <span class="meta-rating-val">${rating}</span>`, true);
-
-    const voteCountStr = formatVoteCount(movie.vote_count);
-    if (voteCountStr) {
-      const voteSvg = `<svg class="meta-vote-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>`;
-      appendMetaItem(`${voteSvg} <span class="meta-vote-count">(${voteCountStr})</span>`, true);
+  const posterVotesBadge = document.querySelector("#poster-votes-badge");
+  if (posterVotesBadge) {
+    const badgeVotes = formatBadgeVoteCount(movie.vote_count);
+    if (badgeVotes) {
+      posterVotesBadge.textContent = badgeVotes;
+      posterVotesBadge.title = `${Number(movie.vote_count).toLocaleString()} votes`;
+      posterVotesBadge.style.display = "inline-flex";
+    } else {
+      posterVotesBadge.style.display = "none";
     }
   }
 

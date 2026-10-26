@@ -5,6 +5,33 @@
 ## Ã°Å¸Å¸Â¢ Pending Tasks (Active Focus)
 
 
+- [x] **Task 15: Single Movie Detail Header & Typography Architecture (Complete Editorial Flow)**
+  * **[CANVAS & POSTER COLUMN (LEFT)]**:
+    - **64px Left-Anchored Canvas**: Desktop left padding halved to 64px, locked in strict vertical alignment with the [ ← Back to ... ] button.
+    - **Cinematic 270x405px Poster**: Stepped up from 240x360px (+12.5%, 2:3 ratio).
+    - **Poster Top Overlays (Rating & Votes)**:
+      * **Top-Left**: Brand yellow (#DEC68B) star icon and score (★ 6.5) on dark frosted pill.
+      * **Top-Right**: Brand yellow (#DEC68B) vote count with semantic unit (e.g. 17.7k votes) in brand yellow (#DEC68B) on dark frosted pill directly overlaid on the poster.
+    - **Clean Poster Base**: Keywords relocated to the right column, leaving the bottom of the poster completely uncluttered.
+  * **[CREDITS FILMOGRAPHY ROUND-TRIP]**:
+    - Clicking any director or actor opens their filmography view while capturing the origin movie snapshot.
+    - Filmography toolbar return button dynamically labels [ ← Return to Movie Title ] (e.g. ← Return to Avatar).
+    - Clicking the return button seamlessly restores the library context and re-opens the exact single movie detail page.
+  * **[PENDING CODE SIGNAL] Genre Presentation as Chips**:
+    - Revert genres from plain text with bullet dots back to sleek, calm chips/pills (8px squircle, subtle border, quiet muted grey text) matching the Zen chips design system. No code changes until user explicitly requests.
+  * **[MAIN CONTENT COLUMN (RIGHT) - SEQUENTIAL FLOW]**:
+    1. **Movie Title**: Dominant headline scale (clamp(1.85rem, 2.7vw, 2.35rem)), favorite heart removed.
+    2. **Year & Language**: Dedicated row directly beneath title (2009 • EN), **no leading bullet**.
+    3. *[Breathing Room Space]*
+    4. **Genres [PENDING NEXT SPRINT]**: Style as sleek chips (reverting plain text dots back to calm squircle chips per user request) (•), heavy pill frames removed.
+    5. *[Breathing Room Space]*
+    6. **Movie Description**: Full column width parity (510px width cap removed; expands naturally to match actors and section bounds).
+    7. *[Breathing Room Space]*
+    8. **Director & Cast**: Interactive clickable links without underlines; cast preceded by leading bullet (• ) with generous bullet separators (  •  ).
+    9. *[Breathing Room Space]*
+    10. **Keyword Chips (DNA)**: Relocated from under the poster to sit beneath the Director & Cast credits.
+  * **[PENDING DECISION] Prominent Status Repositioning**: Finalize new prominent placement of the movie status badge/indicator (position to be chosen).
+
 - [ ] **Task 4: Search Profiles (Zen Redesign)**
   * **Eliminate Redundant Dropdown & Orphaned Divider**: Completely remove the bottom `<select>` dropdown box and its divider line. Clickable chips above already handle 1-click preset switching.
   * **Eradicate Dead Black Void ("IN RESERVE")**: Consolidate profiles into a single calm group labeled **`SAVED PRESETS`** (with a quiet `4/6` counter on the right). Never render an empty "IN RESERVE" header or dead vertical gap when no reserve profiles exist.
