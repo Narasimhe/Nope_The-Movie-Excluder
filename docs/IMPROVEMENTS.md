@@ -16,6 +16,12 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Movie Detail Dynamic Origin Return, Overview Order Restoration & Prominent Kicker**
+  * **Dynamic Back Navigation Label**: Replaced generic `"Back to movies"` with dynamic context-aware origin return labels: `"Back to Watched"`, `"Back to Rewatch"`, `"Back to Watch Later"`, `"Back to Discovery"`, `"Back to Favourites"`, `"Back to Nope"`, `"Back to Notes"`, and `"Back to [Person]"`.
+  * **Restored Canonical Order (Overview before Credits)**: Restored the exact order in `.detail-top-info`: Title & Heart → Genres → Metadata row → Dynamic Plot Overview → Director & Cast lines (`.credits-lines`).
+  * **Enlarged Status Kicker**: Increased the uppercase status kicker font size to 14px with a 16px status icon (`gap: 8px; margin-bottom: 12px; font-weight: 700`), giving clear visual prominence above the title.
+- [x] **Movie Detail Header Parity (Exact 64px Match with Discover/Library)**
+  * **Unified 64px Header Height**: Aligned `.detail-page-header` to the exact 64px height (`height: 64px !important; min-height: 64px !important; max-height: 64px !important; padding: 0 24px !important;`) of the Discover and Library `.topbar` navigation header, establishing complete visual consistency and navigation continuity across views.
 - [x] **Movie Detail Color Parity, Spacing Tightening & Anchored Credits Architecture**
   * **Unified Site & Header Canvas Color**: Standardized `.movie-detail-page` to identical `--bg` (`#09090b`), eliminating conflicting radial gradient overlays and ensuring total color harmony between `.detail-page-header`, the detail page canvas, and the rest of the application.
   * **Reduced Header-to-Details Space**: Slimmed `.detail-page-header` from 60px to 48px (`padding: 6px 16px`) and tightened `.detail-page-content` top padding from 24px to 12px, connecting the header smoothly to the movie details.

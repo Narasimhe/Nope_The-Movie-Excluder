@@ -5530,6 +5530,62 @@ async function loadRelatedMovies(movieId) {
   }
 }
 
+function computeDetailReturnLabel() {
+  const fromNoteReader = Boolean(
+    state.entryReaderEntry &&
+    elements.entryReader &&
+    !elements.entryReader.classList.contains("is-hidden")
+  );
+  if (fromNoteReader) {
+    return "Back to note";
+  }
+  if (state.mode === "filmography") {
+    return state.activeFilmographyPerson ? `Back to ${state.activeFilmographyPerson.name}` : "Back to filmography";
+  }
+
+  const view = state.currentView;
+  switch (view) {
+    case "watched":
+      return "Back to Watched";
+    case "rewatch":
+      return "Back to Rewatch";
+    case "watch_later":
+      return "Back to Watch Later";
+    case "new_discovery":
+      return "Back to Discovery";
+    case "favorites":
+      return "Back to Favourites";
+    case "excluded":
+      return "Back to Nope";
+    case "movie-notes":
+      if (state.movieNotesShelfFilter) {
+        const filterMap = {
+          watched: "Watched",
+          rewatch: "Rewatch",
+          watch_later: "Watch Later",
+          new_discovery: "Discovery",
+          favorites: "Favourites",
+          excluded: "Nope"
+        };
+        const filterName = filterMap[state.movieNotesShelfFilter] || state.movieNotesShelfFilter;
+        return `Back to ${filterName} Notes`;
+      }
+      return "Back to Notes";
+    case "entries":
+      return "Back to Notes";
+    case "discover":
+      if (state.mode === "search" || state.mode === "keyword-search" || (elements.searchInput && elements.searchInput.value.trim())) {
+        return "Back to results";
+      }
+      return "Back to Discover";
+    default:
+      if (state.mode === "shelf") {
+        return "Back to movies";
+      }
+      return "Back to Discover";
+  }
+}
+
 async function openMovieDetails(
   movieId,
   { trailMode = "root", trailIndex = null } = {},
@@ -5542,18 +5598,7 @@ async function openMovieDetails(
     state.previousScrollPosition = (elements.shell && elements.shell.scrollTop)
       ? elements.shell.scrollTop
       : window.scrollY;
-    const fromNoteReader = Boolean(
-      state.entryReaderEntry &&
-      elements.entryReader &&
-      !elements.entryReader.classList.contains("is-hidden")
-    );
-    state.detailReturnLabel = fromNoteReader
-      ? "Back to note"
-      : (state.mode === "shelf"
-        ? "Back to movies"
-        : (state.mode === "filmography"
-          ? (state.activeFilmographyPerson ? `Back to ${state.activeFilmographyPerson.name}` : "Back to filmography")
-          : "Back to results"));
+    state.detailReturnLabel = computeDetailReturnLabel();
 
     let activeList = [];
     if (state.currentView === "discover" || state.mode === "search" || state.mode === "discover") {
@@ -5661,6 +5706,10 @@ function closeMovieDetails() {
   if (elements.detailNavStepper) elements.detailNavStepper.classList.add("is-hidden");
   elements.detailTrail.replaceChildren();
   updateGreyContext();
+  if (state.shelfNeedsRefresh) {
+    state.shelfNeedsRefresh = false;
+    reloadCurrentLibraryView();
+  }
 }
 
 function getMovieNavId(movie) {
@@ -5766,6 +5815,7 @@ function updateVisibleMovie(userData) {
   }
 
   state.selectedMovie.user_data = userData;
+  state.shelfNeedsRefresh = true;
   updateMovieCardDOM(movieId, userData);
 }
 
