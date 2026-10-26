@@ -16,6 +16,9 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Movie Detail Brand Muted Yellow Accents & Flowing Keywords**
+  * **Brand Muted Yellow Rating & Vote Count**: Styled the vote count text (`(13.9k votes)`) and star icon (`★`) in matching brand muted yellow (`#DEC68B`), with coordinating icon hue for harmonious visual hierarchy.
+  * **Flowing Poster Keywords**: Maintained natural horizontal flex-wrapping for `.poster-keywords` below the 240px poster column.
 - [x] **Movie Detail Dynamic Origin Return, Overview Order Restoration & Prominent Kicker**
   * **Dynamic Back Navigation Label**: Replaced generic `"Back to movies"` with dynamic context-aware origin return labels: `"Back to Watched"`, `"Back to Rewatch"`, `"Back to Watch Later"`, `"Back to Discovery"`, `"Back to Favourites"`, `"Back to Nope"`, `"Back to Notes"`, and `"Back to [Person]"`.
   * **Restored Canonical Order (Overview before Credits)**: Restored the exact order in `.detail-top-info`: Title & Heart → Genres → Metadata row → Dynamic Plot Overview → Director & Cast lines (`.credits-lines`).

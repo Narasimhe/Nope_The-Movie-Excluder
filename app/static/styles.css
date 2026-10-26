@@ -9319,15 +9319,20 @@ footer {
 }
 
 .movie-detail-page .dialog-meta .meta-star-icon {
-  color: #F2CA52 !important;
+  color: #DEC68B !important;
   flex-shrink: 0 !important;
   vertical-align: middle !important;
 }
 
 .movie-detail-page .dialog-meta .meta-vote-icon {
-  color: #9CA3AF !important;
+  color: #DEC68B !important;
+  opacity: 0.85 !important;
   flex-shrink: 0 !important;
   vertical-align: middle !important;
+}
+
+.movie-detail-page .dialog-meta .meta-vote-count {
+  color: #DEC68B !important;
 }
 
 /* Overview / Plot - Dynamic natural text flow directly below metadata */
@@ -9418,7 +9423,8 @@ footer {
   box-sizing: border-box !important;
 }
 
-.poster-keywords .tag {
+.poster-keywords .tag,
+.movie-detail-page .poster-keywords .tag {
   display: inline-flex !important;
   align-items: center !important;
   height: 22px !important;

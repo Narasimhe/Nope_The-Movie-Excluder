@@ -5384,12 +5384,12 @@ function renderMovieDetails(movie) {
 
   if (rating) {
     const starSvg = `<svg class="meta-star-icon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
-    appendMetaItem(`${starSvg} <span>${rating}</span>`, true);
+    appendMetaItem(`${starSvg} <span class="meta-rating-val">${rating}</span>`, true);
 
     const voteCountStr = formatVoteCount(movie.vote_count);
     if (voteCountStr) {
       const voteSvg = `<svg class="meta-vote-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>`;
-      appendMetaItem(`${voteSvg} <span>(${voteCountStr})</span>`, true);
+      appendMetaItem(`${voteSvg} <span class="meta-vote-count">(${voteCountStr})</span>`, true);
     }
   }
 
