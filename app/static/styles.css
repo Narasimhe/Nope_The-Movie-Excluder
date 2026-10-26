@@ -9107,14 +9107,14 @@ footer {
   width: 100% !important;
   max-width: 670px !important;
   min-width: 0 !important;
-  min-height: 405px !important;
+  min-height: auto !important;
   height: auto !important;
   max-height: none !important;
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
-  margin-bottom: 22px !important;
+  margin-bottom: 0 !important;
 }
 
 /* Status Kicker (suppressed from top of title; to be placed prominently later) */
@@ -9178,14 +9178,30 @@ footer {
   color: #9CA3AF !important;
 }
 
-/* Movie Title & Beneath-Title Metadata (Year & Language) */
+/* Movie Title & Beside-Title Metadata (Year, Language & Rating) */
 .detail-title-wrap {
   display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-start !important;
-  gap: 6px !important;
-  margin: 0 0 14px 0 !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  flex-wrap: wrap !important;
+  gap: 8px 16px !important;
+  margin: 0 0 16px 0 !important;
   line-height: 1.2 !important;
+  text-align: left !important;
+  width: 100% !important;
+  max-width: 670px !important;
+}
+
+.detail-title-row {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+  flex-shrink: 0 !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 .movie-detail-page .dialog-body h1,
@@ -9198,20 +9214,23 @@ footer {
   color: #DEC68B !important;
   margin: 0 !important;
   display: inline !important;
-  vertical-align: baseline !important;
+  vertical-align: middle !important;
+  text-align: left !important;
 }
 
 .detail-title-meta {
-  display: flex !important;
+  display: inline-flex !important;
   align-items: center !important;
+  vertical-align: middle !important;
   gap: 0 !important;
-  font-size: 14.5px !important;
+  font-size: 15px !important;
   font-weight: 450 !important;
   color: #9CA3AF !important;
+  text-align: left !important;
 }
 
 .detail-title-meta .title-meta-item + .title-meta-item::before {
-  content: "•" !important;
+  content: "\2022" !important;
   margin: 0 8px !important;
   color: #6B7280 !important;
 }
@@ -9487,7 +9506,7 @@ footer {
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
-  margin-top: 0 !important;
+  margin-top: 24px !important;
   margin-bottom: 0 !important;
   max-width: 670px !important;
   width: 100% !important;
@@ -9696,10 +9715,13 @@ footer {
   letter-spacing: 0.01em !important;
 }
 
-.related-familiar-toggle {
+.related-familiar-toggle,
+#related-familiar-toggle {
   font-size: 11px !important;
   font-weight: 500 !important;
   color: #9CA3AF !important;
+  border-radius: 999px !important;
+  padding: 4px 12px !important;
 }
 
 /* Responsive alignment for Single Movie Page */
@@ -10074,11 +10096,14 @@ body.grey-docked-open .related-card {
 /* 2. Title & Beside-Title Metadata (Year & Language) */
 .detail-title-wrap {
   display: flex !important;
-  align-items: baseline !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
   flex-wrap: wrap !important;
-  gap: 16px !important; /* Ample breathing room between title and metadata */
+  gap: 8px 16px !important; /* Breathing room between title, heart, and metadata */
   margin: 0 0 16px 0 !important;
   line-height: 1.2 !important;
+  text-align: left !important;
 }
 
 .movie-detail-page .dialog-body h1,
@@ -10103,10 +10128,15 @@ body.grey-docked-open .related-card {
   vertical-align: baseline !important;
 }
 
-.detail-title-meta .title-meta-item::before {
-  content: "•" !important;
+.detail-title-meta .title-meta-item + .title-meta-item::before {
+  content: "\2022" !important;
   margin: 0 8px !important;
   color: #6B7280 !important;
+}
+
+.detail-title-meta .title-meta-item:first-child::before {
+  content: none !important;
+  margin: 0 !important;
 }
 
 /* 3. Genres (Sleek Squircle Chips, Slight Brand Yellow, Zero Glow or Shadow) */
@@ -10123,8 +10153,8 @@ body.grey-docked-open .related-card {
   display: inline-flex !important;
   align-items: center !important;
   height: 24px !important;
-  padding: 0 9px !important;
-  border-radius: 6px !important;
+  padding: 0 10px !important;
+  border-radius: 999px !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   background: rgba(255, 255, 255, 0.02) !important;
   color: #9CA3AF !important; /* Calm, muted tone so plot stays prominent */
@@ -10215,8 +10245,8 @@ body.grey-docked-open .related-card {
   display: inline-flex !important;
   align-items: center !important;
   height: 23px !important;
-  padding: 0 8px !important;
-  border-radius: 6px !important;
+  padding: 0 10px !important;
+  border-radius: 999px !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   background: rgba(255, 255, 255, 0.02) !important;
   color: #8E8E93 !important; /* Quiet muted grey, non-distracting */
@@ -10250,7 +10280,7 @@ body.grey-docked-open .related-card {
   display: block !important;
   width: 100% !important;
   max-width: 670px !important;
-  margin: 28px 0 34px 0 !important;
+  margin: 24px 0 28px 0 !important;
   padding: 0 !important;
   background: transparent !important;
   border: none !important;
@@ -10260,21 +10290,31 @@ body.grey-docked-open .related-card {
 
 .journal-note-inner {
   position: relative !important;
-  border-left: 2.5px solid rgba(222, 198, 139, 0.55) !important;
-  padding-left: 16px !important;
+  border: none !important;
+  border-left: 2px solid rgba(255, 255, 255, 0.22) !important;
+  border-bottom: none !important;
+  border-top: none !important;
+  border-right: none !important;
+  padding-left: 14px !important;
+  box-shadow: none !important;
   transition: border-color 160ms ease !important;
 }
 
 .journal-note-inner:focus-within {
-  border-left-color: #DEC68B !important;
+  border-left-color: rgba(222, 198, 139, 0.6) !important;
 }
 
 .journal-note-textarea,
-#movie-notes {
+#movie-notes,
+.movie-detail-page .detail-notes textarea {
   display: block !important;
   width: 100% !important;
   background: transparent !important;
   border: none !important;
+  border-bottom: none !important;
+  border-top: none !important;
+  border-left: none !important;
+  border-right: none !important;
   outline: none !important;
   box-shadow: none !important;
   padding: 2px 0 !important;
@@ -10284,10 +10324,15 @@ body.grey-docked-open .related-card {
   line-height: 1.7 !important;
   color: #E5E7EB !important;
   font-style: normal !important;
-  resize: vertical !important;
+  resize: none !important;
   overflow-y: auto !important;
   min-height: 72px !important;
   box-sizing: border-box !important;
+}
+
+.detail-notes-header,
+.movie-detail-page .detail-notes-header {
+  display: none !important;
 }
 
 .journal-note-textarea::placeholder,
@@ -10400,4 +10445,17 @@ h1#dialog-title,
   color: #77747c !important;
   font-size: 0.85rem !important;
   user-select: none !important;
+}
+
+/* Explicit suppressions for Poster Badges and Stray Dots */
+#poster-overlay-badges,
+.poster-overlay-badges,
+#poster-rating-badge,
+#poster-votes-badge {
+  display: none !important;
+}
+
+.credit-lead-dot,
+.movie-detail-page .credit-lead-dot {
+  display: none !important;
 }

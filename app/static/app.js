@@ -5044,12 +5044,6 @@ function renderPeople(container, people, entityKey) {
   }
 
   const isActor = entityKey === "actors" || entityKey === "cast";
-  if (isActor) {
-    const leadDot = document.createElement("span");
-    leadDot.className = "credit-lead-dot";
-    leadDot.textContent = "• ";
-    container.append(leadDot);
-  }
 
   available.forEach((person, index) => {
     if (index > 0) {
@@ -5437,6 +5431,7 @@ function renderMovieDetails(movie) {
 
   const year = getMovieYear(movie);
   const lang = getMovieLanguage(movie);
+  const rating = getMovieRating(movie);
   const titleMetaEl = document.querySelector("#detail-title-meta");
   if (titleMetaEl) {
     titleMetaEl.replaceChildren();
@@ -5452,6 +5447,13 @@ function renderMovieDetails(movie) {
       langSpan.textContent = lang;
       titleMetaEl.append(langSpan);
     }
+    if (rating) {
+      const ratingSpan = document.createElement("span");
+      ratingSpan.className = "title-meta-item title-meta-rating";
+      const votesText = movie.vote_count ? ` (${Number(movie.vote_count).toLocaleString()} votes)` : "";
+      ratingSpan.textContent = `★ ${rating}${votesText}`;
+      titleMetaEl.append(ratingSpan);
+    }
   }
 
   // Clear obsolete dialogMeta
@@ -5459,30 +5461,11 @@ function renderMovieDetails(movie) {
     elements.dialogMeta.replaceChildren();
   }
 
-  // Populate Poster Top Overlays (Rating Top-Left, Votes Top-Right)
-  const rating = getMovieRating(movie);
+  // Hide poster corner badges so artwork remains clean
   const posterRatingBadge = document.querySelector("#poster-rating-badge");
-  if (posterRatingBadge) {
-    if (rating) {
-      const starSvg = `<svg class="poster-star-icon" viewBox="0 0 24 24" width="13" height="13" fill="currentColor" stroke="none" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>`;
-      posterRatingBadge.innerHTML = `${starSvg} <span class="poster-rating-val">${rating}</span>`;
-      posterRatingBadge.style.display = "inline-flex";
-    } else {
-      posterRatingBadge.style.display = "none";
-    }
-  }
-
+  if (posterRatingBadge) posterRatingBadge.style.display = "none";
   const posterVotesBadge = document.querySelector("#poster-votes-badge");
-  if (posterVotesBadge) {
-    const badgeVotes = formatBadgeVoteCount(movie.vote_count);
-    if (badgeVotes) {
-      posterVotesBadge.textContent = badgeVotes;
-      posterVotesBadge.title = `${Number(movie.vote_count).toLocaleString()} votes`;
-      posterVotesBadge.style.display = "inline-flex";
-    } else {
-      posterVotesBadge.style.display = "none";
-    }
-  }
+  if (posterVotesBadge) posterVotesBadge.style.display = "none";
 
   elements.dialogOverview.textContent =
     movie.overview || "No overview is currently available.";
@@ -9681,7 +9664,7 @@ async function saveGreyToMovieNotes(providedCritique = null) {
   const yearStr = releaseYear ? ` (${releaseYear})` : "";
   const movieLine = `${movie.title || "Movie"}${yearStr}${genreStr}`;
 
-  const formattedBlock = `Grey says:\n${movieLine}\n${critique}`;
+  const formattedBlock = `Grey says:\n${critique}`;
 
   const existingNotes = (elements.notes ? elements.notes.value : (movie.user_data?.notes || "")).trim();
   const fullNotes = existingNotes ? `${existingNotes}\n\n${formattedBlock}` : formattedBlock;

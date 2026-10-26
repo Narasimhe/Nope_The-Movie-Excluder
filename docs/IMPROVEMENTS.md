@@ -16,6 +16,13 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Movie Detail Refinements: Clean Poster, Inline Rating, Gap Removal & Unified Pill Geometry**
+  * **Unobstructed Poster Artwork & Inline Rating**: Stripped corner badges (`★ 6.4` and `532 votes`) from the movie poster to keep artwork 100% clean. Re-placed rating and vote count inline beside the year and language (`2006 • English • ★ 6.4 (532 votes)`), removing the stray leading bullet dot before the release year.
+  * **Restored Favourite Button**: Restored the circular heart button next to the movie headline, enabling immediate favorite status toggling.
+  * **Clean Cast Row**: Removed the stray leading bullet dot directly following the `Cast:` label (`Cast: Nathan Baesel • Angela Goethals...`).
+  * **Eliminated Status Pill Gap**: Removed the artificial `min-height: 405px` and margin offsets on `.detail-top-info`, creating a consistent, natural `24px` spacing directly above the status pill row.
+  * **True Borderless Left-Spine Note**: Formatted notes with ONLY an editorial left vertical spine (`border-left: 2px solid rgba(255, 255, 255, 0.22); padding-left: 14px`), no bottom border, no resize grip, and omitted redundant movie title headers from Grey critique insertions.
+  * **Unified Pill Geometry (`border-radius: 999px`)**: Standardized genre chips, keyword chips, and the `Hide tracked movies` button with smooth `999px` pill geometry.
 - [x] **Discover Total Movie Count & Pagination Top Breathing Space**
   * **Discover Total Count Display**: Eradicated the useless batch message ('24 movies on this page') on the Discover page. It now always displays the actual total movie count (e.g. 1,820 movies).
   * **Pagination Breathing Room on Top**: Set margin-top: 52px on .pagination to give generous, elegant breathing room below the bottom row of movie cards, centered across the 670px grid with universal 8px squircle buttons.

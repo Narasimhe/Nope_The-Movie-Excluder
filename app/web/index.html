@@ -11,8 +11,8 @@
   >
   <title>NOPE</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/styles.css?v=20261026_zen_194">
-  <script src="/static/app.js?v=20261026_zen_194" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261026_zen_197">
+  <script src="/static/app.js?v=20261026_zen_197" defer></script>
 </head>
 <body data-active-view="discover">
   <div class="site-shell" id="app-shell">
@@ -1004,10 +1004,6 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
       <section class="detail-hero">
                 <div class="detail-poster-column">
           <div class="dialog-poster-wrap" id="dialog-poster-wrap">
-            <div class="poster-overlay-badges" id="poster-overlay-badges">
-              <span class="poster-badge poster-rating-badge" id="poster-rating-badge" style="display:none;"></span>
-              <span class="poster-badge poster-votes-badge" id="poster-votes-badge" style="display:none;"></span>
-            </div>
             <div class="dialog-poster-img-wrap" id="dialog-poster-img-wrap"></div>
           </div>
           <div class="tag-list poster-keywords detail-keywords-wrap" id="dialog-keywords"></div>
@@ -1020,11 +1016,13 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
               <span class="kicker-text">Movie details</span>
             </p>
             <div class="detail-title-wrap">
-              <h1 id="dialog-title" class="dialog-title" style="color: #DEC68B !important;"></h1>
+              <div class="detail-title-row">
+                <h1 id="dialog-title" class="dialog-title" style="color: #DEC68B !important;"></h1>
+                <button class="favorite-button" id="favorite-button" type="button" aria-label="Add to favourites" title="Toggle Favourite (F)">
+                  <span aria-hidden="true">♥</span>
+                </button>
+              </div>
               <span class="detail-title-meta" id="detail-title-meta"></span>
-              <button class="favorite-button is-hidden" id="favorite-button" type="button" aria-label="Add to favourites" title="Toggle Favourite (F)" style="display:none !important;">
-                <span aria-hidden="true">♥</span>
-              </button>
             </div>
             <div class="tag-list dialog-genres" id="dialog-genres"></div>
             <div class="dialog-meta is-hidden" id="dialog-meta" style="display:none !important;"></div>
