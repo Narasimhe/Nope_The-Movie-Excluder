@@ -918,3 +918,60 @@ efreshCompactCloud where background excluded status prevented Hindi from receivi
       - Moved `.card-rating` to `bottom: 4px; left: 4px;` in gold with star prefix (`★ 7.5`).
       - Added `.card-votes` at `bottom: 4px; right: 4px;` featuring a micro vote ballot icon and compact formatted vote count (e.g. `17.7k`, `850`, `1.2M`) with full vote volume on tooltip.
       - Implemented identically across `createMovieCard` (Discover & all Library shelves) and `createRelatedMovieCard` (Related Movies panel).
+
+- [x] **Streamline Movie Hover Preview & Tone Down Popover Title**
+  * **Goal**: Remove redundant rating and vote count badges from the library poster hover note preview (since they are already rendered on the poster corners) and tone down the popover title yellow.
+  * **Key Changes**:
+    * **Note Popover Header ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Cleaned the header in `showPosterNotePreview` so it solely displays the movie title and year, removing duplicate ratings and vote numbers.
+    * **Tooltip Cleanup ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**: Removed redundant vote count strings from poster button tooltips in Discover, Library, and Related cards.
+    * **Toned Down Title Styling ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Softened `.poster-note-popover-title` from stark `var(--accent)` (`#f2ca52`) to the calm brand yellow (`#DEC68B`), balancing legibility with visual comfort.
+
+- [x] **Universal Custom Hover Title Preview Across Discover & Related Cards**
+  * **Goal**: Replace the sluggish native browser tooltip in Discover and Related Movies with the sleek, dark frosted glass hover popover matching the Library hover card.
+  * **Key Changes**:
+    * **Compact Title-Only Popover Mode ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js) & [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
+      - Added `.poster-note-popover.is-title-only` styling featuring a compact, auto-width 8px squircle pill with no bottom separator.
+      - Enabled `schedulePosterNotePreview` on all Discover and Related movie cards: displays movie title in soft brand yellow (`#DEC68B`) and release year in muted grey upon hover, seamlessly expanding if the movie has personal notes.
+      - Stripped `title` attributes so native OS tooltips never clash with the custom popover.
+
+- [x] **Refine Hover Title Micro-Pill Typography**
+  * **Goal**: Tone down the weight, scale, and padding of the hover title popover so it appears as a subtle, elegant micro-pill.
+  * **Key Changes**:
+    * **Popover Typography ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
+      - Reduced title size from `0.88rem` down to `0.75rem` and weight from `700/800` to a calm `550`.
+      - Reduced year size to `0.69rem` (`400` weight).
+      - Tightened padding to `4px 9px` with a sleek `6px` squircle corner radius.
+
+- [x] **Elevate Active Preset Chip Border Prominence**
+  * **Goal**: Fix overly subtle highlight border on active Discover preset ribbon chips so the selected preset is clearly identifiable.
+  * **Key Changes**:
+    * **Active Preset Styling ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
+      - Replaced the low-opacity `0.58` hairline border with a defined `1.5px solid rgba(222, 198, 139, 0.92)` brand yellow border.
+      - Added a gentle `rgba(222, 198, 139, 0.06)` ambient warm background wash.
+      - Crisp `#F3F4F6` text at `550` weight makes the active preset clearly stand out against inactive chips.
+
+- [x] **Unify Library Shelf Ribbon: Muted Yellow Icons, Crisp White Text & Parity Highlight Border**
+  * **Goal**: Strip rainbow status colors from shelf chips, unifying all shelf icons in muted brand yellow with white text and an identical highlight border matching the preset chips.
+  * **Key Changes**:
+    * **Shelf Icon Harmonization ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
+      - Replaced divergent rainbow status colors with universal muted brand yellow (`rgba(222, 198, 139, 0.72)` / `#DEC68B` on hover/active) across all shelf chips.
+      - Retained clean `#FFFFFF` text across all states.
+      - Applied identical highlight styling to match Discover preset chips: `1.5px solid rgba(222, 198, 139, 0.92)` border with `rgba(222, 198, 139, 0.06)` ambient wash.
+
+- [x] **Relocate Rating & Votes Exclusively to Hover Card for Clean Poster Artwork**
+  * **Goal**: Strip all rating and vote number overlays from movie posters across Discover, Library shelves, and Related cards, rendering them exclusively in the clean hover preview card.
+  * **Key Changes**:
+    * **Clean Poster Artwork ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js) & [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
+      - Completely removed `.card-rating` and `.card-votes` overlay elements from poster cards, restoring 100% unobstructed, distraction-free movie poster artwork.
+    * **Refined Hover Card Header ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js) & [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
+      - Integrated rating and vote count into `.poster-note-popover-header` as a neat, balanced pair (e.g. `★ 7.5 (17.7k)`) aligned with the movie title and year.
+      - Styled in soft brand yellow (`#DEC68B`) with muted vote numbers, keeping the hover card minimal and elegant.
+
+- [x] **Keyword Chips Beneath Poster & Static Zero-Hover Interaction for Keyword & Genre Chips**
+  * **Goal**: Relocate keyword chips beneath the poster in the poster column, and convert both keyword and genre chips into static, non-interactive textual chips with no hover or highlight effects.
+  * **Key Changes**:
+    * **Keyword Relocation ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html) & [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
+      - Moved `#dialog-keywords` into `.detail-poster-column`, positioning it directly beneath `.dialog-poster-wrap` with a clean `14px` top margin matching the 270px poster column width.
+    * **Static Non-Interactive Styling ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
+      - Applied `cursor: default`, `pointer-events: none`, and eliminated all `:hover` color, border, and transform changes for both keyword chips (`.poster-keywords .tag`) and genre chips (`.dialog-genres .tag`).
+      - Genre chips remain in their current position above the plot overview.

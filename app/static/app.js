@@ -2608,49 +2608,78 @@ function hidePosterNotePreview() {
 
 function showPosterNotePreview(anchorEl, movie) {
   const pop = elements.posterNotePopover || document.querySelector("#poster-note-popover");
-  const rawNotes = (movie?.user_data?.notes || "").trim();
-  if (!pop || !anchorEl || !rawNotes) return;
+  if (!pop || !anchorEl || !movie) return;
 
+  const rawNotes = (movie?.user_data?.notes || "").trim();
   const title = movie.title || movie.original_title || "Untitled movie";
   const yearText = getMovieYear(movie);
   const rating = getMovieRating(movie);
-  const voteCountStr = formatVoteCount(movie.vote_count);
+  const compactVotes = formatCompactVotes(movie.vote_count);
+  const isTitleOnly = !rawNotes;
 
   let metaHtml = "";
   if (rating) {
-    metaHtml = `<span class="poster-note-popover-rating">★ ${escapeHTML(rating)}${voteCountStr ? ` <span class="poster-note-popover-votes">(${escapeHTML(voteCountStr)})</span>` : ""}</span>`;
+    const votesStr = compactVotes ? ` <span class="poster-note-popover-votes">(${compactVotes})</span>` : "";
+    metaHtml = `<span class="poster-note-popover-rating">★ ${escapeHTML(rating)}${votesStr}</span>`;
   }
 
-  pop.innerHTML = `
+  pop.classList.toggle("is-title-only", isTitleOnly);
+
+  const headerHtml = `
     <div class="poster-note-popover-header">
-      <span class="poster-note-popover-title">${escapeHTML(title)}${yearText ? ` <span class="poster-note-popover-year">(${escapeHTML(String(yearText))})</span>` : ""}</span>
+      <span class="poster-note-popover-title-wrap">
+        <span class="poster-note-popover-title">${escapeHTML(title)}</span>
+        ${yearText ? `<span class="poster-note-popover-year">(${escapeHTML(String(yearText))})</span>` : ""}
+      </span>
       ${metaHtml}
     </div>
-    <div class="poster-note-popover-body">${formatRichText(rawNotes)}</div>
   `;
+
+  if (isTitleOnly) {
+    pop.innerHTML = headerHtml;
+  } else {
+    pop.innerHTML = `
+      ${headerHtml}
+      <div class="poster-note-popover-body">${formatRichText(rawNotes)}</div>
+    `;
+  }
 
   pop.classList.remove("is-hidden");
   pop.setAttribute("aria-hidden", "false");
 
   const rect = anchorEl.getBoundingClientRect();
-  const noteLength = rawNotes.length;
-  const targetWidth = noteLength > 200 ? 400 : noteLength > 80 ? 340 : 280;
   const viewportW = window.innerWidth;
-  const viewportH = window.innerHeight;
-  const popWidth = Math.min(targetWidth, viewportW - 24);
 
-  let left = rect.left + rect.width / 2 - popWidth / 2;
-  left = Math.max(12, Math.min(left, viewportW - popWidth - 12));
+  if (isTitleOnly) {
+    pop.style.width = "auto";
+    const popWidth = Math.min(pop.offsetWidth || 220, viewportW - 24);
+    let left = rect.left + rect.width / 2 - popWidth / 2;
+    left = Math.max(12, Math.min(left, viewportW - popWidth - 12));
+    pop.style.left = `${Math.round(left)}px`;
+    const popHeight = pop.offsetHeight || 32;
+    let top = rect.top - popHeight - 8;
+    if (top < 10) {
+      top = rect.bottom + 8;
+    }
+    pop.style.top = `${Math.round(Math.max(10, top))}px`;
+  } else {
+    const noteLength = rawNotes.length;
+    const targetWidth = noteLength > 200 ? 400 : noteLength > 80 ? 340 : 280;
+    const popWidth = Math.min(targetWidth, viewportW - 24);
 
-  pop.style.width = `${popWidth}px`;
-  pop.style.left = `${Math.round(left)}px`;
+    let left = rect.left + rect.width / 2 - popWidth / 2;
+    left = Math.max(12, Math.min(left, viewportW - popWidth - 12));
 
-  const popHeight = pop.offsetHeight || 110;
-  let top = rect.top - popHeight - 10;
-  if (top < 10) {
-    top = 10;
+    pop.style.width = `${popWidth}px`;
+    pop.style.left = `${Math.round(left)}px`;
+
+    const popHeight = pop.offsetHeight || 110;
+    let top = rect.top - popHeight - 10;
+    if (top < 10) {
+      top = rect.bottom + 8;
+    }
+    pop.style.top = `${Math.round(Math.max(10, top))}px`;
   }
-  pop.style.top = `${Math.round(Math.max(10, top))}px`;
 
   requestAnimationFrame(() => {
     pop.classList.add("is-visible");
@@ -2684,10 +2713,8 @@ function createMovieCard(movie) {
   const voteCountStr = formatVoteCount(movie.vote_count);
   const rawNotes = (movie.user_data?.notes || "").trim();
 
-  let tooltip = title;
-  if (yearText) tooltip += ` (${yearText})`;
-  if (voteCountStr) tooltip += ` • (${voteCountStr})`;
-  posterButton.title = tooltip;
+  // Native tooltip removed so custom frosted hover preview takes precedence
+  posterButton.removeAttribute("title");
   if (status === "excluded" && state.currentView === "discover") {
     article.classList.add("is-noped");
   }
@@ -2704,18 +2731,16 @@ function createMovieCard(movie) {
     openMovieDetails(movieId);
   });
 
-  if (rawNotes) {
-    posterButton.addEventListener("mouseenter", () => {
-      if (state.nopeMode && state.currentView === "discover") return;
-      schedulePosterNotePreview(posterButton, movie);
-    });
-    posterButton.addEventListener("mouseleave", hidePosterNotePreview);
-    posterButton.addEventListener("focus", () => {
-      if (state.nopeMode && state.currentView === "discover") return;
-      schedulePosterNotePreview(posterButton, movie);
-    });
-    posterButton.addEventListener("blur", hidePosterNotePreview);
-  }
+  posterButton.addEventListener("mouseenter", () => {
+    if (state.nopeMode && state.currentView === "discover") return;
+    schedulePosterNotePreview(posterButton, movie);
+  });
+  posterButton.addEventListener("mouseleave", hidePosterNotePreview);
+  posterButton.addEventListener("focus", () => {
+    if (state.nopeMode && state.currentView === "discover") return;
+    schedulePosterNotePreview(posterButton, movie);
+  });
+  posterButton.addEventListener("blur", hidePosterNotePreview);
 
 
 
@@ -2728,23 +2753,7 @@ function createMovieCard(movie) {
     }
   }
 
-  const rating = getMovieRating(movie);
-  if (rating) {
-    const ratingElement = document.createElement("span");
-    ratingElement.className = "card-rating";
-    ratingElement.textContent = rating;
-    ratingElement.title = `Rating: ${rating} / 10`;
-    posterButton.append(ratingElement);
-  }
-
-  const compactVotes = formatCompactVotes(movie.vote_count);
-  if (compactVotes) {
-    const votesElement = document.createElement("span");
-    votesElement.className = "card-votes";
-    votesElement.title = `${Number(movie.vote_count).toLocaleString()} votes`;
-    votesElement.innerHTML = `<svg class="card-vote-icon" viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>${compactVotes}</span>`;
-    posterButton.append(votesElement);
-  }
+  // Ratings and votes rendered exclusively in clean hover preview popover
 
   const copy = document.createElement("div");
   copy.className = "card-copy";
@@ -5544,12 +5553,12 @@ function createRelatedMovieCard(movie) {
   const voteCountStr = formatVoteCount(movie.vote_count);
   const notesText = movie.user_data?.notes ? movie.user_data.notes.trim() : "";
 
-  let tooltip = title;
-  if (yearText) tooltip += ` (${yearText})`;
-  if (voteCountStr) tooltip += ` • (${voteCountStr})`;
-  button.title = tooltip;
   button.setAttribute("aria-label", `Open details for ${title}`);
   button.append(createPoster(movie));
+  button.addEventListener("mouseenter", () => schedulePosterNotePreview(button, movie));
+  button.addEventListener("mouseleave", hidePosterNotePreview);
+  button.addEventListener("focus", () => schedulePosterNotePreview(button, movie));
+  button.addEventListener("blur", hidePosterNotePreview);
 
   const status = getStatus(movie);
   if (status && status !== "untracked") {
@@ -5561,23 +5570,7 @@ function createRelatedMovieCard(movie) {
     }
   }
 
-  const rating = getMovieRating(movie);
-  if (rating) {
-    const ratingElement = document.createElement("span");
-    ratingElement.className = "card-rating";
-    ratingElement.textContent = rating;
-    ratingElement.title = `Rating: ${rating} / 10`;
-    button.append(ratingElement);
-  }
-
-  const relatedCompactVotes = formatCompactVotes(movie.vote_count);
-  if (relatedCompactVotes) {
-    const votesElement = document.createElement("span");
-    votesElement.className = "card-votes";
-    votesElement.title = `${Number(movie.vote_count).toLocaleString()} votes`;
-    votesElement.innerHTML = `<svg class="card-vote-icon" viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>${relatedCompactVotes}</span>`;
-    button.append(votesElement);
-  }
+  // Ratings and votes rendered exclusively in clean hover preview popover
 
   button.addEventListener("click", () => {
     openMovieDetails(movieId, { trailMode: "push" });

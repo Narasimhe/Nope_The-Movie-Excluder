@@ -1718,60 +1718,11 @@ button {
 }
 
 /* Micro Rating Pill */
-.card-rating {
-  position: absolute !important;
-  z-index: 3 !important;
-  left: 4px !important;
-  right: auto !important;
-  bottom: 4px !important;
-  display: inline-flex !important;
-  gap: 3px !important;
-  align-items: center !important;
-  padding: 1px 4.5px !important;
-  background: rgba(9, 9, 11, 0.82) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 4px !important;
-  color: #f6df8b !important;
-  font-size: 0.58rem !important;
-  font-weight: 800 !important;
-  line-height: 1.2 !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
-  user-select: none !important;
-  pointer-events: none !important;
-}
-.card-rating::before {
-  color: var(--accent) !important;
-  content: "★";
-}
-
-.card-votes {
-  position: absolute !important;
-  z-index: 3 !important;
-  right: 4px !important;
-  left: auto !important;
-  bottom: 4px !important;
-  display: inline-flex !important;
-  gap: 3px !important;
-  align-items: center !important;
-  padding: 1px 4.5px !important;
-  background: rgba(9, 9, 11, 0.82) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 4px !important;
-  color: #f6df8b !important;
-  font-size: 0.58rem !important;
-  font-weight: 800 !important;
-  line-height: 1.2 !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
-  user-select: none !important;
-  pointer-events: none !important;
-}
-.card-votes .card-vote-icon {
-  width: 9px !important;
-  height: 9px !important;
-  color: #f6df8b !important;
-  flex-shrink: 0 !important;
+.card-rating,
+.card-votes,
+.related-card .card-rating,
+.related-card .card-votes {
+  display: none !important;
 }
 
 /* Notes Indicator & Snippet */
@@ -2908,16 +2859,17 @@ footer span {
 }
 
 .profile-ribbon .ribbon-chip.is-active {
-  background: transparent !important;
-  border-color: rgba(222, 198, 139, 0.58) !important;
-  color: #D1D5DB !important;
-  font-weight: 500 !important;
+  background: rgba(222, 198, 139, 0.06) !important;
+  border: 1.5px solid rgba(222, 198, 139, 0.92) !important;
+  color: #F3F4F6 !important;
+  font-weight: 550 !important;
   box-shadow: none !important;
 }
 
 .profile-ribbon .ribbon-chip.is-active:hover {
-  border-color: rgba(222, 198, 139, 0.75) !important;
-  color: #D1D5DB !important;
+  background: rgba(222, 198, 139, 0.1) !important;
+  border-color: #DEC68B !important;
+  color: #FFFFFF !important;
 }
 
 .ribbon-chip {
@@ -2985,56 +2937,44 @@ footer span {
   color: #DEC68B !important;
 }
 
-/* Library Shelf Chip Status Icons (Dimmed Muted Tones in Idle) */
-.library-shelf-ribbon .ribbon-chip[data-view="new_discovery"] .shelf-chip-icon {
-  color: rgba(222, 198, 139, 0.65) !important;
-}
-.library-shelf-ribbon .ribbon-chip[data-view="watch_later"] .shelf-chip-icon {
-  color: rgba(56, 189, 248, 0.65) !important;
-}
-.library-shelf-ribbon .ribbon-chip[data-view="watched"] .shelf-chip-icon {
-  color: rgba(74, 222, 128, 0.65) !important;
-}
-.library-shelf-ribbon .ribbon-chip[data-view="rewatch"] .shelf-chip-icon {
-  color: rgba(251, 146, 60, 0.65) !important;
-}
-.library-shelf-ribbon .ribbon-chip[data-view="excluded"] .shelf-chip-icon {
-  color: rgba(239, 68, 68, 0.65) !important;
+/* Library Shelf Ribbon: All icons unified in muted brand yellow; text remains white */
+.library-shelf-ribbon .ribbon-chip {
+  color: #FFFFFF !important;
 }
 
-/* Highlight & Active State: Icon becomes vibrant and colorful; Border remains clean neutral dark squircle */
-.library-shelf-ribbon .ribbon-chip[data-view="new_discovery"]:hover .shelf-chip-icon,
-.library-shelf-ribbon .ribbon-chip[data-view="new_discovery"].is-active .shelf-chip-icon {
-  color: #F5E8C7 !important;
-}
-.library-shelf-ribbon .ribbon-chip[data-view="watch_later"]:hover .shelf-chip-icon,
-.library-shelf-ribbon .ribbon-chip[data-view="watch_later"].is-active .shelf-chip-icon {
-  color: #38BDF8 !important;
-}
-.library-shelf-ribbon .ribbon-chip[data-view="watched"]:hover .shelf-chip-icon,
-.library-shelf-ribbon .ribbon-chip[data-view="watched"].is-active .shelf-chip-icon {
-  color: #4ADE80 !important;
-}
-.library-shelf-ribbon .ribbon-chip[data-view="rewatch"]:hover .shelf-chip-icon,
-.library-shelf-ribbon .ribbon-chip[data-view="rewatch"].is-active .shelf-chip-icon {
-  color: #FB923C !important;
-}
-.library-shelf-ribbon .ribbon-chip[data-view="excluded"]:hover .shelf-chip-icon,
-.library-shelf-ribbon .ribbon-chip[data-view="excluded"].is-active .shelf-chip-icon {
-  color: #EF4444 !important;
+.library-shelf-ribbon .ribbon-chip .shelf-chip-icon {
+  color: rgba(222, 198, 139, 0.72) !important;
 }
 
+.library-shelf-ribbon .ribbon-chip:hover .shelf-chip-icon,
+.library-shelf-ribbon .ribbon-chip.is-active .shelf-chip-icon {
+  color: #DEC68B !important;
+}
+
+.library-shelf-ribbon .ribbon-chip:hover {
+  background: rgba(222, 198, 139, 0.06) !important;
+  border-color: rgba(222, 198, 139, 0.6) !important;
+  color: #FFFFFF !important;
+}
+
+/* Active Highlight: EXACTLY like the preset chips on highlight */
 .library-shelf-ribbon .ribbon-chip.is-active,
 .library-shelf-ribbon .ribbon-chip[data-view="new_discovery"].is-active,
 .library-shelf-ribbon .ribbon-chip[data-view="watch_later"].is-active,
 .library-shelf-ribbon .ribbon-chip[data-view="watched"].is-active,
 .library-shelf-ribbon .ribbon-chip[data-view="rewatch"].is-active,
 .library-shelf-ribbon .ribbon-chip[data-view="excluded"].is-active {
-  border: 1.25px solid rgba(255, 255, 255, 0.38) !important;
-  background: rgba(255, 255, 255, 0.04) !important;
+  background: rgba(222, 198, 139, 0.06) !important;
+  border: 1.5px solid rgba(222, 198, 139, 0.92) !important;
   color: #FFFFFF !important;
   font-weight: 550 !important;
   box-shadow: none !important;
+}
+
+.library-shelf-ribbon .ribbon-chip.is-active:hover {
+  background: rgba(222, 198, 139, 0.1) !important;
+  border-color: #DEC68B !important;
+  color: #FFFFFF !important;
 }
 
 /* Navigation links in Library and Notes panes */
@@ -5146,38 +5086,7 @@ footer {
   border-radius: 3px;
   max-width: calc(100% - 8px);
 }
-.related-card .card-rating {
-  position: absolute !important;
-  bottom: 4px !important;
-  left: 4px !important;
-  right: auto !important;
-  font-size: 0.58rem !important;
-  padding: 1px 4.5px !important;
-  background: rgba(9, 9, 11, 0.82) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 4px !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
-  color: #f6df8b !important;
-  font-weight: 800 !important;
-  pointer-events: none !important;
-}
-.related-card .card-votes {
-  position: absolute !important;
-  bottom: 4px !important;
-  right: 4px !important;
-  left: auto !important;
-  font-size: 0.58rem !important;
-  padding: 1px 4.5px !important;
-  background: rgba(9, 9, 11, 0.82) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-radius: 4px !important;
-  backdrop-filter: blur(4px) !important;
-  -webkit-backdrop-filter: blur(4px) !important;
-  color: #f6df8b !important;
-  font-weight: 800 !important;
-  pointer-events: none !important;
-}
+
 .related-message {
   grid-column: 1 / -1;
   margin: 0;
@@ -6686,50 +6595,75 @@ body.grey-docked-open .related-card {
   opacity: 1;
   transform: translateY(0) scale(1);
 }
+.poster-note-popover.is-title-only {
+  padding: 5px 11px !important;
+  border-radius: 7px !important;
+  width: auto !important;
+  max-width: 380px !important;
+  white-space: nowrap !important;
+}
+
+.poster-note-popover.is-title-only .poster-note-popover-header {
+  border-bottom: none !important;
+  margin-bottom: 0 !important;
+  padding-bottom: 0 !important;
+  gap: 12px !important;
+}
+
 .poster-note-popover.is-hidden {
   display: none !important;
 }
 .poster-note-popover-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: flex-start;
-  gap: 10px;
-  margin-bottom: 6px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  min-width: 0;
-  flex-wrap: nowrap;
+  display: flex !important;
+  align-items: baseline !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  margin-bottom: 6px !important;
+  padding-bottom: 6px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  min-width: 0 !important;
+  flex-wrap: nowrap !important;
+}
+.poster-note-popover-title-wrap {
+  display: inline-flex !important;
+  align-items: baseline !important;
+  gap: 4px !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  flex-shrink: 1 !important;
 }
 .poster-note-popover-title {
-  font-size: 0.88rem;
-  font-weight: 800;
-  color: var(--accent);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 1;
-  min-width: 0;
+  font-size: 0.75rem !important;
+  font-weight: 550 !important;
+  color: #DEC68B !important;
+  letter-spacing: 0.01em !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  min-width: 0 !important;
 }
 .poster-note-popover-year {
-  font-size: 0.76rem;
-  font-weight: 500;
-  color: #9ca3af;
-  margin-left: 3px;
+  font-size: 0.69rem !important;
+  font-weight: 400 !important;
+  color: #9ca3af !important;
+  flex-shrink: 0 !important;
 }
 .poster-note-popover-rating {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 3px;
-  color: #f2ca52;
-  font-size: 0.74rem;
-  font-weight: 700;
-  white-space: nowrap;
+  flex-shrink: 0 !important;
+  display: inline-flex !important;
+  align-items: baseline !important;
+  gap: 3.5px !important;
+  color: #DEC68B !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
 }
 .poster-note-popover-votes {
-  color: #9ca3af;
-  font-size: 0.70rem;
-  font-weight: 500;
+  color: #9ca3af !important;
+  font-size: 0.68rem !important;
+  font-weight: 400 !important;
 }
 .poster-note-popover-body {
   font-size: 0.78rem;
@@ -9544,10 +9478,7 @@ footer {
   transition: all 140ms ease !important;
 }
 
-.poster-keywords .tag:hover {
-  border-color: rgba(255, 255, 255, 0.25) !important;
-  color: #FFFFFF !important;
-}
+
 
 /* Right: Action Cockpit (Shelf status pills & 10-star rating) */
 .movie-detail-page .personal-panel,
@@ -10187,7 +10118,8 @@ body.grey-docked-open .related-card {
   margin: 0 0 16px 0 !important;
 }
 
-.movie-detail-page .dialog-genres .tag {
+.movie-detail-page .dialog-genres .tag,
+.dialog-genres .tag {
   display: inline-flex !important;
   align-items: center !important;
   height: 24px !important;
@@ -10203,18 +10135,25 @@ body.grey-docked-open .related-card {
   box-shadow: none !important;
   text-shadow: none !important;
   outline: none !important;
-  transition: border-color 140ms ease, color 140ms ease !important;
+  cursor: default !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  transition: none !important;
 }
 
-.movie-detail-page .dialog-genres .tag::before {
+.movie-detail-page .dialog-genres .tag::before,
+.dialog-genres .tag::before {
   display: none !important;
   content: none !important;
 }
 
-.movie-detail-page .dialog-genres .tag:hover {
-  border-color: rgba(222, 198, 139, 0.45) !important;
-  color: #F5E8C7 !important;
+.movie-detail-page .dialog-genres .tag:hover,
+.dialog-genres .tag:hover {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  color: #9CA3AF !important;
   box-shadow: none !important;
+  transform: none !important;
 }
 
 /* 4. Description: Full Width Parity with Section (510px cap removed) */
@@ -10254,23 +10193,25 @@ body.grey-docked-open .related-card {
   box-sizing: border-box !important;
 }
 
-/* 6. Keywords: Relocated Below Cast, Slight Brand Yellow, Flat Zero Glow */
+/* 6. Keywords: Positioned Beneath Poster Column, Calm Static Chips (No Hover) */
 .poster-keywords,
 .movie-detail-page .poster-keywords,
 .detail-keywords-wrap {
   display: flex !important;
   flex-wrap: wrap !important;
   gap: 6px !important;
-  margin: 0 0 24px 0 !important;
+  margin: 14px 0 0 0 !important;
   padding: 0 !important;
   width: 100% !important;
-  max-width: 100% !important;
+  max-width: 270px !important;
   box-sizing: border-box !important;
   justify-content: flex-start !important;
 }
 
 .poster-keywords .tag,
-.movie-detail-page .poster-keywords .tag {
+.movie-detail-page .poster-keywords .tag,
+.detail-keywords-wrap .tag,
+.keyword-chip {
   display: inline-flex !important;
   align-items: center !important;
   height: 23px !important;
@@ -10286,14 +10227,21 @@ body.grey-docked-open .related-card {
   box-shadow: none !important;
   text-shadow: none !important;
   outline: none !important;
-  transition: border-color 140ms ease, color 140ms ease !important;
+  cursor: default !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  transition: none !important;
 }
 
 .poster-keywords .tag:hover,
-.movie-detail-page .poster-keywords .tag:hover {
-  border-color: rgba(222, 198, 139, 0.45) !important;
-  color: #F5E8C7 !important;
+.movie-detail-page .poster-keywords .tag:hover,
+.detail-keywords-wrap .tag:hover,
+.keyword-chip:hover {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+  color: #8E8E93 !important;
   box-shadow: none !important;
+  transform: none !important;
 }
 
 /* 7. Borderless Journal Note (Editorial Left Spine & Pure Flow) */
