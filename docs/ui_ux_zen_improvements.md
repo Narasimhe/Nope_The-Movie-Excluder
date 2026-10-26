@@ -17,19 +17,26 @@
     - Clicking any director or actor opens their filmography view while capturing the origin movie snapshot.
     - Filmography toolbar return button dynamically labels [ ← Return to Movie Title ] (e.g. ← Return to Avatar).
     - Clicking the return button seamlessly restores the library context and re-opens the exact single movie detail page.
-  * **[PENDING CODE SIGNAL] Genre Presentation as Chips**:
-    - Revert genres from plain text with bullet dots back to sleek, calm chips/pills (8px squircle, subtle border, quiet muted grey text) matching the Zen chips design system. No code changes until user explicitly requests.
+  * **[IMPLEMENTED] Genre Chips & Inline Title Meta**:
+    - **Year & Language Beside Title**: Relocate release year and language beside the title headline on the same line (subordinate 15px font, baseline-aligned, noticeably smaller than the large title headline).
+    - **Genre Chips (Flat, Slight Brand Yellow Text)**: Revert genres back into sleek squircle chip boxes. Text styled in slight brand yellow (#DEC68B), with completely flat styling—zero inner shadow, zero drop shadow, and zero glow/halation around or inside the chip box.
+    - **Keyword Chips (DNA) Color Parity**: Keyword chips beneath the Director & Cast credits also adopt the same slight brand yellow (#DEC68B) text and clean flat chip styling.
   * **[MAIN CONTENT COLUMN (RIGHT) - SEQUENTIAL FLOW]**:
-    1. **Movie Title**: Dominant headline scale (clamp(1.85rem, 2.7vw, 2.35rem)), favorite heart removed.
-    2. **Year & Language**: Dedicated row directly beneath title (2009 • EN), **no leading bullet**.
-    3. *[Breathing Room Space]*
-    4. **Genres [PENDING NEXT SPRINT]**: Style as sleek chips (reverting plain text dots back to calm squircle chips per user request) (•), heavy pill frames removed.
-    5. *[Breathing Room Space]*
-    6. **Movie Description**: Full column width parity (510px width cap removed; expands naturally to match actors and section bounds).
-    7. *[Breathing Room Space]*
-    8. **Director & Cast**: Interactive clickable links without underlines; cast preceded by leading bullet (• ) with generous bullet separators (  •  ).
-    9. *[Breathing Room Space]*
-    10. **Keyword Chips (DNA)**: Relocated from under the poster to sit beneath the Director & Cast credits.
+    1. **Movie Title & Inline Meta**: Main movie title styled in faint brand yellow (#DEC68B / warm soft gold) with Year & Language placed beside the title (subordinate ~15px scale, e.g. Avatar • 2009 • EN), favorite heart removed.
+       *[Breathing Room Space]*
+    2. **Genres (Calm Flat Chips)**: Soft muted grey/silver text (#9CA3AF) in quiet, faint-bordered squircle chips, completely flat with zero inner shadow, border glow, or halation.
+       *[Breathing Room Space]*
+    3. **Movie Description**: Full column width parity (510px width cap removed; expands naturally to match actors and section bounds).
+       *[Breathing Room Space]*
+    4. **Director & Cast**: Interactive clickable links without underlines; cast preceded by leading bullet (• ) with generous bullet separators (  •  ).
+       *[Breathing Room Space]*
+    5. **Keyword Chips (DNA)**: Relocated from under the poster to sit beneath the Director & Cast credits in quiet muted grey (#8E8E93) and flat chip styling.
+  * **[LOCKED IN DESIGN] Borderless Journal Note (Form-Box Eradication)**:
+    - **Eliminate "Personal Memory" Box**: Remove the boxed card, rigid border, card background, and explicit `<h2>Personal Memory</h2>` header entirely.
+    - **Left Vertical Spine (▎)**: A sleek, elegant 2px–3px vertical accent spine in brand gold (`#DEC68B`) with `16px` left padding, giving thoughts an editorial margin-note / film diary aesthetic.
+    - **Always-Visible Faint Spine & Prompt**: When empty, a faint spine with a subtle, dimmed prompt (`▎ Add private thoughts, observations, or memories...`) sits quietly below the Action Cockpit—always 1 click away.
+    - **Seamless In-Place Editing**: Clicking anywhere on the note allows inline editing directly on the obsidian canvas without jumping into a rigid form textarea; auto-saves silently in background.
+    - **Flow into Related Movies**: Transitions seamlessly with quiet breathing room directly into the Related Movies grid without form-box fatigue.
   * **[PENDING DECISION] Prominent Status Repositioning**: Finalize new prominent placement of the movie status badge/indicator (position to be chosen).
 
 - [ ] **Task 4: Search Profiles (Zen Redesign)**
@@ -42,7 +49,7 @@
     - Keep a subtle `Ãƒâ€”` on hover/focus for 1-click removal.
   * **Clean Action Links**: Replace cramped mechanical buttons (`Save / Update / Delete`) with a quiet, borderless inline link (`+ Save current search as preset`) that illuminates only when filters have been staged or modified.
 
-- [ ] **Task 5: Top Bar & Display Counters**
+- [x] **Task 5: Top Bar & Display Counters (Total Movie Count Parity)**
   * **Sort Controls**: Permanently retained in left sidebar per user decision, now styled as a balanced 50/50 2-column grid.
   * **Calm Search Input**: Remove the bright yellow "Search" button; rely on natural `Enter` key trigger or debounced search.
   * **Subtle Movie Counter (Context-Aware)**:
@@ -75,6 +82,10 @@
     - Replace the two-button segmented pill (`[ Pages | Continuous ]`) with a single, calm binary switch button (e.g. `[ Ã¢Ë†Å¾ Continuous ]` or toggle switch).
     - Default state is standard paginated browsing. When activated/lit, continuous scroll is enabled.
     - Eliminates redundant "Pages" button, cuts visual weight in half, and preserves clean open space on the right of the shelf ribbon.
+  * **[LOCKED IN DESIGN] 4-Way Search Target Switch (Scour Plots Exclusively)**:
+    - **Backend Already Wired**: The library search engine (`search_user_library` in `app/movie_repository.py`) already has native multi-field parsing and ranking for `all`, `title`, `plot`, and `notes`.
+    - **4-Way Mode Switch (`[ All | Title | Plot | Notes ]`)**: Expose this backend power via a calm, balanced segmented switch in the Library search area.
+    - **Scour Plots Exclusively**: Unlocks deep plot scouting across your personal collection—scouring movie overviews for specific narrative hooks, tropes, locations, or story themes exclusively, alongside Title-only, Notes-only, and All-field library searches.
   * **[LOCKED IN] Item 5: Remove Duplicate Sort Accordion**: Eliminate the redundant second 'Sort Results' accordion at the bottom of the Library sidebar, preserving the clean top sort.
   * **Cross-Sidebar Parity**: Symmetrically apply all Discover Zen tokens (FILTERS / Ã¢â€ Âº Reset header row, 34px inputs, muted golden separation borders) across Library and Notes.
   * **Global Structural Parity**: Any structural or stylistic refinement applied to the Discover sidebar applies symmetrically across the Personal Library and Notes sidebars.

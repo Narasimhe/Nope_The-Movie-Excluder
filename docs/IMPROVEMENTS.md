@@ -16,6 +16,14 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Discover Total Movie Count & Pagination Top Breathing Space**
+  * **Discover Total Count Display**: Eradicated the useless batch message ('24 movies on this page') on the Discover page. It now always displays the actual total movie count (e.g. 1,820 movies).
+  * **Pagination Breathing Room on Top**: Set margin-top: 52px on .pagination to give generous, elegant breathing room below the bottom row of movie cards, centered across the 670px grid with universal 8px squircle buttons.
+  * **Title & Metadata Ample Separation**: Created generous 16px breathing room between the faint yellow movie title and the inline metadata (• Year • Language).
+- [x] **Movie Detail Faint Yellow Title, Genre/Keyword Chips & Borderless Journal Note**
+  * **Main Title Faint Yellow**: Softened the headline from stark white to faint brand yellow (#DEC68B), with release metadata (• Year • Language) resting inline beside it at a subordinate 15px scale.
+  * **Flat Genre & Keyword Chips**: Reverted genres into structured squircle chips and unified keyword chips with slight brand yellow text (#DEC68B), completely flat with zero glow, inner shadow, or drop shadow.
+  * **Borderless Journal Note**: Eradicated the boxed-in 'Personal Memories' card and rigid <textarea> field. Sits directly in the natural flow below the Action Cockpit with an editorial left spine (▎) in brand gold, auto-expanding as thoughts are typed with seamless auto-save.
 - [x] **Movie Detail Typography & Information Hierarchy Overhaul**
   * **Title with Inline Year & Language**: Title maintains prominent display sizing, followed inline by factual release metadata (• Year • Language) in a refined, muted 15px font.
   * **Clean Text Genres (Pills Removed)**: Eliminated heavy bordered badge pills from genres, replacing them with clean inline editorial text separated by dot dividers (Crime • Drama).
@@ -895,3 +903,10 @@ efreshCompactCloud where background excluded status prevented Hindi from receivi
 - **Library Sidebar Parity**: Sort Results placed at top with squircle chip cloud, coupled release year inputs (`#lib-year-from` & `#lib-year-to`) separated by centered hyphen, Actor positioned above Director, and `.chip-cloud` scrollbars removed.
 - **Typography Whiteness**: High-contrast `#dedbd4` and `#ffffff` typography applied across all category accordion triggers, headers, and navigation tabs.
 - **Single Movie Detail Zen Layout**: Standardized 64px frosted topbar with uppercase tracked navigation (`Back to Movies`, `Prev` / `Next`), bare title-height inline heart, 2-tier Action Cockpit (`width: fit-content`), separated Notes card, and 105px standardized related movie posters.
+
+- [x] **Single Movie Page Note Auto-Expansion, Ribbon Chip Truncation & Neutral Highlighting**
+  * **Goal**: Fix note truncation on single movie detail pages, eliminate chopped chip borders in the preset ribbon, and replace childish colored borders with vibrant icon highlights on shelf chips.
+  * **Key Changes**:
+    * **Robust Note Reading & Auto-Resize ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js) & [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Overhauled `autoResizeJournalNote()` with a robust line-count heuristic fallback for hidden views, re-measuring accurately when `dialogContent` becomes visible; replaced `overflow: hidden` and `min-height: 28px` with `overflow-y: auto`, `min-height: 72px`, natural font-style, and vertical resizing so movie notes (and "Grey says" critiques) are completely visible and effortless to read.
+    * **Preset Ribbon Chip Truncation ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Applied `flex-shrink: 1`, `min-width: 48px`, and text ellipsis truncation to the last ribbon chip so that the chip button itself (with 8px squircle borders and right padding) closes neatly inside the 670px canvas without getting sliced by container overflow.
+    * **Shelf Ribbon Icon Highlighting ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Removed childish colored border highlights across library shelf chips, keeping a clean neutral dark squircle outline (`rgba(255, 255, 255, 0.38)`) while making the status icon itself brightly illuminate with its signature color on hover and active states.

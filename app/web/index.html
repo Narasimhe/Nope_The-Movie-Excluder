@@ -11,8 +11,8 @@
   >
   <title>NOPE</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/styles.css?v=20261026_zen_177">
-  <script src="/static/app.js?v=20261026_zen_177" defer></script>
+  <link rel="stylesheet" href="/static/styles.css?v=20261026_zen_182">
+  <script src="/static/app.js?v=20261026_zen_182" defer></script>
 </head>
 <body data-active-view="discover">
   <div class="site-shell" id="app-shell">
@@ -1019,8 +1019,8 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
               <span class="kicker-text">Movie details</span>
             </p>
             <div class="detail-title-wrap">
-              <h1 id="dialog-title"></h1>
-              <div class="detail-title-meta" id="detail-title-meta"></div>
+              <h1 id="dialog-title" class="dialog-title" style="color: #DEC68B !important;"></h1>
+              <span class="detail-title-meta" id="detail-title-meta"></span>
               <button class="favorite-button is-hidden" id="favorite-button" type="button" aria-label="Add to favourites" title="Toggle Favourite (F)" style="display:none !important;">
                 <span aria-hidden="true">♥</span>
               </button>
@@ -1085,18 +1085,19 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
             <p class="inline-feedback" id="verdict-feedback" aria-live="polite"></p>
           </div>
 
-          <!-- Zen Notes Canvas -->
-          <div class="detail-notes-card" id="notes-panel">
-            <div class="detail-notes-header">
-              <h2>Personal Memory</h2>
-              <span class="notes-status-indicator" id="notes-feedback" aria-live="polite"></span>
+          <!-- Borderless Journal Note (Editorial Left Spine & Pure Flow) -->
+          <div class="journal-note-container" id="notes-panel">
+            <div class="journal-note-inner">
+              <label class="sr-only" for="movie-notes">Private movie thoughts and journal notes</label>
+              <textarea
+                id="movie-notes"
+                class="journal-note-textarea"
+                rows="3"
+                placeholder="Add private thoughts, observations, or memories..."
+                spellcheck="false"
+              ></textarea>
+              <span class="notes-status-indicator journal-note-status" id="notes-feedback" aria-live="polite"></span>
             </div>
-            <label class="sr-only" for="movie-notes">Movie notes</label>
-            <textarea
-              id="movie-notes"
-              rows="4"
-              placeholder="Thoughts, observations, or anything worth remembering..."
-            ></textarea>
           </div>
 
           <section class="related-panel" id="related-panel">

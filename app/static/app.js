@@ -4467,11 +4467,11 @@ async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } =
       : state.movies.length;
     state.pageLoader = (target) => executeDiscoverySearch(spec, target);
     renderMovies(state.movies, "search", state.totalResults);
-    if (!state.paginationExact) {
-      elements.count.textContent = `${state.movies.length} ${
-        state.movies.length === 1 ? "movie" : "movies"
-      } on this page`;
-    }
+    // Always display total movie count instead of useless batch/page counts
+    const totalCount = Number(response.tmdb_total_results ?? response.total_results ?? response.raw_tmdb_total_results ?? state.totalResults ?? state.movies.length);
+    state.totalResults = totalCount;
+    const formattedTotal = totalCount.toLocaleString();
+    elements.count.textContent = `${formattedTotal} ${totalCount === 1 ? "movie" : "movies"}`;
     renderPagination(
       elements.pagination,
       state.searchPage,
@@ -5406,6 +5406,7 @@ function renderMovieDetails(movie) {
   updateDialogKicker(movie);
   elements.dialogTitle.textContent =
     movie.title || movie.original_title || "Untitled movie";
+  elements.dialogTitle.style.color = "#DEC68B";
 
   const year = getMovieYear(movie);
   const lang = getMovieLanguage(movie);
@@ -5464,7 +5465,8 @@ function renderMovieDetails(movie) {
   renderPeople(elements.dialogActors, (movie.actors || []).slice(0, 5), "actors");
   renderPersonalControls(movie);
   elements.notes.value = movie.user_data?.notes || "";
-  elements.notesPanel.open = true;
+  autoResizeJournalNote();
+  if (elements.notesPanel) elements.notesPanel.open = true;
   [elements.statusFeedback, elements.verdictFeedback, elements.notesFeedback].forEach((item) => {
     item.textContent = "";
   });
@@ -5716,6 +5718,9 @@ async function openMovieDetails(
     } catch (_) {}
     elements.dialogLoading.classList.add("is-hidden");
     elements.dialogContent.classList.remove("is-hidden");
+    autoResizeJournalNote();
+    requestAnimationFrame(() => autoResizeJournalNote());
+    setTimeout(() => autoResizeJournalNote(), 50);
     if (elements.detailPage) {
       elements.detailPage.scrollTop = 0;
     }
@@ -5742,6 +5747,9 @@ async function openMovieDetails(
       renderDetailTrail();
       elements.dialogLoading.classList.add("is-hidden");
       elements.dialogContent.classList.remove("is-hidden");
+      autoResizeJournalNote();
+      requestAnimationFrame(() => autoResizeJournalNote());
+      setTimeout(() => autoResizeJournalNote(), 50);
       if (elements.detailPage) {
         elements.detailPage.scrollTop = 0;
       }
@@ -6020,8 +6028,21 @@ async function saveSelectedNotes({ silent = false } = {}) {
   }
 }
 
+function autoResizeJournalNote() {
+  if (!elements.notes) return;
+  elements.notes.style.height = "auto";
+  const scrollH = elements.notes.scrollHeight;
+  const val = elements.notes.value || "";
+  const lineCount = val ? val.split("\n").length : 1;
+  const minH = val ? 72 : 44;
+  const fallbackH = Math.max(minH, lineCount * 26 + 16);
+  const targetH = scrollH > 40 ? Math.max(minH, scrollH) : fallbackH;
+  elements.notes.style.height = `${targetH}px`;
+}
+
 function handleMovieNotesInput() {
   if (!elements.notes) return;
+  autoResizeJournalNote();
   const currentVal = elements.notes.value.trim() || null;
   const lastSaved = (state.selectedMovie?.user_data?.notes || "").trim() || null;
 
@@ -9647,6 +9668,7 @@ async function saveGreyToMovieNotes(providedCritique = null) {
   if (elements.notes) {
     elements.notes.value = fullNotes;
     if (elements.notesPanel) elements.notesPanel.open = true;
+    autoResizeJournalNote();
   }
 
   try {
@@ -10359,3 +10381,9 @@ window.addEventListener("hashchange", () => {
 });
 
 initializeApp().catch((error) => showNotice(error.message));
+
+window.addEventListener("resize", () => {
+  if (elements.notes && elements.notes.value) {
+    autoResizeJournalNote();
+  }
+});
