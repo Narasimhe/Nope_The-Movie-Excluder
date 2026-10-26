@@ -910,3 +910,11 @@ efreshCompactCloud where background excluded status prevented Hindi from receivi
     * **Robust Note Reading & Auto-Resize ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js) & [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Overhauled `autoResizeJournalNote()` with a robust line-count heuristic fallback for hidden views, re-measuring accurately when `dialogContent` becomes visible; replaced `overflow: hidden` and `min-height: 28px` with `overflow-y: auto`, `min-height: 72px`, natural font-style, and vertical resizing so movie notes (and "Grey says" critiques) are completely visible and effortless to read.
     * **Preset Ribbon Chip Truncation ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Applied `flex-shrink: 1`, `min-width: 48px`, and text ellipsis truncation to the last ribbon chip so that the chip button itself (with 8px squircle borders and right padding) closes neatly inside the 670px canvas without getting sliced by container overflow.
     * **Shelf Ribbon Icon Highlighting ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**: Removed childish colored border highlights across library shelf chips, keeping a clean neutral dark squircle outline (`rgba(255, 255, 255, 0.38)`) while making the status icon itself brightly illuminate with its signature color on hover and active states.
+
+- [x] **Universal Poster Overlay Badges: Rating on Left & Vote Count on Right**
+  * **Goal**: Universalize movie poster badge positioning across Discover, Library shelves, and Related Movies with rating on the bottom-left and vote icon with formatted vote count on the bottom-right.
+  * **Key Changes**:
+    * **Card Badge Placement ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js) & [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
+      - Moved `.card-rating` to `bottom: 4px; left: 4px;` in gold with star prefix (`★ 7.5`).
+      - Added `.card-votes` at `bottom: 4px; right: 4px;` featuring a micro vote ballot icon and compact formatted vote count (e.g. `17.7k`, `850`, `1.2M`) with full vote volume on tooltip.
+      - Implemented identically across `createMovieCard` (Discover & all Library shelves) and `createRelatedMovieCard` (Related Movies panel).

@@ -1719,25 +1719,59 @@ button {
 
 /* Micro Rating Pill */
 .card-rating {
-  position: absolute;
-  z-index: 3;
-  right: 4px;
-  bottom: 4px;
-  display: inline-flex;
-  gap: 3px;
-  align-items: center;
-  padding: 1px 4px;
-  background: rgba(9, 9, 11, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 3px;
-  color: #f6df8b;
-  font-size: 0.58rem;
-  font-weight: 800;
-  backdrop-filter: blur(4px);
+  position: absolute !important;
+  z-index: 3 !important;
+  left: 4px !important;
+  right: auto !important;
+  bottom: 4px !important;
+  display: inline-flex !important;
+  gap: 3px !important;
+  align-items: center !important;
+  padding: 1px 4.5px !important;
+  background: rgba(9, 9, 11, 0.82) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 4px !important;
+  color: #f6df8b !important;
+  font-size: 0.58rem !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  user-select: none !important;
+  pointer-events: none !important;
 }
 .card-rating::before {
-  color: var(--accent);
+  color: var(--accent) !important;
   content: "★";
+}
+
+.card-votes {
+  position: absolute !important;
+  z-index: 3 !important;
+  right: 4px !important;
+  left: auto !important;
+  bottom: 4px !important;
+  display: inline-flex !important;
+  gap: 3px !important;
+  align-items: center !important;
+  padding: 1px 4.5px !important;
+  background: rgba(9, 9, 11, 0.82) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 4px !important;
+  color: #f6df8b !important;
+  font-size: 0.58rem !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  user-select: none !important;
+  pointer-events: none !important;
+}
+.card-votes .card-vote-icon {
+  width: 9px !important;
+  height: 9px !important;
+  color: #f6df8b !important;
+  flex-shrink: 0 !important;
 }
 
 /* Notes Indicator & Snippet */
@@ -2866,6 +2900,24 @@ footer span {
   text-overflow: ellipsis !important;
   max-width: 100% !important;
   vertical-align: middle !important;
+}
+
+.profile-ribbon .ribbon-chip:hover {
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  color: #D1D5DB !important;
+}
+
+.profile-ribbon .ribbon-chip.is-active {
+  background: transparent !important;
+  border-color: rgba(222, 198, 139, 0.58) !important;
+  color: #D1D5DB !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+}
+
+.profile-ribbon .ribbon-chip.is-active:hover {
+  border-color: rgba(222, 198, 139, 0.75) !important;
+  color: #D1D5DB !important;
 }
 
 .ribbon-chip {
@@ -5095,16 +5147,36 @@ footer {
   max-width: calc(100% - 8px);
 }
 .related-card .card-rating {
-  position: absolute;
-  bottom: 4px;
-  right: 4px;
-  font-size: 0.58rem;
-  padding: 1px 4px;
-  background: rgba(9, 9, 11, 0.72);
-  border-radius: 3px;
-  backdrop-filter: blur(4px);
-  color: #fff;
-  font-weight: 700;
+  position: absolute !important;
+  bottom: 4px !important;
+  left: 4px !important;
+  right: auto !important;
+  font-size: 0.58rem !important;
+  padding: 1px 4.5px !important;
+  background: rgba(9, 9, 11, 0.82) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 4px !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  color: #f6df8b !important;
+  font-weight: 800 !important;
+  pointer-events: none !important;
+}
+.related-card .card-votes {
+  position: absolute !important;
+  bottom: 4px !important;
+  right: 4px !important;
+  left: auto !important;
+  font-size: 0.58rem !important;
+  padding: 1px 4.5px !important;
+  background: rgba(9, 9, 11, 0.82) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 4px !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+  color: #f6df8b !important;
+  font-weight: 800 !important;
+  pointer-events: none !important;
 }
 .related-message {
   grid-column: 1 / -1;

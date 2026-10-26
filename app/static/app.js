@@ -2729,15 +2729,21 @@ function createMovieCard(movie) {
   }
 
   const rating = getMovieRating(movie);
-
   if (rating) {
     const ratingElement = document.createElement("span");
     ratingElement.className = "card-rating";
     ratingElement.textContent = rating;
-    if (voteCountStr) {
-      ratingElement.title = `${rating} (${voteCountStr})`;
-    }
+    ratingElement.title = `Rating: ${rating} / 10`;
     posterButton.append(ratingElement);
+  }
+
+  const compactVotes = formatCompactVotes(movie.vote_count);
+  if (compactVotes) {
+    const votesElement = document.createElement("span");
+    votesElement.className = "card-votes";
+    votesElement.title = `${Number(movie.vote_count).toLocaleString()} votes`;
+    votesElement.innerHTML = `<svg class="card-vote-icon" viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>${compactVotes}</span>`;
+    posterButton.append(votesElement);
   }
 
   const copy = document.createElement("div");
@@ -5387,6 +5393,18 @@ function formatBadgeVoteCount(count) {
   return `${num} ${num === 1 ? "vote" : "votes"}`;
 }
 
+function formatCompactVotes(count) {
+  const num = Number(count);
+  if (!num || isNaN(num) || num <= 0) return "";
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+  }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(1).replace(/\.0$/, "")}k`;
+  }
+  return String(num);
+}
+
 function formatVoteCount(count) {
   const num = Number(count);
   if (!num || isNaN(num) || num <= 0) return "";
@@ -5548,7 +5566,17 @@ function createRelatedMovieCard(movie) {
     const ratingElement = document.createElement("span");
     ratingElement.className = "card-rating";
     ratingElement.textContent = rating;
+    ratingElement.title = `Rating: ${rating} / 10`;
     button.append(ratingElement);
+  }
+
+  const relatedCompactVotes = formatCompactVotes(movie.vote_count);
+  if (relatedCompactVotes) {
+    const votesElement = document.createElement("span");
+    votesElement.className = "card-votes";
+    votesElement.title = `${Number(movie.vote_count).toLocaleString()} votes`;
+    votesElement.innerHTML = `<svg class="card-vote-icon" viewBox="0 0 24 24" width="9" height="9" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span>${relatedCompactVotes}</span>`;
+    button.append(votesElement);
   }
 
   button.addEventListener("click", () => {
