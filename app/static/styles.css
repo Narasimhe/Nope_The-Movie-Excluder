@@ -7990,7 +7990,7 @@ body.grey-docked-open .entry-list.is-list-mode {
   border-radius: 14px !important;
   padding: 16px !important;
   box-sizing: border-box !important;
-  margin-bottom: 24px !important;
+  margin-bottom: 22px !important;
 }
 
 /* 1. See Results Button (Calm Neutral Dark, No Yellow/Brown Tint) */
@@ -8985,11 +8985,9 @@ footer {
 
 /* 3. Title & Inline Heart */
 .detail-title-wrap {
-  display: flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  flex-wrap: wrap !important;
+  display: block !important;
   margin: 0 0 14px 0 !important;
+  line-height: 1.25 !important;
 }
 
 .movie-detail-page .dialog-body h1,
@@ -9000,6 +8998,7 @@ footer {
   font-weight: 700 !important;
   margin: 0 !important;
   display: inline !important;
+  vertical-align: middle !important;
 }
 
 .movie-detail-page .favorite-button,
@@ -9115,9 +9114,9 @@ footer {
 
 /* 2. TOP INFO ZONE - Fixed 360px Poster Alignment & Predictable Structural Placement */
 .detail-top-info {
-  width: 670px !important;
+  width: 100% !important;
   max-width: 670px !important;
-  min-width: 540px !important;
+  min-width: 0 !important;
   min-height: 360px !important;
   height: auto !important;
   max-height: none !important;
@@ -9125,7 +9124,7 @@ footer {
   flex-direction: column !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
-  margin-bottom: 24px !important;
+  margin-bottom: 22px !important;
 }
 
 /* Status Kicker (Plain uppercase semantic text with breathing room) */
@@ -9184,13 +9183,11 @@ footer {
   color: #9CA3AF !important;
 }
 
-/* Movie Title & Inline Heart - Relaxed Spacing */
+/* Movie Title & Inline Heart - True Inline Flow (No 3rd Line Wrap) */
 .detail-title-wrap {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-  flex-wrap: wrap !important;
+  display: block !important;
   margin: 0 0 14px 0 !important;
+  line-height: 1.25 !important;
 }
 
 .movie-detail-page .dialog-body h1,
@@ -9202,6 +9199,7 @@ footer {
   color: #FFFFFF !important;
   margin: 0 !important;
   display: inline !important;
+  vertical-align: middle !important;
 }
 
 /* Subtle Circular Heart Toggle Button */
@@ -9216,7 +9214,7 @@ footer {
   justify-content: center !important;
   background: rgba(251, 113, 133, 0.08) !important;
   border: 1px solid rgba(251, 113, 133, 0.32) !important;
-  margin: 0 !important;
+  margin: 0 0 0 10px !important;
   padding: 0 !important;
   box-shadow: none !important;
   cursor: pointer !important;
@@ -9335,15 +9333,17 @@ footer {
   color: #DEC68B !important;
 }
 
-/* Overview / Plot - Dynamic natural text flow directly below metadata */
+/* Overview / Plot - Comfortable 510px reading measure (matched to Grey-mode wrap) */
 .dialog-overview,
 .movie-detail-page .dialog-overview {
-  max-width: 670px !important;
-  width: 670px !important;
-  min-width: 540px !important;
+  width: 100% !important;
+  max-width: 510px !important;
+  min-width: 0 !important;
   height: auto !important;
   max-height: none !important;
   overflow: visible !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
   margin: 0 0 14px 0 !important;
   font-size: 14.5px !important;
   line-height: 1.62 !important;
@@ -9352,13 +9352,17 @@ footer {
   letter-spacing: 0.005em !important;
   display: block !important;
   white-space: normal !important;
+  box-sizing: border-box !important;
 }
 
-/* Credits Lines (Director & Cast) - Placed directly below the description */
+/* Credits Lines (Director & Cast) - Aligned to same 510px measure */
 .credits-lines,
 .movie-detail-page .credits-lines {
-  max-width: 670px !important;
-  width: 670px !important;
+  width: 100% !important;
+  max-width: 510px !important;
+  min-width: 0 !important;
+  overflow-wrap: break-word !important;
+  word-break: normal !important;
   margin-top: 0 !important;
   margin-bottom: 0 !important;
   font-size: 13.5px !important;
@@ -9367,6 +9371,7 @@ footer {
   display: flex !important;
   flex-direction: column !important;
   gap: 6px !important;
+  box-sizing: border-box !important;
 }
 
 .dialog-overview::-webkit-scrollbar,
@@ -9416,7 +9421,7 @@ footer {
   display: flex !important;
   flex-wrap: wrap !important;
   gap: 6px !important;
-  margin-top: 24px !important;
+  margin-top: 22px !important;
   padding: 0 !important;
   width: 240px !important;
   max-width: 240px !important;
@@ -9452,7 +9457,7 @@ footer {
   box-shadow: none !important;
   padding: 0 !important;
   margin-top: 0 !important;
-  margin-bottom: 24px !important;
+  margin-bottom: 0 !important;
   max-width: 670px !important;
   width: 100% !important;
 }
@@ -9462,7 +9467,7 @@ footer {
   flex-wrap: wrap !important;
   gap: 8px !important;
   align-items: center !important;
-  margin: 0 0 14px 0 !important;
+  margin: 0 0 12px 0 !important;
   padding: 0 !important;
 }
 
@@ -9598,7 +9603,8 @@ footer {
 .movie-detail-page .detail-notes {
   max-width: 670px !important;
   width: 670px !important;
-  margin-top: 24px !important;
+  margin-top: 22px !important;
+  margin-bottom: 0 !important;
   box-sizing: border-box !important;
 }
 
@@ -9606,7 +9612,7 @@ footer {
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  margin: 0 0 10px 0 !important;
+  margin: 0 0 8px 0 !important;
 }
 
 .detail-notes-header h2 {
@@ -9645,7 +9651,7 @@ footer {
 .related-panel {
   width: 670px !important;
   max-width: 670px !important;
-  margin-top: 28px !important;
+  margin-top: 22px !important;
   padding-top: 0 !important;
   border-top: none !important;
   box-sizing: border-box !important;
@@ -9851,6 +9857,8 @@ body.grey-docked-open .movie-detail-page .dialog-body {
   box-sizing: border-box !important;
 }
 
+body.grey-docked-open .detail-top-info,
+body.grey-docked-open .movie-detail-page .detail-top-info,
 body.grey-docked-open .movie-detail-page .dialog-overview,
 body.grey-docked-open .movie-detail-page .credits-lines,
 body.grey-docked-open .movie-detail-page .personal-panel,
@@ -9858,8 +9866,10 @@ body.grey-docked-open .movie-detail-page .detail-notes-card,
 body.grey-docked-open .movie-detail-page .detail-notes,
 body.grey-docked-open .movie-detail-page .related-panel {
   width: 100% !important;
-  max-width: 670px !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
   box-sizing: border-box !important;
+  overflow-wrap: break-word !important;
 }
 
 body.grey-docked-open .related-movies {

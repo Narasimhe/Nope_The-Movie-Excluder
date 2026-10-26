@@ -16,6 +16,20 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Movie Detail Refresh-Resilient Hash Routing (#movie:ID)**
+  * **Full Refresh Resistance**: Added `#movie:${id}` hash routing and session persistence to the single movie detail page. When pressing F5 (refresh), bookmarking, or sharing a direct movie URL, the app restores the background shelf context and re-opens the exact movie detail view instantly.
+  * **Seamless Back Navigation & Browser History**: Closing the movie or clicking browser back cleanly transitions back to the origin shelf view (`#watched`, `#rewatch`, `#discover`, etc.) and keeps the history stack in perfect sync.
+- [x] **Movie Detail Consistent 510px Description Reading Measure**
+  * **Unified Reading Width**: Standardized the maximum width of the movie description (`.dialog-overview`) and credits (`.credits-lines`) to `510px` across both normal full-width view and Grey docked view. This locks in the comfortable, book-like typographical measure (~65-75 characters per line) and eliminates excessively wide, stretched-out paragraphs on wide screens.
+- [x] **Movie Detail Grey Drawer Responsiveness (Zero Text Cutoff)**
+  * **Flexible Dynamic Column Sizing**: Replaced rigid `width: 670px` and `min-width: 540px` with fluid `width: 100%; max-width: 670px; min-width: 0;` on `.detail-top-info`, `.dialog-overview`, and `.credits-lines`.
+  * **Grey Docked Open Text Wrap**: Added `overflow-wrap: break-word` and explicit responsive width rules when Grey is open (`body.grey-docked-open`), ensuring the plot description and cast lines wrap cleanly within the available screen width without clipping against Grey's 420px drawer.
+- [x] **Movie Detail True Inline Favorite Flow (Multi-Line Title Support)**
+  * **Eliminated Flexbox Blockification**: Converted `.detail-title-wrap` from a flex container (`flex-wrap: wrap`) to a block/inline text container, allowing `<h1>` to remain genuinely `display: inline` and `.favorite-button` to remain `display: inline-flex`.
+  * **Seamless Inline Heart Flow**: The favourite button now sits directly at the end of the title on the same line (even when the title wraps across multiple lines, e.g. *The Naked Gun: From the Files of Police Squad!*), completely eliminating the accidental 3rd-line orphan wrap.
+- [x] **Movie Detail Uniform Vertical Rhythm (Harmonious 22px Section Gaps)**
+  * **Eliminated Compounding Flexbox Margins**: Cleared the redundant 24px bottom margin on `#detail-action-cockpit` and standardized the gap between the rating row and Personal Memory to a clean, intentional 22px (down from an accidental 48px void).
+  * **Uniform Section-to-Section Rhythm**: Harmonized every inter-section vertical gap across the entire lower canvas to exactly 22px (Action Cockpit → Personal Memory → Related Movies), paired with a snug 12px gap between status pills and star rating and an 8px label-to-textarea gap.
 - [x] **Movie Detail Brand Muted Yellow Accents & Flowing Keywords**
   * **Brand Muted Yellow Rating & Vote Count**: Styled the vote count text (`(13.9k votes)`) and star icon (`★`) in matching brand muted yellow (`#DEC68B`), with coordinating icon hue for harmonious visual hierarchy.
   * **Flowing Poster Keywords**: Maintained natural horizontal flex-wrapping for `.poster-keywords` below the 240px poster column.

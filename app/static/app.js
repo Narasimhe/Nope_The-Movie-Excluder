@@ -5642,6 +5642,15 @@ async function openMovieDetails(
     }
     renderMovieDetails(movie);
     renderDetailTrail();
+    if (history.replaceState) {
+      history.replaceState(null, "", `#movie:${movie.tmdb_id}`);
+    }
+    try {
+      sessionStorage.setItem("nope_open_movie_id", String(movie.tmdb_id));
+      if (state.currentView) {
+        sessionStorage.setItem("nope_movie_origin_view", state.currentView);
+      }
+    } catch (_) {}
     elements.dialogLoading.classList.add("is-hidden");
     elements.dialogContent.classList.remove("is-hidden");
     if (elements.detailPage) {
@@ -5683,6 +5692,13 @@ async function openMovieDetails(
 function closeMovieDetails() {
   if (movieNotesDebounceTimer) {
     saveSelectedNotes({ silent: true });
+  }
+  try {
+    sessionStorage.removeItem("nope_open_movie_id");
+  } catch (_) {}
+  const returnView = state.currentView || "discover";
+  if (history.replaceState) {
+    history.replaceState(null, "", `#${returnView}`);
   }
   elements.detailPage.classList.add("is-hidden");
   elements.shell.classList.remove("is-hidden");
@@ -10074,7 +10090,29 @@ async function initializeApp() {
 
   let hashView = (window.location.hash || "").replace(/^#/, "").trim();
   let openEntryIdFromHash = null;
-  if (hashView.startsWith("entry-reader")) {
+  let openMovieIdFromHash = null;
+
+  if (hashView.startsWith("movie:")) {
+    const parts = hashView.split(":");
+    if (parts.length > 1 && parts[1]) {
+      openMovieIdFromHash = parts[1];
+    }
+    try {
+      if (!openMovieIdFromHash) openMovieIdFromHash = sessionStorage.getItem("nope_open_movie_id");
+    } catch (_) {}
+    let originView = null;
+    try {
+      originView = sessionStorage.getItem("nope_movie_origin_view");
+    } catch (_) {}
+    if (!originView) {
+      try {
+        originView = localStorage.getItem("nope_current_view") || "discover";
+      } catch (_) {
+        originView = "discover";
+      }
+    }
+    hashView = originView;
+  } else if (hashView.startsWith("entry-reader")) {
     const parts = hashView.split(":");
     if (parts.length > 1 && parts[1]) {
       openEntryIdFromHash = parts[1];
@@ -10201,10 +10239,24 @@ async function initializeApp() {
     setActiveView("discover");
     await setDiscoveryMode(restoredMode || "super", true);
   }
+
+  if (openMovieIdFromHash) {
+    openMovieDetails(openMovieIdFromHash);
+  }
 }
 
 window.addEventListener("hashchange", () => {
   let hashView = (window.location.hash || "").replace(/^#/, "").trim();
+  if (hashView.startsWith("movie:")) {
+    const parts = hashView.split(":");
+    const mId = parts[1];
+    if (mId && (!state.selectedMovie || String(state.selectedMovie.tmdb_id) !== String(mId))) {
+      openMovieDetails(mId);
+    }
+    return;
+  } else if (elements.detailPage && !elements.detailPage.classList.contains("is-hidden")) {
+    closeMovieDetails();
+  }
   if (hashView.startsWith("entry-reader")) {
     const parts = hashView.split(":");
     const noteId = parts[1] || "";
