@@ -5,6 +5,20 @@
 ## Ã°Å¸Å¸Â¢ Pending Tasks (Active Focus)
 
 
+- [x] **Task 18: Single Movie Detail — Framed TMDB Dossier Card & Elevate-on-Scroll Header**
+  * **Border Alignment with 270x405px Poster**:
+    - **Top Border**: Strict horizontal alignment (`y = 0`) between the top of `.dialog-poster-wrap` and the top of `.detail-top-info`.
+    - **Bottom Border**: With `min-height: 405px; box-sizing: border-box;`, the bottom border of the TMDB Dossier card aligns flush with the 405px bottom baseline of the poster on standard/short plots.
+    - **Corner Geometry & Hairline**: Matching 12px squircle radius and hairline border (`1px solid rgba(255, 255, 255, 0.07)`), rendering the poster and dossier as balanced companion slabs.
+  * **Internal Dossier Architecture**:
+    - **Surface Tint**: Quiet background tint (`rgba(255, 255, 255, 0.02)`), with generous `20px 24px` internal padding.
+    - **Reading Measure**: Synopsis capped to 560px within the 670px card width.
+    - **Pinned Credits Footer**: Push Director / Cast to the bottom edge (`margin-top: auto`) above a subtle hairline divider (`border-top: 1px solid rgba(255, 255, 255, 0.05)`), turning empty vertical space into intentional editorial layout.
+  * **Unboxed Lower Zone Horizon (`y = 421px`)**:
+    - Remove the outer card border and background from the Personal Workspace.
+    - Keywords under the poster (left) and the Segmented Status Rail (right) start on the exact same horizontal baseline (`y = 421px` with a 16px gap below the 405px upper zone).
+    - Personal controls retain structural clarity via the segmented rail, 14px star indent, and the gold journal spine (`┃`).
+
 - [x] **Task 15: Single Movie Detail Header & Typography Architecture (Complete Editorial Flow)**
   * **[CANVAS & POSTER COLUMN (LEFT)]**:
     - **64px Left-Anchored Canvas**: Desktop left padding halved to 64px, locked in strict vertical alignment with the [ ← Back to ... ] button.
@@ -18,7 +32,8 @@
     - Filmography toolbar return button dynamically labels [ ← Return to Movie Title ] (e.g. ← Return to Avatar).
     - Clicking the return button seamlessly restores the library context and re-opens the exact single movie detail page.
   * **[IMPLEMENTED] Genre Chips & Inline Title Meta**:
-    - **Year & Language Beside Title**: Relocate release year and language beside the title headline on the same line (subordinate 15px font, baseline-aligned, noticeably smaller than the large title headline).
+    - **Year & Language Beside Title**: Relocate release year and language beside the title headline on the same line (subordinate 13px font, baseline-aligned, noticeably smaller than the large title headline).
+      * **Tighter Spacing (Shift Left)**: Reduce gap from 16px down to 10px so the metadata hugs the title slightly closer to the left rather than floating far away.
     - **Genre Chips (Flat, Slight Brand Yellow Text)**: Revert genres back into sleek squircle chip boxes. Text styled in slight brand yellow (#DEC68B), with completely flat styling—zero inner shadow, zero drop shadow, and zero glow/halation around or inside the chip box.
     - **Keyword Chips (DNA) Color Parity**: Keyword chips beneath the Director & Cast credits also adopt the same slight brand yellow (#DEC68B) text and clean flat chip styling.
   * **[MAIN CONTENT COLUMN (RIGHT) - SEQUENTIAL FLOW]**:
@@ -26,7 +41,10 @@
        *[Breathing Room Space]*
     2. **Genres (Calm Flat Chips)**: Soft muted grey/silver text (#9CA3AF) in quiet, faint-bordered squircle chips, completely flat with zero inner shadow, border glow, or halation.
        *[Breathing Room Space]*
-    3. **Movie Description**: Full column width parity (510px width cap removed; expands naturally to match actors and section bounds).
+    3. **Movie Description & Credits Reading Constraint (540px–580px / ~65ch)**:
+       - **Editorial Book Measure**: Cap the synopsis (.dialog-overview) and credits (.credits-lines) at **540px–580px (approx. 65ch)**.
+       - **Eye-Tracking Comfort**: Prevents line-jumping eye strain on wide displays, transforming the plot from a wide spreadsheet row into a comfortable book-like column.
+       - **Right-Edge Negative Space**: Leaves an elegant ~90px breathing margin on the right edge that contrasts gracefully against the full-width (670px) Personal Workspace Panel below it.
        *[Breathing Room Space]*
     4. **Director & Cast**: Interactive clickable links without underlines; cast preceded by leading bullet (• ) with generous bullet separators (  •  ).
        *[Breathing Room Space]*
@@ -37,7 +55,23 @@
     - **Always-Visible Faint Spine & Prompt**: When empty, a faint spine with a subtle, dimmed prompt (`▎ Add private thoughts, observations, or memories...`) sits quietly below the Action Cockpit—always 1 click away.
     - **Seamless In-Place Editing**: Clicking anywhere on the note allows inline editing directly on the obsidian canvas without jumping into a rigid form textarea; auto-saves silently in background.
     - **Flow into Related Movies**: Transitions seamlessly with quiet breathing room directly into the Related Movies grid without form-box fatigue.
-  * **[PENDING DECISION] Prominent Status Repositioning**: Finalize new prominent placement of the movie status badge/indicator (position to be chosen).
+  * **[LOCKED IN DESIGN] Dual Verdict Row (10-Star Rating & Favorite Heart Alignment)**:
+    - **Layout**: ★ ★ ★ ★ ★ ★ ★ ★ ★ ★    <considerable spacing>   [ ♥ ]
+    - **Positioning**: 10-star rating stars lead on the left, followed by considerable spacing (approx. 20px-24px), with the favorite heart button sitting right after the stars (NOT pushed to the extreme right edge).
+    - **Title Clarification**: Heart has already been completely removed from the title headline.
+    - **Star Color Consistency**: Filled stars use the exact same faint brand yellow (#DEC68B) as the movie title headline, creating strict color harmony across the page.
+    - **Domain Purity**: Unifies both subjective evaluations (Score verdict + Favorite like) on a single horizontal axis directly above the private journal notes, keeping the watch status shelf clean.
+  * **[LOCKED IN DESIGN] Unified Segmented Status Track (Pure Typographic State, Zero-Pill Ergonomics)**:
+    - **Architecture**: A single unified continuous rail replacing disjointed floating pill chips: [ Discovery D | Watch later L | Watched W | Rewatch R | Nope X ].
+    - **Dividers & Spacing**: Centered 14px subtle vertical hairline dividers (
+gba(255, 255, 255, 0.08)) with generous balanced breathing room (14px padding on both sides), guaranteeing distinct, comfortable click targets without mis-clicks.
+    - **Pure Text & Weight Active State (Way 1 - Zero Pills)**: Completely eliminates background pill fills. Inactive items rest in muted grey (#8E8B97, regular weight 400). The active status illuminates in bright brand yellow (#DEC68B), steps up to bold weight (600), and highlights its shortcut key badge.
+  * **[LOCKED IN DESIGN] Harmonious Personal Tier Spacing & Optical Grid Anchoring**:
+    - **Identical 16px Cadence (Gap Harmonization)**: Eradicate the accidental 40px void between Stars and Notes (caused by compounding margin-top + margin-bottom). Lock both intervals to an exact 16px cadence (Status → 16px → Stars → 16px → Notes).
+    - **Optical Text Anchor (Under Discovery 'D')**: Indent the 10-star rating row by approx. 14px-16px so the first star aligns flush beneath the capital 'D' of 'Discovery'.
+    - **Heart Anchor (Under 'Watched')**: With the 14px indent and 10 stars, the favorite heart lands directly beneath the 'Watched' segment in the status track.
+    - **Always-Visible Muted Heart**: Heart icon remains always visible in a calm muted outline (#4B5563), never popping in/out based on watch status, and turns red (#EF4444) when favorited.
+    - **Relaxed Title Metadata & Gold Vote Icon**: Set gap beside the title headline to 14px, and style the 'how_to_vote' icon in matching faint brand yellow (#DEC68B).
 
 - [ ] **Task 4: Search Profiles (Zen Redesign)**
   * **Eliminate Redundant Dropdown & Orphaned Divider**: Completely remove the bottom `<select>` dropdown box and its divider line. Clickable chips above already handle 1-click preset switching.

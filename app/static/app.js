@@ -3283,6 +3283,20 @@ function updateBackToTopVisibility() {
   elements.backToTopBtn.classList.toggle("is-hidden", !shouldShow);
 }
 
+function updateDetailHeaderElevation() {
+  const header = document.querySelector(".detail-page-header");
+  if (!header) return;
+  const isDetailOpen = Boolean(
+    elements.detailPage && !elements.detailPage.classList.contains("is-hidden")
+  );
+  if (!isDetailOpen) {
+    header.classList.remove("is-scrolled");
+    return;
+  }
+  const isScrolled = (window.scrollY > 12) || (elements.detailPage && elements.detailPage.scrollTop > 12);
+  header.classList.toggle("is-scrolled", isScrolled);
+}
+
 function updateShelfViewToggleUI() {
   if (!elements.shelfViewToggle) return;
   // Watch Later is strictly excluded by deliberation
@@ -4034,8 +4048,10 @@ function setupShelfViewToggle() {
     applyLibraryFilters(1);
   });
 
-  // Back to top floating circular icon button
+  // Back to top floating circular icon button & detail header elevation
   window.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
+  window.addEventListener("scroll", updateDetailHeaderElevation, { passive: true });
+  elements.detailPage?.addEventListener("scroll", updateDetailHeaderElevation, { passive: true });
 
   elements.backToTopBtn?.addEventListener("click", () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -5046,12 +5062,9 @@ function renderPeople(container, people, entityKey) {
   const isActor = entityKey === "actors" || entityKey === "cast";
 
   available.forEach((person, index) => {
-    if (index > 0) {
-      const sep = document.createElement("span");
-      sep.className = "credit-separator";
-      sep.textContent = isActor ? "  •  " : ", ";
-      container.append(sep);
-    }
+    const item = document.createElement("span");
+    item.className = "credit-item";
+
     const button = document.createElement("button");
     button.type = "button";
     button.className = "credit-link";
@@ -5060,7 +5073,19 @@ function renderPeople(container, people, entityKey) {
     button.addEventListener("click", () => {
       explorePerson(person, entityKey).catch((error) => showNotice(error.message));
     });
-    container.append(button);
+    item.append(button);
+
+    if (index < available.length - 1) {
+      const sep = document.createElement("span");
+      sep.className = "credit-separator";
+      sep.textContent = "\u00A0•";
+      item.append(sep);
+    }
+
+    container.append(item);
+    if (index < available.length - 1) {
+      container.append(document.createTextNode(" "));
+    }
   });
 }
 
@@ -5362,13 +5387,11 @@ function renderPersonalControls(movie) {
   const isFavorite = Boolean(userData?.is_favorite);
 
   elements.statusSelect.value = status;
-  elements.favoriteButton.disabled = !canFavorite;
+  elements.favoriteButton.disabled = false; /* Always enabled and visible */
   elements.favoriteButton.classList.toggle("is-favorite", isFavorite);
   const favoriteAction = isFavorite ? "Remove from favourites (F)" : "Add to favourites (F)";
   elements.favoriteButton.setAttribute("aria-label", favoriteAction);
-  elements.favoriteButton.title = canFavorite
-    ? favoriteAction
-    : "Choose Watched or Rewatch before favouriting (or press F to mark Watched + Favourite)";
+  elements.favoriteButton.title = favoriteAction;
   renderVerdict(userData?.verdict ?? null);
 }
 
@@ -5450,9 +5473,25 @@ function renderMovieDetails(movie) {
     if (rating) {
       const ratingSpan = document.createElement("span");
       ratingSpan.className = "title-meta-item title-meta-rating";
-      const votesText = movie.vote_count ? ` (${Number(movie.vote_count).toLocaleString()} votes)` : "";
-      ratingSpan.textContent = `★ ${rating}${votesText}`;
+      const starSpan = document.createElement("span");
+      starSpan.className = "title-meta-star";
+      starSpan.textContent = "★";
+      const scoreSpan = document.createElement("span");
+      scoreSpan.textContent = ` ${rating}`;
+      ratingSpan.append(starSpan, scoreSpan);
       titleMetaEl.append(ratingSpan);
+    }
+    if (movie.vote_count) {
+      const votesSpan = document.createElement("span");
+      votesSpan.className = "title-meta-item title-meta-votes";
+      const voteIcon = document.createElement("span");
+      voteIcon.className = "material-symbols-outlined title-meta-vote-icon";
+      voteIcon.setAttribute("aria-hidden", "true");
+      voteIcon.textContent = "how_to_vote";
+      const countSpan = document.createElement("span");
+      countSpan.textContent = ` ${Number(movie.vote_count).toLocaleString()} votes`;
+      votesSpan.append(voteIcon, countSpan);
+      titleMetaEl.append(votesSpan);
     }
   }
 
@@ -5691,6 +5730,7 @@ async function openMovieDetails(
   if (elements.detailPage) {
     elements.detailPage.scrollTop = 0;
   }
+  updateDetailHeaderElevation();
 
   try {
     const movie = await fetchJSON(`/movies/${movieId}`);
@@ -5777,6 +5817,7 @@ function closeMovieDetails() {
   }
   elements.detailPage.classList.add("is-hidden");
   elements.shell.classList.remove("is-hidden");
+  updateDetailHeaderElevation();
   const isGreyOpen = document.body.classList.contains("grey-docked-open");
   if (isGreyOpen && elements.shell) {
     elements.shell.scrollTop = state.previousScrollPosition || 0;
@@ -5957,8 +5998,13 @@ async function saveSelectedStatus() {
 }
 
 async function toggleSelectedFavorite() {
-  if (!state.selectedMovie || elements.favoriteButton.disabled) {
+  if (!state.selectedMovie) {
     return;
+  }
+  // Auto-mark watched if favoriting an unreviewed movie so favoriting always succeeds effortlessly
+  const currentStatus = state.selectedMovie.user_data?.status;
+  if (!state.selectedMovie.user_data?.is_favorite && currentStatus !== "watched" && currentStatus !== "rewatch") {
+    await saveSelectedStatus("watched");
   }
 
   const movieId = state.selectedMovie.tmdb_id;
@@ -10107,10 +10153,18 @@ function initGreyCompanion() {
       if (!isInputFocused && !e.ctrlKey && !e.metaKey && !e.altKey) {
         if (e.key === "ArrowLeft") {
           e.preventDefault();
+          if (elements.detailPrevBtn && !elements.detailPrevBtn.disabled) {
+            elements.detailPrevBtn.classList.add("is-key-active");
+            setTimeout(() => elements.detailPrevBtn?.classList.remove("is-key-active"), 180);
+          }
           navigatePrevMovie();
           return;
         } else if (e.key === "ArrowRight") {
           e.preventDefault();
+          if (elements.detailNextBtn && !elements.detailNextBtn.disabled) {
+            elements.detailNextBtn.classList.add("is-key-active");
+            setTimeout(() => elements.detailNextBtn?.classList.remove("is-key-active"), 180);
+          }
           navigateNextMovie();
           return;
         }
