@@ -839,14 +839,55 @@ function updateMovieCardDOM(movieId, userData) {
   }
 }
 
-function showNotice(message) {
-  elements.notice.textContent = message;
+let noticeTimeout = null;
+
+function showNotice(message, type = "auto") {
+  if (!elements.notice || !message) return;
+  if (noticeTimeout) {
+    clearTimeout(noticeTimeout);
+    noticeTimeout = null;
+  }
+
+  const isError = type === "error" || /error|could not|failed|cannot|already exists/i.test(message);
+  const isSuccess = type === "success" || /saved|updated|added|deleted|liberated|removed|reset/i.test(message);
+
+  elements.notice.className = "notice";
+  if (isError) {
+    elements.notice.classList.add("is-error");
+  } else if (isSuccess) {
+    elements.notice.classList.add("is-success");
+  }
+
+  const iconGlyph = isError ? "✕" : (isSuccess ? "✓" : "ℹ");
+  elements.notice.innerHTML = `
+    <span class="notice-icon" aria-hidden="true">${iconGlyph}</span>
+    <span class="notice-text">${escapeHTML(message)}</span>
+    <button type="button" class="notice-close-btn" aria-label="Dismiss notification">×</button>
+  `;
+
+  const closeBtn = elements.notice.querySelector(".notice-close-btn");
+  closeBtn?.addEventListener("click", () => clearNotice());
+
   elements.notice.classList.remove("is-hidden");
+
+  // Auto-dismiss after 4.5 seconds
+  noticeTimeout = setTimeout(() => {
+    clearNotice();
+  }, 4500);
 }
 
 function clearNotice() {
-  elements.notice.textContent = "";
-  elements.notice.classList.add("is-hidden");
+  if (!elements.notice) return;
+  if (noticeTimeout) {
+    clearTimeout(noticeTimeout);
+    noticeTimeout = null;
+  }
+  elements.notice.classList.add("is-dismissing");
+  setTimeout(() => {
+    elements.notice.classList.add("is-hidden");
+    elements.notice.classList.remove("is-dismissing");
+    elements.notice.textContent = "";
+  }, 180);
 }
 
 function updatePickerSummary() {
@@ -2904,83 +2945,120 @@ function renderPagination(
   }
   container.classList.remove("is-hidden");
 
-  const createNavButton = (direction, target, disabled) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = `pagination-nav-btn pagination-nav-${direction}`;
-    btn.disabled = disabled;
-    const svgNS = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(svgNS, "svg");
-    svg.setAttribute("viewBox", "0 0 24 24");
-    svg.setAttribute("width", "14");
-    svg.setAttribute("height", "14");
-    svg.setAttribute("fill", "none");
-    svg.setAttribute("stroke", "currentColor");
-    svg.setAttribute("stroke-width", "2.2");
-    svg.setAttribute("stroke-linecap", "round");
-    svg.setAttribute("stroke-linejoin", "round");
-    svg.setAttribute("aria-hidden", "true");
-    const path = document.createElementNS(svgNS, "path");
-    path.setAttribute("d", direction === "prev" ? "m15 18-6-6 6-6" : "m9 18 6-6-6-6");
-    svg.appendChild(path);
-    const span = document.createElement("span");
-    span.textContent = direction === "prev" ? "Previous" : "Next";
-    if (direction === "prev") {
-      btn.append(svg, span);
-    } else {
-      btn.append(span, svg);
-    }
-    btn.addEventListener("click", () => onPage(target));
-    return btn;
-  };
-
-  const addButton = (label, target, disabled = false, current = false) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "pagination-page-btn";
-    button.textContent = label;
-    button.disabled = disabled;
-    button.classList.toggle("is-current", current);
-    if (current) button.setAttribute("aria-current", "page");
-    button.addEventListener("click", () => onPage(target));
-    container.append(button);
-  };
-
-  container.append(createNavButton("prev", page - 1, page <= 1));
-
-  const pages = new Set([1, safeTotalPages]);
-  if (safeTotalPages <= 7) {
-    for (let item = 1; item <= safeTotalPages; item += 1) {
-      pages.add(item);
-    }
-  } else if (page <= 3) {
-    pages.add(2);
-    pages.add(3);
-    pages.add(4);
-  } else if (page >= safeTotalPages - 2) {
-    pages.add(safeTotalPages - 3);
-    pages.add(safeTotalPages - 2);
-    pages.add(safeTotalPages - 1);
+  // Left Control: ‹ Prev
+  const prevBtn = document.createElement("button");
+  prevBtn.type = "button";
+  prevBtn.className = "pagination-folio-btn pagination-folio-prev";
+  prevBtn.innerHTML = '<span class="folio-chevron" aria-hidden="true">‹</span><span class="folio-text">Prev</span>';
+  const isPrevDisabled = page <= 1;
+  prevBtn.disabled = isPrevDisabled;
+  if (isPrevDisabled) {
+    prevBtn.setAttribute("aria-disabled", "true");
   } else {
-    pages.add(page - 1);
-    pages.add(page);
-    pages.add(page + 1);
+    prevBtn.addEventListener("click", () => onPage(page - 1));
   }
+  container.append(prevBtn);
 
-  let previous = 0;
-  [...pages].sort((a, b) => a - b).forEach((item) => {
-    if (item - previous > 1) {
-      const ellipsis = document.createElement("span");
-      ellipsis.className = "pagination-ellipsis";
-      ellipsis.setAttribute("aria-hidden", "true");
-      ellipsis.textContent = "…";
-      container.append(ellipsis);
+  // Center Counter: 1 / 23
+  const counterWrap = document.createElement("div");
+  counterWrap.className = "pagination-folio-counter";
+
+  const currentSpan = document.createElement("span");
+  currentSpan.className = "pagination-folio-current";
+  currentSpan.textContent = String(page);
+  currentSpan.setAttribute("role", "button");
+  currentSpan.setAttribute("tabindex", "0");
+  currentSpan.setAttribute("title", "Click to jump to page");
+  currentSpan.setAttribute("aria-label", `Current page ${page}. Click to jump to page`);
+
+  const sepSpan = document.createElement("span");
+  sepSpan.className = "pagination-folio-sep";
+  sepSpan.textContent = " / ";
+
+  const totalSpan = document.createElement("span");
+  totalSpan.className = "pagination-folio-total";
+  totalSpan.textContent = String(safeTotalPages);
+
+  counterWrap.append(currentSpan, sepSpan, totalSpan);
+  container.append(counterWrap);
+
+  // Right Control: Next ›
+  const nextBtn = document.createElement("button");
+  nextBtn.type = "button";
+  nextBtn.className = "pagination-folio-btn pagination-folio-next";
+  nextBtn.innerHTML = '<span class="folio-text">Next</span><span class="folio-chevron" aria-hidden="true">›</span>';
+  const isNextDisabled = page >= safeTotalPages && !hasNext;
+  nextBtn.disabled = isNextDisabled;
+  if (isNextDisabled) {
+    nextBtn.setAttribute("aria-disabled", "true");
+  } else {
+    nextBtn.addEventListener("click", () => onPage(page + 1));
+  }
+  container.append(nextBtn);
+
+  // Click-to-Type Interaction
+  const openJumpInput = () => {
+    let committed = false;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.inputMode = "numeric";
+    input.pattern = "[0-9]*";
+    input.className = "pagination-folio-input";
+    input.value = String(page);
+    input.setAttribute("aria-label", `Page number, 1 to ${safeTotalPages}`);
+
+    const restore = () => {
+      if (input.parentNode) {
+        input.replaceWith(currentSpan);
+      }
+    };
+
+    const commit = () => {
+      if (committed) return;
+      committed = true;
+      const val = parseInt(input.value.trim(), 10);
+      if (!isNaN(val)) {
+        const clamped = Math.max(1, Math.min(safeTotalPages, val));
+        if (clamped !== page) {
+          onPage(clamped);
+          return;
+        }
+      }
+      restore();
+    };
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commit();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        committed = true;
+        restore();
+      }
+    });
+
+    input.addEventListener("blur", () => {
+      if (!committed) {
+        committed = true;
+        restore();
+      }
+    });
+
+    currentSpan.replaceWith(input);
+    requestAnimationFrame(() => {
+      input.focus();
+      input.select();
+    });
+  };
+
+  currentSpan.addEventListener("click", openJumpInput);
+  currentSpan.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openJumpInput();
     }
-    addButton(String(item), item, false, item === page);
-    previous = item;
   });
-
-  container.append(createNavButton("next", page + 1, page >= safeTotalPages && !hasNext));
 }
 
 function scrollToResults() {
@@ -4618,12 +4696,33 @@ function syncRibbonActiveState() {
 
 function updateProfileButtons() {
   const preferenceId = Number(elements.profileSelect.value);
-  const preference = state.preferences.find(
+  const preference = state.preferences?.find(
     (item) => item.preference_id === preferenceId,
   );
   const hasPreference = Boolean(preference);
   elements.updateProfile.disabled = !hasPreference;
   elements.deleteProfile.disabled = !hasPreference;
+
+  if (elements.saveProfile) {
+    const textSpan = elements.saveProfile.querySelector(".preset-action-text");
+    const svgIcon = elements.saveProfile.querySelector(".preset-action-svg");
+    if (hasPreference) {
+      if (textSpan) textSpan.textContent = `Rename preset "${preference.name}"`;
+      elements.saveProfile.title = `Rename "${preference.name}" preset`;
+      elements.saveProfile.dataset.mode = "edit";
+      if (svgIcon) {
+        svgIcon.innerHTML = '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>';
+      }
+    } else {
+      if (textSpan) textSpan.textContent = "Save current search as preset";
+      elements.saveProfile.title = "Save current search as preset";
+      elements.saveProfile.dataset.mode = "create";
+      if (svgIcon) {
+        svgIcon.innerHTML = '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>';
+      }
+    }
+  }
+
   if (elements.quickUpdateProfile) {
     elements.quickUpdateProfile.classList.toggle("is-hidden", !hasPreference);
     if (hasPreference) {
@@ -4710,10 +4809,20 @@ function renderProfileRibbon() {
       if (elements.query) {
         elements.query.value = "";
       }
-      elements.profileSelect.value = String(prof.id);
-      applySelectedProfile();
-      clearDiscoveryCache();
-      runDiscoverySearch();
+      const isAlreadyActive = Number(elements.profileSelect.value) === Number(prof.id);
+      if (isAlreadyActive) {
+        elements.profileSelect.value = "";
+        updateProfileButtons();
+        resetAdvancedFilters({ notify: false });
+        clearDiscoveryCache();
+        runDiscoverySearch();
+      } else {
+        elements.profileSelect.value = String(prof.id);
+        applySelectedProfile();
+        clearDiscoveryCache();
+        runDiscoverySearch();
+      }
+      renderProfileWorkshop();
     });
     ribbon.append(chip);
   });
@@ -4765,13 +4874,7 @@ function renderProfileWorkshop() {
     const nameSpan = document.createElement("span");
     nameSpan.className = "chip-name";
     nameSpan.textContent = prof.name;
-    nameSpan.addEventListener("click", () => {
-      elements.profileSelect.value = String(prof.id);
-      applySelectedProfile();
-      clearDiscoveryCache();
-      runDiscoverySearch();
-      renderProfileWorkshop();
-    });
+    nameSpan.title = `${prof.name} (Select via ribbon above)`;
 
     const delBtn = document.createElement("button");
     delBtn.type = "button";
@@ -4781,8 +4884,7 @@ function renderProfileWorkshop() {
     delBtn.setAttribute("aria-label", `Delete ${prof.name}`);
     delBtn.addEventListener("click", async (e) => {
       e.stopPropagation();
-      elements.profileSelect.value = String(prof.id);
-      await deleteSelectedProfile();
+      await deleteProfileById(Number(prof.id));
       const updated = getRibbonProfiles().filter((k) => Number(k) !== Number(prof.id));
       saveRibbonProfiles(updated);
     });
@@ -4874,13 +4976,13 @@ function openProfileDialog(mode) {
   elements.profileNameForm.reset();
   elements.profileName.value = mode === "edit" ? preference.name : "";
   elements.profileDialogTitle.textContent = mode === "edit"
-    ? "Update search profile"
+    ? "Rename search profile"
     : "Save search profile";
   elements.profileDialogCopy.textContent = mode === "edit"
-    ? "Rename this profile and replace its saved parameters with the filters currently on screen."
+    ? `Enter a new name for "${preference.name}".`
     : "Save the current filters so you can use them again.";
   elements.profileSubmit.textContent = mode === "edit"
-    ? "Update profile"
+    ? "Rename profile"
     : "Save profile";
   elements.profileDialog.showModal();
   elements.profileName.focus();
@@ -4925,10 +5027,9 @@ async function updateSelectedProfile(name) {
   showNotice(`Updated “${response.preference.name}”.`);
 }
 
-async function deleteSelectedProfile() {
-  const preferenceId = Number(elements.profileSelect.value);
-  const preference = state.preferences.find(
-    (item) => item.preference_id === preferenceId,
+async function deleteProfileById(preferenceId) {
+  const preference = state.preferences?.find(
+    (item) => item.preference_id === Number(preferenceId),
   );
 
   if (!preference || !window.confirm(
@@ -4940,9 +5041,19 @@ async function deleteSelectedProfile() {
   await fetchJSON(`/search-preferences/${preferenceId}`, {
     method: "DELETE",
   });
-  resetAdvancedFilters();
+  const isActive = Number(elements.profileSelect?.value) === Number(preferenceId);
+  if (isActive) {
+    resetAdvancedFilters({ notify: false });
+  }
   await loadProfiles();
   showNotice(`Deleted “${preference.name}”.`);
+}
+
+async function deleteSelectedProfile() {
+  const preferenceId = Number(elements.profileSelect?.value);
+  if (preferenceId) {
+    await deleteProfileById(preferenceId);
+  }
 }
 
 function markSelectedProfileModified() {
@@ -4970,6 +5081,32 @@ function appendMetaItem(content, isHtml = false) {
     item.textContent = content;
   }
   elements.dialogMeta.append(item);
+}
+
+
+function updateDetailPosterStatusBadge(movie, overrideStatus = null) {
+  const wrap = document.querySelector("#dialog-poster-wrap");
+  if (!wrap) return;
+  const status = overrideStatus !== null ? overrideStatus : (getStatus(movie) || "untracked");
+  const existing = wrap.querySelector(".detail-poster-status-badge");
+  if (!status || status === "untracked" || !STATUS_GLYPH_NAMES[status]) {
+    existing?.remove();
+    return;
+  }
+  if (existing) {
+    existing.dataset.status = status;
+    existing.title = STATUS_LABELS[status] || status;
+    existing.setAttribute("aria-label", STATUS_LABELS[status] || status);
+    existing.innerHTML = `<span class="material-symbols-outlined detail-status-badge-glyph" aria-hidden="true">${STATUS_GLYPH_NAMES[status]}</span>`;
+  } else {
+    const badge = document.createElement("span");
+    badge.className = "detail-poster-status-badge";
+    badge.dataset.status = status;
+    badge.title = STATUS_LABELS[status] || status;
+    badge.setAttribute("aria-label", STATUS_LABELS[status] || status);
+    badge.innerHTML = `<span class="material-symbols-outlined detail-status-badge-glyph" aria-hidden="true">${STATUS_GLYPH_NAMES[status]}</span>`;
+    wrap.append(badge);
+  }
 }
 
 function updateDialogKicker(movie, overrideStatus = null) {
@@ -5380,6 +5517,7 @@ function renderPersonalControls(movie) {
   const userData = movie.user_data || null;
   const status = userData?.status || "untracked";
   updateDialogKicker(movie, status);
+  updateDetailPosterStatusBadge(movie, status);
   document.querySelectorAll(".cockpit-shelf-pill").forEach((pill) => {
     pill.classList.toggle("is-active", pill.dataset.status === status);
   });
@@ -5448,6 +5586,7 @@ function renderMovieDetails(movie) {
   updateGreyContext();
   elements.dialogPoster.replaceChildren(createPoster(movie));
   updateDialogKicker(movie);
+  updateDetailPosterStatusBadge(movie);
   elements.dialogTitle.textContent =
     movie.title || movie.original_title || "Untitled movie";
   elements.dialogTitle.style.color = "#DEC68B";
@@ -8499,7 +8638,8 @@ elements.profileSelect.addEventListener("change", () => {
 });
 
 elements.saveProfile.addEventListener("click", () => {
-  openProfileDialog("create");
+  const mode = elements.saveProfile.dataset.mode === "edit" ? "edit" : "create";
+  openProfileDialog(mode);
 });
 
 elements.cancelProfile.addEventListener("click", () => {
@@ -10193,6 +10333,39 @@ function initGreyCompanion() {
             toggleSelectedFavorite();
           }
           return;
+        }
+      }
+    }
+
+    // Keyboard navigation (ArrowLeft / ArrowRight) for Pagination in Discover, Library, and Notes
+    const isModalOpen = Boolean(
+      elements.profileDialog?.open ||
+      elements.entryReaderDialog?.open ||
+      state.readerEditing
+    );
+    if (!elements.detailPage || elements.detailPage.classList.contains("is-hidden")) {
+      if (!isInputFocused && !isModalOpen && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+          let activePagination = null;
+          if (elements.pagination && !elements.pagination.classList.contains("is-hidden") && !elements.pagination.classList.contains("force-hidden")) {
+            activePagination = elements.pagination;
+          } else if (elements.entryPagination && !elements.entryPagination.classList.contains("is-hidden") && !elements.entryPagination.classList.contains("force-hidden")) {
+            activePagination = elements.entryPagination;
+          }
+
+          if (activePagination) {
+            const targetBtn = e.key === "ArrowLeft"
+              ? activePagination.querySelector(".pagination-folio-prev")
+              : activePagination.querySelector(".pagination-folio-next");
+
+            if (targetBtn && !targetBtn.disabled) {
+              e.preventDefault();
+              targetBtn.classList.add("is-key-active");
+              setTimeout(() => targetBtn.classList.remove("is-key-active"), 180);
+              targetBtn.click();
+              return;
+            }
+          }
         }
       }
     }

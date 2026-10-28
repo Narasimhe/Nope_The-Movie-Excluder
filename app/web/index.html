@@ -735,9 +735,11 @@
           <span class="nope-undo-counter is-hidden" id="nope-undo-counter" title="Press Ctrl+Z to undo (up to 3)">Undo (0)</span>
           <span class="nope-banner-hint">Esc or Alt+N to exit</span>
         </div>
-        <div class="movie-grid is-compact" id="movie-grid" aria-live="polite"></div>
+        <div class="movie-grid-viewport" id="movie-grid-viewport">
+          <div class="movie-grid is-compact" id="movie-grid" aria-live="polite"></div>
 
-        <nav class="pagination is-hidden" id="pagination" aria-label="Movie result pages"></nav>
+          <nav class="pagination is-hidden" id="pagination" aria-label="Movie result pages"></nav>
+        </div>
 
         <div class="empty-state is-hidden" id="empty-state">
           <div class="empty-icon" aria-hidden="true"></div>
