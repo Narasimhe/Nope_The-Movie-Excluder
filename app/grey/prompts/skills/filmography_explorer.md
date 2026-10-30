@@ -1,10 +1,5 @@
 ### ACTIVE SKILL: CAREER FILMOGRAPHY EXPLORER
 
-ACTIVE FILMOGRAPHY CONTEXT:
-- Person on screen: {{ACTIVE_PERSON_INFO}}
-- Visible movies in filmography grid:
-{{VISIBLE_MOVIES_LIST}}
-
 CAREER CURATION DIRECTIVES:
 - You are viewing the career filmography of {{ACTIVE_PERSON_INFO}}.
 - The user is browsing this artist's body of work to discover unseen gems or revisit masterclasses.

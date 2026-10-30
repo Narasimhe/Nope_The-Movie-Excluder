@@ -1,10 +1,7 @@
 ACTIVE SKILL: /research (Cinema Research Files)
 
 You manage 1–5 focused research markdown files stored directly in `data/research/*.md`.
-These files are human-readable, editable in VS Code, and automatically indexed from disk.
-
-Active research files currently on disk:
-{{RESEARCH_FILES_INDEX}}
+These files are human-readable, editable in VS Code, and automatically indexed from disk (see `Research Files Index` in context).
 
 ### RULES:
 

@@ -1212,6 +1212,56 @@ def test_grey_on_demand_tool_call_fetches_note_and_shelf():
                 assert mock_post.call_count == 2
 
 
+def test_grey_phase2_zero_sql_mention_http_session_and_history_cap():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+        temp_db = Path(temp_dir) / "test.db"
+        with patch.object(database, "DATABASE_PATH", temp_db):
+            initialize_database()
+            service = GreyService(db_path=str(temp_db))
+            service.api_key = "test_key"
+
+            # 1. Verify _resolve_screen_and_mentioned_context runs 0 SQL queries when dossier is passed and nothing matches
+            dossier = service.get_taste_dossier()
+            with patch.object(service, "_get_connection") as mock_conn:
+                ctx = service._resolve_screen_and_mentioned_context(
+                    lower_msg="recommend a sharp crime thriller",
+                    inspected_movie_id=None,
+                    inspected_note=None,
+                    related_movies=None,
+                    live_movie_notes=None,
+                    dossier=dossier,
+                )
+                assert ctx["inspected_movie_id"] is None
+                assert ctx["inspected_note_id"] is None
+                mock_conn.assert_not_called()
+
+            # 2. Verify http_session.post is used in production (when requests.post is unmocked) and older history turns > 600 chars are truncated
+            long_old_turn = "A" * 900
+            history = [
+                {"role": "user", "text": long_old_turn},
+                {"role": "model", "text": "Reply 1"},
+                {"role": "user", "text": "Msg 2"},
+                {"role": "model", "text": "Reply 2"},
+                {"role": "user", "text": "Msg 3"},
+                {"role": "model", "text": "Reply 3"},
+            ]
+            with patch.object(service.http_session, "post") as mock_session_post:
+                mock_resp = MagicMock()
+                mock_resp.status_code = 200
+                mock_resp.json.return_value = {
+                    "candidates": [{"content": {"parts": [{"text": json.dumps({"text": "Done.", "action": None, "pills": []})}]}}]
+                }
+                mock_session_post.return_value = mock_resp
+
+                service.chat("Filter to 90s thrillers", history=history)
+                assert mock_session_post.call_count == 1
+                sent_payload = mock_session_post.call_args.kwargs.get("json")
+                first_turn_text = sent_payload["contents"][0]["parts"][0]["text"]
+                assert len(first_turn_text) < 700
+                assert "[earlier turn truncated]" in first_turn_text
+
+
+
 
 
 

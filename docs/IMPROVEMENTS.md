@@ -4,6 +4,14 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
+- [ ] **Native Gemini `google_search` Grounding & Zero-Plot-Synopsis Context for Movie Reviews (`app/grey/service.py` & `app/grey/prompts/grey_core.md`)**
+  * **Goal**: Stop Grey from bluffing reviews out of baked pre-training data or paraphrasing the 200-character TMDB plot summary. Instead, use Gemini's native `"tools": [{"google_search": {}}]` grounding alongside **Director + Top 4 Cast** (with **zero** plot synopsis) so Gemini searches real-world reception across Letterboxd, Rotten Tomatoes, IMDb, and Reddit live and synthesizes grounded takes on performances (*"De Niro nailed this"*), pacing, atmosphere, and act-by-act execution.
+  * **Discarded Approach (Do NOT Implement)**: *Custom Python scraping of Letterboxd / TMDB `/reviews` into prompt strings* — discarded as impractical, brittle, and the wrong way to use AI when Gemini's native `google_search` grounding tool can search the live web directly.
+  * **Key Components**:
+    * **Zero Plot Synopsis + Director & Cast in `{{INSPECTED_INFO}}` (`_resolve_screen_and_mentioned_context()` in `app/grey/service.py`)**: Remove `Overview: ...` completely from `{{INSPECTED_INFO}}` and replace it with **Director + Top 4 Cast** queried from local SQLite (`movie_credits`), preventing Grey from ever regurgitating the plot premise on screen.
+    * **Native `google_search` Tool Grounding on Review Turns (`chat()` & `_call_gemini_cascade()` in `app/grey/service.py`)**: Attach `"tools": [{"google_search": {}}]` when the user asks about a movie or related movies (omitting `responseMimeType: "application/json"` when `google_search` is active so the REST API accepts the tool call, with automatic fallback if a candidate model rejects the tool).
+    * **Observant Film-Lover Review Framing (`grey_core.md` & `related_curator.md`)**: Shift Grey from binary verdict posturing to grounded synthesis of what actually works or fails on screen—highlighting standout performances, pacing, atmosphere, and act-by-act strengths/flaws while reserving the "CGI/AI slop" hammer for genuine slop.
+
 - [ ] **Dedicated API & Network Telemetry Space (Footer / System View)**
   * **Goal**: Provide a clean, dedicated space (similar to the Storage page, accessible via footer or system navigation) that visualizes outbound TMDB API consumption, cache efficiency, and network health without cluttering the main footer or UI.
   * **Key Components**:
@@ -24,6 +32,16 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Soul vs. Soulless Cinema Rubric, CGI/AI Slop Diagnosis & Blunt Human Vocabulary (`app/grey/prompts/grey_core.md`, `app/grey/prompts/skills/related_curator.md`, `app/grey/service.py`)**
+  * **Synthesized 7-Axis "Soul vs. Soulless" Rubric (The Ten-Minute Rule)**: Replaced the generic rubric in `grey_core.md` with the user's 7-axis framework (*Observed Humans vs. Director Ego-Extensions*, *Lived History in Behaviour vs. Expositional Slop*, *Genuine Exploration vs. Predetermined Thesis*, *Trusting the Audience vs. Reaction Engineering*, *Long-Term Conviction vs. Cash Grabs*, *Singular Voice vs. Committee AI Slop*, and *Tactile Craft vs. Weightless CGI Slop*).
+  * **Explicit CGI Slop & AI Slop Diagnosis in `YES / NOPE` Verdicts**: Updated `related_curator.md` and `grey_core.md` so every `YES` or `NOPE` verdict diagnoses whether a film has real life and conviction or is weightless CGI spectacle/synthetic slop.
+  * **Blunt Human Vocabulary & `BLOCK_NONE` Safety Thresholds**: Authorized unfiltered human language in `grey_core.md` and added `BLOCK_NONE` safety settings to `chat()` in `app/grey/service.py` so Gemini never self-censors blunt roasts.
+- [x] **Grey Service Phase 2 Micro-Optimizations & Skill Hygiene (`app/grey/service.py` & `app/grey/prompts/skills/`)**
+  * **Zero-SQL Mention Resolution (`_resolve_screen_and_mentioned_context()` in `app/grey/service.py`)**: Removed the dead `relevant_journal_excerpt` SQL query (`LIMIT 15`) and replaced the per-turn `LIMIT 200` movies scan and `LIMIT 50` `general_entries` body scan with fast in-memory matching against `_dossier_cache` (`tracked_movies_index` and `all_active_notes`), querying SQLite for the single row only when a title actually matches.
+  * **Persistent HTTP Connection Pooling (`_call_gemini_cascade()` in `app/grey/service.py`)**: Routed Gemini API calls through `self.http_session.post` (while preserving unit test compatibility when `requests.post` is monkeypatched) to eliminate repeated DNS + TCP/TLS handshakes (~150–250ms saved per call).
+  * **Removed Orphaned `watchlist_builder.md` & Dead `{{WATCHLIST_JSON}}` Serialization**: Deleted `app/grey/prompts/skills/watchlist_builder.md` and removed redundant `{{WATCHLIST_JSON}}` replacement in `chat()`.
+  * **Documented `apply_filter` Parameter Schema (`app/grey/prompts/skills/library_ops.md`)**: Specified the exact filter keys expected by `handleGreyFilterAction` in `app/static/app.js` (`genres`, `languages`, `min_year`, `max_year`) so Grey can reliably filter the grid on command.
+  * **Bounded Conversation History Window (`chat()` in `app/grey/service.py`)**: Kept the most recent 4 history turns intact while capping older turns in `history[-16:]` to ~600 characters so earlier 30-movie lists or tables don't re-bloat token payloads on subsequent turns.
 - [x] **Grey Service Intelligence & Architecture Overhaul (`app/grey/service.py` & `app/grey/note_formatter.py`)**
   * **Eradicated Per-Turn Megaprompt Bloat & 17-Query SQLite Loop**: Consolidated `get_taste_dossier()` from 17 sequential SQL queries (including an 8-query `N+1` tag loop) into 2 fast consolidated queries backed by signature-verified RAM caching (`_dossier_cache`), and replaced the 15,000-character research file dump on normal turns with a 1-line filenames summary (`get_research_files_summary()`).
   * **Hybrid 1-Line RAM Title Map + On-Demand Gemini Tool Fetching (`_execute_tool_call()`)**: Replaced the 50-object JSON note dump with a compact `ID="Title"` map and implemented native on-demand tool execution (`get_shelf_movies`, `get_note`, `search_library_movie`, `read_research_file`) so Gemini can resolve synonyms and fetch shelves, notes, or research files in ~1ms when a query reaches outside the current screen.

@@ -260,10 +260,12 @@ class GreyService:
         discarded_samples: list[dict[str, Any]] = []
         journal_digest: list[dict[str, Any]] = []
         journal_notes_list: list[dict[str, Any]] = []
+        all_active_notes: list[dict[str, Any]] = []
         watched_titles: list[str] = []
         rewatch_list: list[str] = []
         excluded_titles: list[str] = []
         new_discovery_list: list[str] = []
+        tracked_movies_index: list[dict[str, Any]] = []
 
         try:
             with self._get_connection() as conn:
@@ -294,7 +296,7 @@ class GreyService:
                         m.vote_average
                     FROM user_movie_data u
                     LEFT JOIN movies m ON m.tmdb_id = u.tmdb_id
-                    ORDER BY u.updated_at DESC
+                    ORDER BY (u.notes IS NOT NULL AND trim(u.notes) != '') DESC, u.updated_at DESC
                     """
                 ).fetchall()
 
@@ -311,6 +313,12 @@ class GreyService:
                     is_fav = r["is_favorite"]
                     notes = r["notes"]
                     vote_avg = r["vote_average"] or 0.0
+
+                    if title and status is not None:
+                        tracked_movies_index.append({
+                            "tmdb_id": r["tmdb_id"],
+                            "title": title,
+                        })
 
                     if title and ((verdict is not None and verdict >= 8) or is_fav == 1):
                         fav_candidates.append((verdict or 0, vote_avg, {
@@ -368,26 +376,29 @@ class GreyService:
                     FROM general_entries e
                     LEFT JOIN general_entry_tag_links l ON e.entry_id = l.entry_id
                     LEFT JOIN general_entry_tags t ON l.tag_id = t.tag_id
-                    WHERE e.is_deleted = 0 AND e.is_archived = 0 AND e.status = 'published'
+                    WHERE e.is_deleted = 0 AND e.is_archived = 0
                     GROUP BY e.entry_id
                     ORDER BY e.updated_at DESC
                     LIMIT 50
                     """
                 ).fetchall()
 
-                for idx, jr in enumerate(j_rows):
-                    journal_notes_list.append({
+                for jr in j_rows:
+                    note_item = {
                         "entry_id": jr["entry_id"],
                         "title": jr["title"],
                         "status": jr["status"],
-                    })
-                    if idx < 8:
-                        raw_tags = jr["tag_names"] or ""
-                        tags = [t for t in raw_tags.split("||") if t]
-                        journal_digest.append({
-                            "title": jr["title"],
-                            "tags": tags,
-                        })
+                    }
+                    all_active_notes.append(note_item)
+                    if jr["status"] == "published":
+                        journal_notes_list.append(note_item)
+                        if len(journal_digest) < 8:
+                            raw_tags = jr["tag_names"] or ""
+                            tags = [t for t in raw_tags.split("||") if t]
+                            journal_digest.append({
+                                "title": jr["title"],
+                                "tags": tags,
+                            })
 
                 result = {
                     "high_rated": favorites,
@@ -396,10 +407,12 @@ class GreyService:
                     "discarded_samples": discarded_samples,
                     "journal_digest": journal_digest,
                     "journal_notes_list": journal_notes_list,
+                    "all_active_notes": all_active_notes,
                     "all_watched_titles": watched_titles,
                     "rewatch_list": rewatch_list,
                     "all_excluded_titles": excluded_titles,
                     "new_discovery_list": new_discovery_list,
+                    "tracked_movies_index": tracked_movies_index,
                 }
                 self._dossier_cache = (cache_key, result)
                 return result
@@ -413,10 +426,12 @@ class GreyService:
             "discarded_samples": discarded_samples,
             "journal_digest": journal_digest,
             "journal_notes_list": journal_notes_list,
+            "all_active_notes": all_active_notes,
             "all_watched_titles": watched_titles,
             "rewatch_list": rewatch_list,
             "all_excluded_titles": excluded_titles,
             "new_discovery_list": new_discovery_list,
+            "tracked_movies_index": tracked_movies_index,
         }
 
     def _deduplicate_and_format_note_body(
@@ -613,7 +628,35 @@ class GreyService:
             skill_filename = "filmography_explorer.md"
         elif any(
             w in lq
-            for w in ["related", "similar to this", "worth my attention", "recommend from these"]
+            for w in [
+                "related",
+                "similar to this",
+                "worth my attention",
+                "worth my time",
+                "worth watching",
+                "recommend from these",
+                "what about this",
+                "what do you think",
+                "thoughts on",
+                "is this good",
+                "is it good",
+                "how is this",
+            ]
+        ) and not any(
+            op in lq
+            for op in [
+                "mark as",
+                "add to",
+                "add this to",
+                "move to",
+                "nope this",
+                "exclude this",
+                "new discovery",
+                "watchlist",
+                "watch later",
+                "filter",
+                "shelf",
+            ]
         ):
             skill_filename = "related_curator.md"
         else:
@@ -631,16 +674,38 @@ class GreyService:
         inspected_note: dict[str, Any] | None,
         related_movies: list[dict[str, Any]] | None,
         live_movie_notes: str | None,
+        dossier: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Resolve open screen movie/note and strictly boundary-matched mentions without 4-letter hijacking."""
+        """Resolve open screen movie/note and boundary-matched mentions using RAM dossier cache (0 SQL when unmentioned)."""
         inspected_info = "None"
         inspected_title = None
-        relevant_journal_excerpt = "None"
         ui_had_inspected_movie = bool(inspected_movie_id)
+        if dossier is None:
+            dossier = self.get_taste_dossier()
 
         try:
-            with self._get_connection() as conn:
-                if inspected_movie_id:
+            if not inspected_movie_id:
+                # Zero-SQL RAM scan over tracked_movies_index (strict whole-title word-boundary match)
+                stopwords = {
+                    "time", "good", "dark", "life", "hard", "dead", "part", "find",
+                    "movie", "notes", "note", "from", "library", "then", "this", "that",
+                    "with", "have", "what", "list", "show", "watch", "seen", "like",
+                }
+                for r in dossier.get("tracked_movies_index", [])[:200]:
+                    t = (r.get("title") or "").lower().strip()
+                    t_norm = re.sub(r"^(?:the|a|an)\s+", "", t).strip()
+                    matched = False
+                    if len(t) >= 4 and t not in stopwords and re.search(rf"\b{re.escape(t)}\b", lower_msg):
+                        matched = True
+                    elif len(t_norm) >= 5 and t_norm not in stopwords and re.search(rf"\b{re.escape(t_norm)}\b", lower_msg):
+                        matched = True
+
+                    if matched:
+                        inspected_movie_id = r["tmdb_id"]
+                        break
+
+            if inspected_movie_id:
+                with self._get_connection() as conn:
                     row = conn.execute(
                         """
                         SELECT m.title, m.release_date, m.overview, m.vote_average, u.status, u.verdict, u.notes
@@ -655,7 +720,7 @@ class GreyService:
                         year_str = f" ({(row['release_date'] or '')[:4]})" if row["release_date"] else ""
                         effective_notes = (
                             live_movie_notes.strip()
-                            if live_movie_notes and live_movie_notes.strip()
+                            if ui_had_inspected_movie and live_movie_notes and live_movie_notes.strip()
                             else None
                         ) or row["notes"]
                         inspected_info = (
@@ -664,82 +729,10 @@ class GreyService:
                             f"User Verdict: {row['verdict'] or 'None'} | User Notes: {effective_notes or 'None'} | "
                             f"Overview: {(row['overview'] or '')[:200]}..."
                         )
-                else:
-                    # Strict whole-title word-boundary match (never match random 4-letter substrings!)
-                    rows = conn.execute(
-                        """
-                        SELECT m.tmdb_id, m.title, m.release_date, m.overview, m.vote_average, u.status, u.verdict, u.notes
-                        FROM movies m
-                        LEFT JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
-                        WHERE u.status IS NOT NULL
-                        ORDER BY (u.notes IS NOT NULL AND trim(u.notes) != '') DESC, u.updated_at DESC
-                        LIMIT 200
-                        """
-                    ).fetchall()
-                    stopwords = {
-                        "time", "good", "dark", "life", "hard", "dead", "part", "find",
-                        "movie", "notes", "note", "from", "library", "then", "this", "that",
-                        "with", "have", "what", "list", "show", "watch", "seen", "like",
-                    }
-                    for r in rows:
-                        t = (r["title"] or "").lower().strip()
-                        t_norm = re.sub(r"^(?:the|a|an)\s+", "", t).strip()
-                        matched = False
-                        if len(t) >= 4 and t not in stopwords and re.search(rf"\b{re.escape(t)}\b", lower_msg):
-                            matched = True
-                        elif len(t_norm) >= 5 and t_norm not in stopwords and re.search(rf"\b{re.escape(t_norm)}\b", lower_msg):
-                            matched = True
-
-                        if matched:
-                            inspected_movie_id = r["tmdb_id"]
-                            inspected_title = r["title"]
-                            year_str = f" ({(r['release_date'] or '')[:4]})" if r["release_date"] else ""
-                            inspected_info = (
-                                f"{r['title']}{year_str} (TMDB ID: {inspected_movie_id}), "
-                                f"TMDB Rating {r['vote_average']} | Status: {r['status']} | "
-                                f"User Verdict: {r['verdict'] or 'None'} | User Notes: {r['notes'] or 'None'} | "
-                                f"Overview: {(r['overview'] or '')[:200]}..."
-                            )
-                            break
-
-                # Frugal on-demand journal excerpt: fetch full text only if asked or directly relevant
-                wants_journal = any(
-                    w in lower_msg
-                    for w in [
-                        "my blog",
-                        "my essay",
-                        "my note",
-                        "my journal",
-                        "my writing",
-                        "what did i write",
-                        "based on my",
-                    ]
-                )
-                if wants_journal or inspected_title:
-                    j_entries = conn.execute(
-                        """
-                        SELECT title, body FROM general_entries
-                        WHERE is_deleted = 0 AND is_archived = 0 AND status = 'published'
-                        ORDER BY updated_at DESC
-                        LIMIT 15
-                        """
-                    ).fetchall()
-                    for er in j_entries:
-                        et = (er["title"] or "").lower()
-                        if (
-                            wants_journal
-                            and (
-                                et in lower_msg
-                                or any(word in lower_msg for word in et.split() if len(word) > 4)
-                            )
-                        ) or (inspected_title and inspected_title.lower() in et):
-                            body_preview = (er["body"] or "")[:700]
-                            relevant_journal_excerpt = f"Title: {er['title']}\nExcerpt: {body_preview}"
-                            break
         except Exception as exc:
-            logger.debug("Could not query journal entries for Grey: %s", exc)
+            logger.debug("Could not query movie context for Grey: %s", exc)
 
-        # Note context resolution (only open note or explicit full-title match, never random 5-letter word hijacking)
+        # Note context resolution (only open note or explicit full-title match in RAM, 0 SQL when unmentioned)
         inspected_note_info = "None"
         inspected_note_title = None
         inspected_note_id = None
@@ -764,23 +757,29 @@ class GreyService:
             )
         else:
             try:
-                with self._get_connection() as conn:
-                    matched_rows = conn.execute(
-                        """
-                        SELECT entry_id, title, body, status
-                        FROM general_entries
-                        WHERE is_deleted = 0 AND is_archived = 0
-                        ORDER BY LENGTH(title) DESC, updated_at DESC
-                        LIMIT 50
-                        """
-                    ).fetchall()
-                    for mr in matched_rows:
-                        m_title = (mr["title"] or "").strip().lower()
-                        if len(m_title) >= 3 and m_title in lower_msg:
-                            inspected_note_id = mr["entry_id"]
-                            inspected_note_title = mr["title"]
-                            nbody = mr["body"] or ""
-                            nstatus = mr["status"] or "published"
+                ram_notes = sorted(
+                    dossier.get("all_active_notes") or dossier.get("journal_notes_list", []),
+                    key=lambda x: len(x.get("title") or ""),
+                    reverse=True,
+                )
+                matched_entry_id = None
+                for mr in ram_notes:
+                    m_title = (mr.get("title") or "").strip().lower()
+                    if len(m_title) >= 3 and m_title in lower_msg:
+                        matched_entry_id = mr["entry_id"]
+                        break
+
+                if matched_entry_id is not None:
+                    with self._get_connection() as conn:
+                        nr = conn.execute(
+                            "SELECT entry_id, title, body, status FROM general_entries WHERE entry_id = ? AND is_deleted = 0",
+                            (matched_entry_id,),
+                        ).fetchone()
+                        if nr:
+                            inspected_note_id = nr["entry_id"]
+                            inspected_note_title = nr["title"]
+                            nbody = nr["body"] or ""
+                            nstatus = nr["status"] or "published"
                             mode_hint = (
                                 " [WRITE/EDIT MODE ENABLED]"
                                 if has_write_intent
@@ -790,7 +789,6 @@ class GreyService:
                                 f"Title: {inspected_note_title} (ID: {inspected_note_id}) "
                                 f"(Status: {nstatus}){mode_hint}\nContent:\n{nbody[:25000]}"
                             )
-                            break
             except Exception as exc:
                 logger.debug("Could not match note rows for Grey: %s", exc)
 
@@ -839,7 +837,6 @@ class GreyService:
             "inspected_movie_id": inspected_movie_id,
             "inspected_title": inspected_title,
             "inspected_info": inspected_info,
-            "relevant_journal_excerpt": relevant_journal_excerpt,
             "inspected_note_id": inspected_note_id,
             "inspected_note_title": inspected_note_title,
             "inspected_note_info": inspected_note_info,
@@ -952,10 +949,16 @@ class GreyService:
 
         resp = None
         model_label = default_label
+        # Use persistent TCP/TLS session in production while remaining compatible with monkeypatched requests.post in tests
+        post_fn = (
+            self.http_session.post
+            if getattr(requests.post, "__module__", "") == "requests.api"
+            else requests.post
+        )
         for model_candidate in candidate_models:
             try:
                 endpoint = f"{GEMINI_API_BASE_URL}/models/{model_candidate}:generateContent?key={self.api_key}"
-                resp = requests.post(
+                resp = post_fn(
                     endpoint,
                     json=payload,
                     headers={"Content-Type": "application/json"},
@@ -1576,6 +1579,7 @@ class GreyService:
 
         lower_msg = message.lower()
         target_model, model_label = self._select_target_model(lower_msg, model_mode)
+        full_dossier = self.get_taste_dossier()
 
         ctx = self._resolve_screen_and_mentioned_context(
             lower_msg=lower_msg,
@@ -1583,11 +1587,11 @@ class GreyService:
             inspected_note=inspected_note,
             related_movies=related_movies,
             live_movie_notes=live_movie_notes,
+            dossier=full_dossier,
         )
         inspected_movie_id = ctx["inspected_movie_id"]
         inspected_title = ctx["inspected_title"]
         inspected_info = ctx["inspected_info"]
-        relevant_journal_excerpt = ctx["relevant_journal_excerpt"]
         inspected_note_id = ctx["inspected_note_id"]
         inspected_note_title = ctx["inspected_note_title"]
         inspected_note_info = ctx["inspected_note_info"]
@@ -1622,7 +1626,7 @@ class GreyService:
                 "all_excluded_titles": [],
             }
         else:
-            dossier = self.get_taste_dossier()
+            dossier = full_dossier
 
         active_person_info = "None"
         if active_person and isinstance(active_person, dict):
@@ -1682,7 +1686,6 @@ class GreyService:
             .replace("{{RESEARCH_FILES_INDEX}}", research_files_str)
             .replace("{{AVAILABLE_REACTIONS}}", reactions_index_str)
             .replace("{{FAVORITES_JSON}}", json.dumps(dossier["high_rated"][:5]))
-            .replace("{{WATCHLIST_JSON}}", json.dumps(dossier["watchlist"][:12]))
             .replace("{{DISCARDED_COUNT}}", str(dossier["discarded_count"]))
             .replace("{{DISCARDED_SAMPLES_JSON}}", json.dumps(dossier["discarded_samples"][:4]))
             .replace("{{JOURNAL_NOTES_LIST}}", compact_notes_index)
@@ -1692,32 +1695,23 @@ class GreyService:
 
         contents = []
         if history:
-            for item in history[-16:]:
+            recent_history = history[-16:]
+            cutoff_idx = max(0, len(recent_history) - 4)
+            for idx, item in enumerate(recent_history):
                 role = "user" if item.get("role") == "user" else "model"
-                contents.append({"role": role, "parts": [{"text": item.get("text", "")}]})
+                turn_text = item.get("text", "") or ""
+                if idx < cutoff_idx and len(turn_text) > 600:
+                    turn_text = turn_text[:600] + "\n... [earlier turn truncated]"
+                contents.append({"role": role, "parts": [{"text": turn_text}]})
 
         screen_contexts = []
         if active_person_info != "None":
             screen_contexts.append(f"Filmography on screen: {active_person_info}")
-        if visible_movies and isinstance(visible_movies, list) and len(visible_movies) > 0:
-            titles_sample = [
-                vm.get("title") or vm.get("original_title")
-                for vm in visible_movies[:8]
-                if (vm.get("title") or vm.get("original_title"))
-            ]
-            if titles_sample:
-                screen_contexts.append(
-                    f"Grid shows {len(visible_movies)} titles including: {', '.join(titles_sample)}"
-                )
         if notes_shelf_filter:
             screen_contexts.append(f"Movie Notes paired shelf filter: {notes_shelf_filter}")
         if inspected_title:
             id_info = f" (TMDB ID: {inspected_movie_id})" if inspected_movie_id else ""
             screen_contexts.append(f"Currently viewing movie on screen: {inspected_title}{id_info}")
-            if live_movie_notes and live_movie_notes.strip():
-                screen_contexts.append(
-                    f"Active movie Personal Memory on screen: {live_movie_notes.strip()[:300]}"
-                )
         if inspected_note_title:
             screen_contexts.append(f"Currently viewing note on screen: {inspected_note_title}")
 
@@ -1730,8 +1724,14 @@ class GreyService:
             "contents": contents,
             "generationConfig": {
                 "responseMimeType": "application/json",
-                "temperature": 0.35,
+                "temperature": 0.72,
             },
+            "safetySettings": [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+            ],
         }
 
         try:

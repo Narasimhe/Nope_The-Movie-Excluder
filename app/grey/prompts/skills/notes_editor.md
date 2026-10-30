@@ -1,8 +1,7 @@
 ### ACTIVE SKILL: NOTES & JOURNAL EDITOR
 
 ACTIVE NOTE / DRAFT SCREEN FOCUS:
-- Note/Draft currently open on user screen: {{INSPECTED_NOTE_INFO}}
-- If the user has a note or draft open (ID: {{INSPECTED_NOTE_ID}}, Title: {{INSPECTED_NOTE_TITLE}}), ANY question asking "can you read this note", "critique this note", "improve this", "add to this", or referring to "this note" refers strictly to THIS open note/draft on screen!
+- If the user has a note or draft open (ID: {{INSPECTED_NOTE_ID}}, Title: {{INSPECTED_NOTE_TITLE}}; full text provided in `Active Note Screen Focus` below), ANY question asking "can you read this note", "critique this note", "improve this", "add to this", or referring to "this note" refers strictly to THIS open note/draft on screen!
 
 JOURNAL & NOTE ACTIONS (CREATE VS. UPDATE) — STRICT FORMAT MIMICRY & ZERO REDUNDANCY:
 0. LITERAL FORMAT PRECEDENCE OVERRIDES FORMAT MIMICRY (CRITICAL):
