@@ -4,26 +4,6 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
-- [ ] **Grey Service Intelligence & Architecture Overhaul (`app/grey/service.py`)**
-  * **Goal**: Make Grey genuinely intelligent, context-aware, fast, and predictable by fixing context/action hijacking bugs, eliminating N+1 database queries and redundant disk/network overhead, unifying prompt/skill routing, and decomposing the 1,020-line `chat()` method into clean, modular components.
-  * **1. Context & Intelligence Fixes**:
-    * **Eliminate Accidental Movie Hijacking (`lines 683–714`)**: Separate *Currently Open Movie on Screen* (`inspected_movie_id` passed by UI) from *Mentioned Library Movie Lookup*. Remove the naive 4-letter word substring matcher (`len(w) >= 4 and w in t_norm`) that latches onto random movies on everyday words ("time", "good", "dark"), overwrites `inspected_movie_id`, and triggers background `get_related_movies()` calls.
-    * **Eliminate Accidental Note Hijacking (`lines 748–764`)**: Stop matching any 5-letter word from 50 journal note titles (`len(word) > 4`) when no note is open on screen, which falsely injects up to 25,000 characters of an unrelated note as the active screen focus. Require explicit whole-title or clear note reference matching.
-    * **Fix Accidental "Pro Model" Slowdowns (`lines 596–602`)**: Remove overly broad single-word triggers like `"rating"`, `"review"`, or `"director"` from `research_triggers` so simple commands like *"give this a 7 rating"* stay on fast Gemini Flash instead of routing to slow Gemini Pro.
-    * **Remove Hardcoded `set_movie_status` Action Hijacking (`lines 1244–1305`)**: Stop overriding a valid `set_movie_status` action into a journal blog post `update_entry` just because the message contains the word *"note"* or *"list"* (e.g., *"mark as watched and add a note"*). Only route to journal `update_entry` when a specific journal post/entry is actually targeted.
-    * **Richer Library & Personal Notes Context (`get_taste_dossier()`)**: Include personal movie notes (`user_movie_data.notes`) and release years in the dossier so Grey can accurately answer questions about your personal movie notes across shelves.
-  * **2. Prompt & Skill Routing Cleanup**:
-    * **Eliminate Duplicate Skill Directives (`SKILLS_REGISTRY` vs. `app/grey/prompts/skills/*.md`)**: Stop duplicating prompt instructions in both Python `SKILLS_REGISTRY` strings and `.md` files (which currently get concatenated together and sent twice). Keep `SKILLS_REGISTRY` as lightweight metadata and store all prompt instructions cleanly in the markdown files.
-    * **Composable Multi-Skill Routing (`lines 866–896`)**: Replace the mutually exclusive `if/elif` single-skill selector with composable skill loading—keeping core library operations active while layering `notes_editor.md`, `research_partner.md`, `related_curator.md`, or `filmography_explorer.md` whenever relevant to screen state or user intent.
-  * **3. Database, Disk & Network Performance**:
-    * **Consolidate 16+ SQLite Queries & Fix N+1 Loop (`get_taste_dossier()`)**: Eliminate the `N+1` tag query loop (`lines 230–243`) and duplicate `general_entries` query (`lines 246–254`), consolidating the dossier extraction into a few fast queries with lightweight in-memory caching invalidated on library/note updates.
-    * **Persistent HTTP Connection Pooling (`requests.Session()`)**: Replace bare `requests.post()` calls with a persistent `self.http_session = requests.Session()` on `GreyService` to reuse TCP/TLS connections to Google's Gemini endpoint (saving 150–300ms per turn) and tune per-model timeouts.
-    * **In-Memory Prompt & Reaction Caching**: Cache `grey_core.md`, skill `.md` files, and `reactions.json` in memory with lightweight `mtime`-aware hot-reload support, while keeping `data/research/*.md` dynamic.
-  * **4. Code Structure & Modularity**:
-    * **Decompose `chat()` & Extract Action Handlers**: Extract `_handle_create_draft`, `_handle_batch_set_movie_status`, `_handle_set_movie_status`, `_handle_update_entry`, and `_handle_research_file` (plus context/prompt builders) into clean private methods so `chat()` becomes a concise ~120-line orchestrator.
-    * **Extract Note Formatter Module (`app/grey/note_formatter.py`)**: Move the 250-line `_deduplicate_and_format_note_body()` regex/markdown formatter out of `service.py` into its own dedicated helper module.
-    * **Top-Level Imports & Service Initialization**: Hoist scattered inline imports (`MovieService`, `UserMovieRepository`, `GeneralEntryRepository`) to module top-level and initialize them cleanly in `GreyService.__init__()`.
-
 - [ ] **Dedicated API & Network Telemetry Space (Footer / System View)**
   * **Goal**: Provide a clean, dedicated space (similar to the Storage page, accessible via footer or system navigation) that visualizes outbound TMDB API consumption, cache efficiency, and network health without cluttering the main footer or UI.
   * **Key Components**:
@@ -44,6 +24,12 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Grey Service Intelligence & Architecture Overhaul (`app/grey/service.py` & `app/grey/note_formatter.py`)**
+  * **Eradicated Per-Turn Megaprompt Bloat & 17-Query SQLite Loop**: Consolidated `get_taste_dossier()` from 17 sequential SQL queries (including an 8-query `N+1` tag loop) into 2 fast consolidated queries backed by signature-verified RAM caching (`_dossier_cache`), and replaced the 15,000-character research file dump on normal turns with a 1-line filenames summary (`get_research_files_summary()`).
+  * **Hybrid 1-Line RAM Title Map + On-Demand Gemini Tool Fetching (`_execute_tool_call()`)**: Replaced the 50-object JSON note dump with a compact `ID="Title"` map and implemented native on-demand tool execution (`get_shelf_movies`, `get_note`, `search_library_movie`, `read_research_file`) so Gemini can resolve synonyms and fetch shelves, notes, or research files in ~1ms when a query reaches outside the current screen.
+  * **Eliminated False-Positive Movie, Note & Model Hijacking**: Replaced the naive 4-letter substring movie matcher (`len(w) >= 4`) with strict word-boundary title matching (`_resolve_screen_and_mentioned_context()`), prevented background `get_related_movies()` calls unless a movie is open in the UI, removed generic single-word Pro triggers (`"rating"`, `"review"`), and restricted `set_movie_status` $\rightarrow$ `update_entry` interception strictly to explicit post/note target phrasing.
+  * **Zero Hardcoded Python Prompts & Mtime-Aware RAM Cache**: Removed all hardcoded `"directive"` strings from `SKILLS_REGISTRY` and inline fallback prompts, preloaded `grey_core.md`, skill `.md` files, and `reactions.json` into memory (`_read_cached_file()`), and documented `##`/`###` headings, `@Movie Title (YYYY)` pills, `>` blockquotes, and Read vs. Write separation in `notes_editor.md`.
+  * **Decomposed `chat()` & Extracted `note_formatter.py`**: Moved the 250-line `_deduplicate_and_format_note_body()` helper into `app/grey/note_formatter.py` and extracted `_handle_create_draft`, `_handle_batch_set_movie_status`, `_handle_set_movie_status`, `_handle_update_entry`, and `_handle_research_file_action` into dedicated private methods with top-level imports.
 - [x] **Per-Shelf Notes Lens in Library Ribbon (Status + Notes)**
   * **Eliminated Generic "All Statuses Notes" Bucket**: Transformed the ribbon's `📝` button into a dedicated, status-paired lens (*Shelf + Notes*). It never mixes notes from unrelated statuses into an untamed bucket.
   * **Status-Aware Memory Reading**: Clicking `📝` on **Nope** shows only rejected films with notes (*"Why did I drop this?"*); on **Watched** it shows watched reflections; on **New discovery** or **Rewatch** it filters to those respective notes.

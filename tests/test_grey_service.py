@@ -149,20 +149,22 @@ def test_grey_ingests_published_journal_digest_and_on_demand_excerpt():
                 }
                 mock_post.return_value = mock_resp
 
-                # Ask about the published essay
-                service.chat("Based on my essay on Settlers, what should I watch?")
+                # Ask about the published essay (read-only question)
+                service.chat("Based on my essay The Desolation of Settlers, what should I watch?")
 
                 self_call = mock_post.call_args
                 payload = self_call.kwargs.get("json") or self_call[1].get("json")
                 system_instruction = payload["systemInstruction"]["parts"][0]["text"]
 
-                # Journal digest has the published essay title and tags
+                # Compact 1-line note title index has the published essay title
                 assert "The Desolation of Settlers" in system_instruction
                 assert "Unpublished Ramblings" not in system_instruction
 
-                # On-demand excerpt was pulled because user asked about their essay on Settlers
+                # Full note content was loaded in READ-ONLY mode without loading the 85-line editor manual
                 assert "Title: The Desolation of Settlers" in system_instruction
                 assert "Settlers strips away Martian romanticism" in system_instruction
+                assert "ACTIVE SKILL: READ-ONLY NOTE DISCUSSION" in system_instruction
+                assert "ACTIVE SKILL: NOTES & JOURNAL EDITOR" not in system_instruction
 
 
 def test_grey_ingests_all_watched_and_excluded_titles():
@@ -170,8 +172,20 @@ def test_grey_ingests_all_watched_and_excluded_titles():
         temp_db = Path(temp_dir) / "test.db"
         with patch.object(database, "DATABASE_PATH", temp_db):
             initialize_database()
-            # Seed a movie and marked as watched
+            # Seed a high-rated favorite, a watched movie, and an excluded movie
             with database.get_connection() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO movies (tmdb_id, title, release_date, vote_average, overview)
+                    VALUES (100, 'Fargo', '1996-03-08', 8.1, 'A Minnesota car salesman...')
+                    """
+                )
+                conn.execute(
+                    """
+                    INSERT INTO user_movie_data (tmdb_id, status, verdict, is_favorite, updated_at)
+                    VALUES (100, 'watched', 9.0, 1, '2026-10-17 12:00:00')
+                    """
+                )
                 conn.execute(
                     """
                     INSERT INTO movies (tmdb_id, title, release_date, vote_average, overview)
@@ -192,8 +206,8 @@ def test_grey_ingests_all_watched_and_excluded_titles():
                 )
                 conn.execute(
                     """
-                    INSERT INTO user_movie_data (tmdb_id, status, verdict, updated_at)
-                    VALUES (102, 'excluded', NULL, '2026-10-17 12:05:00')
+                    INSERT INTO user_movie_data (tmdb_id, status, verdict, notes, updated_at)
+                    VALUES (102, 'excluded', NULL, 'Mindless CGI slop', '2026-10-17 12:05:00')
                     """
                 )
 
@@ -222,10 +236,17 @@ def test_grey_ingests_all_watched_and_excluded_titles():
                 payload = self_call.kwargs.get("json") or self_call[1].get("json")
                 system_instruction = payload["systemInstruction"]["parts"][0]["text"]
 
-                assert "Sicario (7.0/10)" in system_instruction
+                # Base prompt contains only the compact taste fingerprint (Fargo + Transformers 5 sample) and get_shelf_movies tool
+                assert "Fargo" in system_instruction
                 assert "Transformers 5" in system_instruction
+                assert "Sicario (7.0/10)" not in system_instruction
+                assert "get_shelf_movies" in system_instruction
                 assert "LIBRARY, WATCHED & REWATCH AWARENESS" in system_instruction
                 assert "REWATCHING & REVISITING IS WELCOMED" in system_instruction
+
+                # And calling get_shelf_movies on demand returns the watched shelf including Sicario
+                shelf_out = service._execute_tool_call({"tool": "get_shelf_movies", "status": "watched", "limit": 20})
+                assert "Sicario (2015)" in shelf_out
 
 
 def test_grey_handles_markdown_fenced_json_and_plain_text():
@@ -1080,6 +1101,116 @@ def test_grey_reactions_sanitizes_nonexistent_files():
 
         res = service.chat("What do you think of Fargo?")
         assert res["reaction"] is None
+
+
+def test_grey_does_not_hijack_movie_on_common_four_letter_words():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+        temp_db = Path(temp_dir) / "test.db"
+        with patch.object(database, "DATABASE_PATH", temp_db):
+            initialize_database()
+            with database.get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO movies (tmdb_id, title, release_date, vote_average, overview) VALUES (999, 'Time', '2020-01-01', 7.0, 'Doc')"
+                )
+                conn.execute(
+                    "INSERT INTO user_movie_data (tmdb_id, status, updated_at) VALUES (999, 'watched', '2026-10-17 12:00:00')"
+                )
+
+            service = GreyService(db_path=str(temp_db))
+            service.api_key = "test_key"
+
+            with patch("requests.post") as mock_post:
+                mock_resp = MagicMock()
+                mock_resp.status_code = 200
+                mock_resp.json.return_value = {
+                    "candidates": [{"content": {"parts": [{"text": json.dumps({"text": "Reply", "action": None, "pills": []})}]}}]
+                }
+                mock_post.return_value = mock_resp
+
+                service.chat("What movie is worth my time tonight?")
+                payload = mock_post.call_args.kwargs.get("json") or mock_post.call_args[1].get("json")
+                system_instruction = payload["systemInstruction"]["parts"][0]["text"]
+                assert "Active Movie TMDB ID: None" in system_instruction
+
+
+def test_grey_two_tier_progressive_research_context_avoids_bloat_on_normal_turns():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+        temp_db = Path(temp_dir) / "test.db"
+        research_dir = Path(temp_dir) / "research"
+        research_dir.mkdir(parents=True, exist_ok=True)
+        (research_dir / "noir_notes.md").write_text("# Secret Noir Body Content 12345\n", encoding="utf-8")
+
+        with patch.object(database, "DATABASE_PATH", temp_db):
+            initialize_database()
+            service = GreyService(db_path=str(temp_db))
+            service.research_dir = research_dir
+            service.api_key = "test_key"
+
+            with patch("requests.post") as mock_post:
+                mock_resp = MagicMock()
+                mock_resp.status_code = 200
+                mock_resp.json.return_value = {
+                    "candidates": [{"content": {"parts": [{"text": json.dumps({"text": "Reply", "action": None, "pills": []})}]}}]
+                }
+                mock_post.return_value = mock_resp
+
+                # Normal movie turn: only filename summary, NOT full body content
+                service.chat("Is Sicario good?")
+                payload = mock_post.call_args.kwargs.get("json") or mock_post.call_args[1].get("json")
+                sys_normal = payload["systemInstruction"]["parts"][0]["text"]
+                assert "noir_notes.md" in sys_normal
+                assert "Secret Noir Body Content 12345" not in sys_normal
+
+                # Research turn: full body content is injected
+                service.chat("/research what is in noir_notes?")
+                payload_res = mock_post.call_args.kwargs.get("json") or mock_post.call_args[1].get("json")
+                sys_res = payload_res["systemInstruction"]["parts"][0]["text"]
+                assert "Secret Noir Body Content 12345" in sys_res
+
+
+def test_grey_on_demand_tool_call_fetches_note_and_shelf():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+        temp_db = Path(temp_dir) / "test.db"
+        with patch.object(database, "DATABASE_PATH", temp_db):
+            initialize_database()
+            repo = GeneralEntryRepository()
+            note = repo.create_entry(
+                entry_type="note",
+                title="Spoof Movies",
+                body="• Top Secret! (1984)\n• Airplane! (1980)",
+                tags=["parody", "comedy"],
+                status="published",
+            )
+            service = GreyService(db_path=str(temp_db))
+            service.api_key = "test_key"
+
+            hop1_reply = {
+                "text": "Fetching spoof note...",
+                "action": {
+                    "type": "tool_call",
+                    "params": {"tool": "get_note", "entry_id": note["entry_id"], "query": "parody"},
+                },
+                "pills": [],
+            }
+            hop2_reply = {
+                "text": "Your Spoof Movies note includes Top Secret! (1984) and Airplane! (1980).",
+                "action": {"type": "none"},
+                "pills": [],
+            }
+
+            with patch("requests.post") as mock_post:
+                resp1 = MagicMock()
+                resp1.status_code = 200
+                resp1.json.return_value = {"candidates": [{"content": {"parts": [{"text": json.dumps(hop1_reply)}]}}]}
+                resp2 = MagicMock()
+                resp2.status_code = 200
+                resp2.json.return_value = {"candidates": [{"content": {"parts": [{"text": json.dumps(hop2_reply)}]}}]}
+                mock_post.side_effect = [resp1, resp2]
+
+                res = service.chat("What movies are in my parody list?")
+                assert "Top Secret!" in res["text"]
+                assert mock_post.call_count == 2
+
 
 
 
