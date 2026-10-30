@@ -225,6 +225,8 @@ __pycache__/
 
 # Local database and media cache
 *.db
+*.db-shm
+*.db-wal
 data/*.db
 data/posters/
 data/banners/

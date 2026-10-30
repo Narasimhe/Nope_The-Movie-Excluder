@@ -256,6 +256,7 @@ const elements = {
   releaseYearTo: document.querySelector("#release-year-to"),
   minimumVotes: document.querySelector("#minimum-votes"),
   sortBy: document.querySelector("#sort-by"),
+  sortChipCloud: document.querySelector("#sort-chip-cloud"),
   includeUntracked: document.querySelector("#include-untracked"),
   notesQuery: document.querySelector("#notes-query"),
   favoriteOnly: document.querySelector("#favorite-only"),
@@ -507,9 +508,30 @@ function setSectionCopy({ kicker, title, description }) {
   elements.kicker.textContent = kicker;
   elements.title.textContent = title;
   elements.description.textContent = description;
-  if (elements.shelfCount) {
+  if (elements.shelfCount && (state.currentView === "entries" || state.currentView === "discover")) {
     elements.shelfCount.textContent = "";
   }
+}
+
+function updateShelfRibbonActiveState() {
+  const isAllShelvesActive = state.librarySearchScope === "all";
+  const effectiveView = isAllShelvesActive ? null : state.currentView;
+
+  const shelfHeartEl = document.querySelector(".shelf-favorites-btn");
+  if (shelfHeartEl) {
+    shelfHeartEl.classList.toggle("is-active", effectiveView === "favorites");
+  }
+  elements.navLinks.forEach((button) => {
+    const btnView = button.dataset.view;
+    const isPrimary = btnView === effectiveView;
+    const isPairedShelf = Boolean(
+      effectiveView === "movie-notes" &&
+      state.movieNotesShelfFilter &&
+      btnView === state.movieNotesShelfFilter
+    );
+    button.classList.toggle("is-active", Boolean(isPrimary || isPairedShelf));
+    button.classList.toggle("is-notes-paired", isPairedShelf);
+  });
 }
 
 function setActiveView(view) {
@@ -525,21 +547,7 @@ function setActiveView(view) {
     elements.filmographyToolbar.classList.add("is-hidden");
     state.activeFilmographyPerson = null;
   }
-  const shelfHeartEl = document.querySelector(".shelf-favorites-btn");
-  if (shelfHeartEl) {
-    shelfHeartEl.classList.toggle("is-active", view === "favorites");
-  }
-  elements.navLinks.forEach((button) => {
-    const btnView = button.dataset.view;
-    const isPrimary = btnView === view;
-    const isPairedShelf = Boolean(
-      view === "movie-notes" &&
-      state.movieNotesShelfFilter &&
-      btnView === state.movieNotesShelfFilter
-    );
-    button.classList.toggle("is-active", Boolean(isPrimary || isPairedShelf));
-    button.classList.toggle("is-notes-paired", isPairedShelf);
-  });
+  updateShelfRibbonActiveState();
 
   elements.masterTabs.forEach((tab) => {
     const tabType = tab.dataset.masterTab;
@@ -1354,13 +1362,17 @@ function getPickerValues(id, numeric = false) {
 
 function syncSortChips(val) {
   const currentVal = val || elements.sortBy?.value || "popularity.desc";
-  document.querySelectorAll(".sort-chip").forEach((chip) => {
+  const container = elements.sortChipCloud || document.querySelector("#sort-chip-cloud");
+  if (!container) return;
+  container.querySelectorAll(".sort-chip").forEach((chip) => {
     chip.classList.toggle("is-active", chip.dataset.value === currentVal);
   });
 }
 
 function initializeSortChips() {
-  document.querySelectorAll(".sort-chip").forEach((chip) => {
+  const container = elements.sortChipCloud || document.querySelector("#sort-chip-cloud");
+  if (!container) return;
+  container.querySelectorAll(".sort-chip").forEach((chip) => {
     chip.addEventListener("click", () => {
       const val = chip.dataset.value;
       if (elements.sortBy) {
@@ -1524,7 +1536,10 @@ function renderSelectedEntities(key) {
       renderActiveFilterTags();
       scheduleSearchStateSave();
       refreshCompactClouds();
-      if (key.startsWith("lib")) searchPersonalLibrary();
+      if (key.startsWith("lib")) {
+        if (typeof syncLibraryTargetBtn === "function") syncLibraryTargetBtn();
+        searchPersonalLibrary();
+      }
     });
     chip.append(name, remove);
     container.append(chip);
@@ -1542,7 +1557,10 @@ function renderSelectedEntities(key) {
       renderActiveFilterTags();
       scheduleSearchStateSave();
       refreshCompactClouds();
-      if (key.startsWith("lib")) searchPersonalLibrary();
+      if (key.startsWith("lib")) {
+        if (typeof syncLibraryTargetBtn === "function") syncLibraryTargetBtn();
+        searchPersonalLibrary();
+      }
     });
     container.append(clear);
   }
@@ -1567,7 +1585,10 @@ function addSelectedEntity(key, entity) {
     renderSelectedEntities(key);
     updateFilterPillBadges();
     renderActiveFilterTags();
-    if (key.startsWith("lib")) searchPersonalLibrary();
+    if (key.startsWith("lib")) {
+      if (typeof syncLibraryTargetBtn === "function") syncLibraryTargetBtn();
+      searchPersonalLibrary();
+    }
   }
 
   const config = ENTITY_CONFIG[key];
@@ -1691,7 +1712,8 @@ function initializeEntityPickers() {
             searchUrl += `&status=${encodeURIComponent(state.currentView)}`;
           }
           const response = await fetchJSON(searchUrl);
-          renderEntityResults(key, response.results || []);
+          const list = Array.isArray(response) ? response : (response.results || []);
+          renderEntityResults(key, list);
         } catch (error) {
           results.replaceChildren();
           const message = document.createElement("p");
@@ -2444,6 +2466,10 @@ function initializeOutsideClosing() {
   });
   document.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
+    if (state.currentView === "storage") {
+      exitStorageView();
+      return;
+    }
     document.querySelectorAll(".multi-picker-menu[open]").forEach((menu) => {
       menu.open = false;
     });
@@ -2888,13 +2914,20 @@ function renderMovies(movies, emptyContext = "library", total = null) {
           };
         }
       } else {
-        elements.emptyTitle.textContent = "No movie notes yet";
+        const shelfName = (state.movieNotesShelfFilter && VIEW_COPY[state.movieNotesShelfFilter])
+          ? VIEW_COPY[state.movieNotesShelfFilter].title
+          : "this shelf";
+        elements.emptyTitle.textContent = `No notes in ${shelfName}`;
         elements.emptyCopy.textContent =
-          "Open any movie and write your personal thoughts or reflections to collect them here.";
+          `You haven't written any private notes for movies in ${shelfName} yet.`;
         if (elements.emptySearchButton) {
-          elements.emptySearchButton.textContent = "Search movies";
+          elements.emptySearchButton.textContent = `View all ${shelfName}`;
           elements.emptySearchButton.classList.remove("is-hidden");
-          elements.emptySearchButton.onclick = () => elements.query?.focus();
+          elements.emptySearchButton.onclick = () => {
+            const target = state.movieNotesShelfFilter || "watched";
+            state.movieNotesShelfFilter = null;
+            loadShelf(target);
+          };
         }
       }
     } else {
@@ -3315,15 +3348,13 @@ function matchesLibraryShelfStatus(movie, shelfStatus) {
 }
 
 function getMovieNotesHeadingCopy() {
-  const base = VIEW_COPY["movie-notes"];
-  if (state.movieNotesShelfFilter && VIEW_COPY[state.movieNotesShelfFilter]) {
-    return {
-      kicker: base.kicker,
-      title: `Movie Notes · ${VIEW_COPY[state.movieNotesShelfFilter].title}`,
-      description: base.description,
-    };
-  }
-  return base;
+  const shelfKey = state.movieNotesShelfFilter;
+  const shelfTitle = (shelfKey && VIEW_COPY[shelfKey]) ? VIEW_COPY[shelfKey].title : "Library";
+  return {
+    kicker: "Personal memory",
+    title: `${shelfTitle} Notes`,
+    description: `Private thoughts and observations for movies in ${shelfTitle}.`,
+  };
 }
 
 const CONTINUOUS_ELIGIBLE_SHELVES = [
@@ -3486,6 +3517,8 @@ function applyLibraryFilters(targetPage = 1) {
   let { mode: searchMode, term: searchTerm } = parseLibrarySearchQuery(rawQuery);
   if (state.currentView === "movie-notes" && searchMode === "all") {
     searchMode = "notes";
+  } else if (searchMode === "all" && state.librarySearchTarget && state.librarySearchTarget !== "all") {
+    searchMode = state.librarySearchTarget;
   }
 
   const normSearchTerm = normalizeLibrarySearchText(searchTerm);
@@ -3660,7 +3693,7 @@ function applyLibraryFilters(targetPage = 1) {
       const subA = a._rankSubtier ?? a.search_subtier ?? 0;
       const subB = b._rankSubtier ?? b.search_subtier ?? 0;
       if (subA !== subB) return subA - subB;
-      return (a.title || "").localeCompare(b.title || "");
+      return compareBySortChip(a, b);
     });
   } else {
     list.sort(compareBySortChip);
@@ -3794,13 +3827,32 @@ function resetLibraryFilters({ silent = false } = {}) {
   state.isSearchingLibrary = false;
   elements.grid?.classList.remove("is-all-shelves-search");
   refreshCompactClouds();
+  markLibrarySearchClean();
+  if (typeof syncLibraryTargetBtn === "function") syncLibraryTargetBtn();
   if (silent) return;
   reloadCurrentLibraryView();
 }
 
 let librarySearchDebounce = null;
 
+function markLibrarySearchDirty() {
+  // Kept as passive dummy for layout parity with Discover
+}
+
+function markLibrarySearchClean() {
+  const btn = document.querySelector("#run-library-search");
+  if (btn) btn.classList.remove("is-dirty");
+}
+
+function markLibraryFilterDirty() {
+  updateFilterPillBadges();
+  if (typeof syncLibraryTargetBtn === "function") syncLibraryTargetBtn();
+  onLibraryFilterChange();
+}
+
 function onLibraryFilterChange() {
+  markLibrarySearchClean();
+  if (typeof syncLibraryTargetBtn === "function") syncLibraryTargetBtn();
   if (hasActiveLibraryFilters()) {
     searchPersonalLibrary();
   } else {
@@ -3822,8 +3874,10 @@ async function searchPersonalLibrary() {
     if (state.isSearchingLibrary) {
       state.isSearchingLibrary = false;
       elements.grid?.classList.remove("is-all-shelves-search");
+      updateShelfRibbonActiveState();
       await reloadCurrentLibraryView();
     } else {
+      updateShelfRibbonActiveState();
       applyLibraryFilters();
     }
     return;
@@ -3832,6 +3886,7 @@ async function searchPersonalLibrary() {
   const requestNumber = ++state.requestNumber;
   state.isSearchingLibrary = true;
   elements.grid?.classList.toggle("is-all-shelves-search", scope === "all");
+  updateShelfRibbonActiveState();
   elements.pagination.classList.add("is-hidden");
   const shelfTitle =
     state.currentView === "movie-notes"
@@ -3842,9 +3897,15 @@ async function searchPersonalLibrary() {
     title: scope === "all" ? "Personal Library" : shelfTitle,
     description: scope === "all" ? "Results from every shelf." : `Results from ${shelfTitle}.`,
   });
-  showLoadingCards();
-  elements.grid?.classList.toggle("is-all-shelves-search", scope === "all");
-  elements.count.textContent = `Searching ${scope === "all" ? "personal library" : "current shelf"}…`;
+
+  const hasExistingCards = Boolean(elements.grid?.children?.length && !elements.grid?.querySelector(".skeleton-card"));
+  if (!hasExistingCards) {
+    showLoadingCards();
+    elements.count.textContent = `Searching ${scope === "all" ? "personal library" : "current shelf"}…`;
+  } else {
+    elements.grid.style.transition = "opacity 120ms ease";
+    elements.grid.style.opacity = "0.75";
+  }
 
   try {
     let effectiveQuery = query;
@@ -3866,6 +3927,9 @@ async function searchPersonalLibrary() {
     const results = await fetchJSON(url);
     if (requestNumber !== state.requestNumber) return;
 
+    if (elements.grid) {
+      elements.grid.style.opacity = "1";
+    }
     const list = Array.isArray(results) ? results : (results.results || []);
     state.unfilteredShelfMovies = list;
     applyLibraryFilters();
@@ -3878,6 +3942,9 @@ async function searchPersonalLibrary() {
     if (elements.shelfCount) elements.shelfCount.textContent = countText;
   } catch (error) {
     if (requestNumber !== state.requestNumber) return;
+    if (elements.grid) {
+      elements.grid.style.opacity = "1";
+    }
     state.movies = [];
     state.unfilteredShelfMovies = [];
     renderMovies([]);
@@ -3897,14 +3964,15 @@ function setupLibraryFilters() {
     chip.dataset.genreName = name;
     chip.textContent = name;
     chip.addEventListener("click", () => {
-      if (state.libSelectedGenres.has(Number(id))) {
-        state.libSelectedGenres.delete(Number(id));
+      const gId = Number(id);
+      if (state.libSelectedGenres.has(gId)) {
+        state.libSelectedGenres.delete(gId);
         chip.classList.remove("is-active");
       } else {
-        state.libSelectedGenres.add(Number(id));
+        state.libSelectedGenres.add(gId);
         chip.classList.add("is-active");
       }
-      onLibraryFilterChange();
+      markLibraryFilterDirty();
     });
     elements.libGenresCloud.append(chip);
   });
@@ -3924,15 +3992,16 @@ function setupLibraryFilters() {
         state.libSelectedLanguages.add(code);
         chip.classList.add("is-active");
       }
-      onLibraryFilterChange();
+      markLibraryFilterDirty();
     });
     elements.libLanguagesCloud.append(chip);
   });
 
-  // Sort chips — radio behaviour (one active at a time)
+  // Sort chips — robust radio behaviour (clicking a chip firmly selects it without flip-back)
   if (elements.libSortCloud) {
     elements.libSortCloud.querySelectorAll(".filter-chip").forEach((chip) => {
       chip.addEventListener("click", () => {
+        if (chip.classList.contains("is-active")) return;
         elements.libSortCloud.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("is-active"));
         chip.classList.add("is-active");
         applyLibraryFilters(1);
@@ -3940,10 +4009,32 @@ function setupLibraryFilters() {
     });
   }
 
+  const runLibSearchBtn = document.querySelector("#run-library-search");
+  if (runLibSearchBtn) {
+    runLibSearchBtn.addEventListener("click", () => {
+      markLibrarySearchClean();
+      document.querySelectorAll("#library-pills-bar .sidebar-accordion-trigger").forEach((p) => {
+        p.classList.remove("is-open");
+        p.setAttribute("aria-expanded", "false");
+        const c = document.getElementById(p.dataset.target);
+        if (c) c.classList.add("is-collapsed");
+      });
+      onLibraryFilterChange();
+    });
+  }
+
   if (elements.libraryFilterQuery) {
     elements.libraryFilterQuery.addEventListener("input", () => {
+      syncLibraryTargetBtn();
       clearTimeout(librarySearchDebounce);
       librarySearchDebounce = setTimeout(searchPersonalLibrary, 250);
+    });
+    elements.libraryFilterQuery.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        clearTimeout(librarySearchDebounce);
+        markLibrarySearchClean();
+        searchPersonalLibrary();
+      }
     });
   }
 
@@ -3958,11 +4049,78 @@ function setupLibraryFilters() {
   const TARGET_ICONS = {
     all: '<svg class="target-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></svg>',
     title: '<svg class="target-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h16v3"/><line x1="12" y1="4" x2="12" y2="20"/></svg>',
+    plot: '<svg class="target-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h12"/></svg>',
     notes: '<svg class="target-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
   };
 
+  const ENTITY_ICONS = {
+    keyword: '<svg class="target-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
+    director: '<svg class="target-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>',
+    actor: '<svg class="target-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
+    multi: '<svg class="target-icon" viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>'
+  };
+
+  function getActiveLibraryEntityInfo() {
+    const kw = state.selectedEntities?.libKeywords || [];
+    const dirs = state.selectedEntities?.libDirectors || [];
+    const actors = state.selectedEntities?.libActors || [];
+    const total = kw.length + dirs.length + actors.length;
+    if (total === 0) return null;
+
+    if (kw.length > 0 && dirs.length === 0 && actors.length === 0) {
+      const raw = (kw[0].raw_name || kw[0].name || "").replace(/^[🏷️\s]+/, "").trim();
+      return {
+        type: "keyword",
+        name: raw,
+        label: `${raw}${kw.length > 1 ? ` +${kw.length - 1}` : ""} ×`,
+        tooltip: `Active theme: ${raw} (Click to reset theme)`,
+        placeholder: `Search movies with theme "${raw}"…`,
+        icon: ENTITY_ICONS.keyword
+      };
+    }
+    if (dirs.length > 0 && kw.length === 0 && actors.length === 0) {
+      const name = dirs[0].name || "Director";
+      return {
+        type: "director",
+        name,
+        label: `${name}${dirs.length > 1 ? ` +${dirs.length - 1}` : ""} ×`,
+        tooltip: `Active director: ${name} (Click to reset director)`,
+        placeholder: `Search movies directed by ${name}…`,
+        icon: ENTITY_ICONS.director
+      };
+    }
+    if (actors.length > 0 && kw.length === 0 && dirs.length === 0) {
+      const name = actors[0].name || "Actor";
+      return {
+        type: "actor",
+        name,
+        label: `${name}${actors.length > 1 ? ` +${actors.length - 1}` : ""} ×`,
+        tooltip: `Active actor: ${name} (Click to reset actor)`,
+        placeholder: `Search movies starring ${name}…`,
+        icon: ENTITY_ICONS.actor
+      };
+    }
+    return {
+      type: "multi",
+      name: "Filters",
+      label: `${total} filters ×`,
+      tooltip: `${total} active entity filters (Click to reset)`,
+      placeholder: "Search within active filters…",
+      icon: ENTITY_ICONS.multi
+    };
+  }
+
   function updateLibrarySearchPlaceholder() {
     if (!elements.libraryFilterQuery) return;
+    const hasQueryText = Boolean((elements.libraryFilterQuery?.value || "").trim());
+    const entityInfo = (!hasQueryText) ? getActiveLibraryEntityInfo() : null;
+
+    if (entityInfo) {
+      elements.libraryFilterQuery.placeholder = entityInfo.placeholder;
+      elements.libraryFilterQuery.title = entityInfo.placeholder;
+      return;
+    }
+
     const scope = state.librarySearchScope || "shelf";
     const target = state.librarySearchTarget || "all";
 
@@ -3980,14 +4138,17 @@ function setupLibraryFilters() {
     let text = "";
     if (state.currentView === "movie-notes" && !state.movieNotesShelfFilter) {
       if (target === "title") text = "Search titles in notes…";
+      else if (target === "plot") text = "Search plots in notes…";
       else if (target === "notes") text = "Search note text…";
       else text = "Search all notes…";
     } else if (scope === "shelf") {
       if (target === "title") text = `Search titles in ${shelfName}…`;
+      else if (target === "plot") text = `Search plots in ${shelfName}…`;
       else if (target === "notes") text = `Search notes in ${shelfName}…`;
       else text = `Search in ${shelfName}…`;
     } else {
       if (target === "title") text = "Search titles across all shelves…";
+      else if (target === "plot") text = "Search plots across all shelves…";
       else if (target === "notes") text = "Search notes across all shelves…";
       else text = "Search entire library…";
     }
@@ -4010,44 +4171,76 @@ function setupLibraryFilters() {
       : "Search scope: This shelf (Click to search all shelves)";
     scopeToggleBtn.setAttribute("aria-label", isAll ? "Search scope: All shelves" : "Search scope: This shelf");
     updateLibrarySearchPlaceholder();
+    updateShelfRibbonActiveState();
   }
 
   function syncLibraryTargetBtn() {
     if (!targetToggleBtn) return;
-    const curTarget = state.librarySearchTarget || "all";
+    const hasQueryText = Boolean((elements.libraryFilterQuery?.value || "").trim());
+    const entityInfo = (!hasQueryText) ? getActiveLibraryEntityInfo() : null;
+
     const iconWrap = targetToggleBtn.querySelector("#library-target-icon");
     const textSpan = targetToggleBtn.querySelector("#library-target-text");
-    if (iconWrap) iconWrap.innerHTML = TARGET_ICONS[curTarget] || TARGET_ICONS.all;
-    if (textSpan) {
-      const labels = { all: "All", title: "Title", notes: "Notes" };
-      textSpan.textContent = labels[curTarget] || "All";
+
+    if (entityInfo) {
+      targetToggleBtn.dataset.isEntity = "true";
+      targetToggleBtn.classList.add("is-entity-target");
+      targetToggleBtn.classList.remove("is-active-target");
+      if (iconWrap) iconWrap.innerHTML = entityInfo.icon;
+      if (textSpan) textSpan.textContent = entityInfo.label;
+      targetToggleBtn.title = entityInfo.tooltip;
+      targetToggleBtn.setAttribute("aria-label", entityInfo.tooltip);
+    } else {
+      targetToggleBtn.dataset.isEntity = "false";
+      targetToggleBtn.classList.remove("is-entity-target");
+      const curTarget = state.librarySearchTarget || "all";
+      if (iconWrap) iconWrap.innerHTML = TARGET_ICONS[curTarget] || TARGET_ICONS.all;
+      if (textSpan) {
+        const labels = { all: "All", title: "Title", plot: "Plot", notes: "Notes" };
+        textSpan.textContent = labels[curTarget] || "All";
+      }
+      targetToggleBtn.classList.toggle("is-active-target", curTarget !== "all");
+      const titles = {
+        all: "Search field: All (Click to search Titles only)",
+        title: "Search field: Title (Click to search Plot synopsis only)",
+        plot: "Search field: Plot (Click to search Notes only)",
+        notes: "Search field: Notes (Click to search All fields)"
+      };
+      targetToggleBtn.title = titles[curTarget] || "Search field";
+      targetToggleBtn.setAttribute("aria-label", titles[curTarget] || "Search field");
     }
-    targetToggleBtn.classList.toggle("is-active-target", curTarget !== "all");
-    const titles = {
-      all: "Search field: All (Click to search Titles only)",
-      title: "Search field: Title (Click to search Notes only)",
-      notes: "Search field: Notes (Click to search All fields)"
-    };
-    targetToggleBtn.title = titles[curTarget] || "Search field";
-    targetToggleBtn.setAttribute("aria-label", titles[curTarget] || "Search field");
     updateLibrarySearchPlaceholder();
   }
+  window.syncLibraryTargetBtn = syncLibraryTargetBtn;
 
   if (scopeToggleBtn) {
     syncLibraryScopeBtn();
     scopeToggleBtn.addEventListener("click", () => {
       state.librarySearchScope = (state.librarySearchScope === "all") ? "shelf" : "all";
       syncLibraryScopeBtn();
-      if (hasActiveLibraryFilters() || (elements.libraryFilterQuery?.value || "").trim()) {
-        searchPersonalLibrary();
-      }
+      searchPersonalLibrary();
     });
   }
 
   if (targetToggleBtn) {
     syncLibraryTargetBtn();
     targetToggleBtn.addEventListener("click", () => {
-      const cycle = { all: "title", title: "notes", notes: "all" };
+      if (targetToggleBtn.dataset.isEntity === "true") {
+        state.selectedEntities.libKeywords = [];
+        state.selectedEntities.libDirectors = [];
+        state.selectedEntities.libActors = [];
+        renderSelectedEntities("libKeywords");
+        renderSelectedEntities("libDirectors");
+        renderSelectedEntities("libActors");
+        targetToggleBtn.dataset.isEntity = "false";
+        syncLibraryTargetBtn();
+        updateFilterPillBadges();
+        markLibrarySearchClean();
+        searchPersonalLibrary();
+        return;
+      }
+
+      const cycle = { all: "title", title: "plot", plot: "notes", notes: "all" };
       state.librarySearchTarget = cycle[state.librarySearchTarget || "all"] || "all";
       syncLibraryTargetBtn();
       if (hasActiveLibraryFilters() || (elements.libraryFilterQuery?.value || "").trim()) {
@@ -4091,16 +4284,35 @@ function setupLibraryFilters() {
     });
   }
 
+  let libYearDebounce = null;
   if (elements.libYearFrom) {
     elements.libYearFrom.addEventListener("input", () => {
-      clearTimeout(librarySearchDebounce);
-      librarySearchDebounce = setTimeout(onLibraryFilterChange, 250);
+      clearTimeout(libYearDebounce);
+      libYearDebounce = setTimeout(() => {
+        markLibraryFilterDirty();
+      }, 250);
+    });
+    elements.libYearFrom.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        clearTimeout(libYearDebounce);
+        onLibraryFilterChange();
+      }
     });
   }
   if (elements.libYearTo) {
     elements.libYearTo.addEventListener("input", () => {
-      clearTimeout(librarySearchDebounce);
-      librarySearchDebounce = setTimeout(onLibraryFilterChange, 250);
+      clearTimeout(libYearDebounce);
+      libYearDebounce = setTimeout(() => {
+        markLibraryFilterDirty();
+      }, 250);
+    });
+    elements.libYearTo.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        clearTimeout(libYearDebounce);
+        onLibraryFilterChange();
+      }
     });
   }
   if (elements.resetLibraryFilters) {
@@ -4195,8 +4407,14 @@ async function loadShelf(view, page = 1) {
     return;
   }
 
-  showLoadingCards();
-  elements.count.textContent = "Loading…";
+  const hasExistingCards = Boolean(elements.grid?.children?.length && !elements.grid?.querySelector(".skeleton-card"));
+  if (!hasExistingCards) {
+    showLoadingCards();
+    elements.count.textContent = "Loading…";
+  } else {
+    elements.grid.style.transition = "opacity 120ms ease";
+    elements.grid.style.opacity = "0.75";
+  }
 
   try {
     // Backend collection query (legacy endpoints: /movies/status/, /movies/notes?page=)
@@ -4204,7 +4422,7 @@ async function loadShelf(view, page = 1) {
     if (requestNumber !== state.requestNumber) {
       return;
     }
-
+    if (elements.grid) elements.grid.style.opacity = "1";
     const allFetched = Array.isArray(results) ? results : (results.results || []);
     state.unfilteredShelfMovies = allFetched;
     state.totalResults = allFetched.length;
@@ -4213,7 +4431,7 @@ async function loadShelf(view, page = 1) {
     if (requestNumber !== state.requestNumber) {
       return;
     }
-
+    if (elements.grid) elements.grid.style.opacity = "1";
     state.movies = [];
     state.unfilteredShelfMovies = [];
     renderMovies([]);
@@ -4251,7 +4469,10 @@ async function loadMovieNotes(page = 1) {
   elements.count.textContent = "Loading…";
 
   try {
-    const results = await fetchJSON("/movies/library/search?status=movie-notes");
+    const statusParam = state.movieNotesShelfFilter
+      ? `movie-notes:${state.movieNotesShelfFilter}`
+      : "movie-notes";
+    const results = await fetchJSON(`/movies/library/search?status=${encodeURIComponent(statusParam)}`);
     if (requestNumber !== state.requestNumber) return;
 
     const allFetched = Array.isArray(results) ? results : (results.results || []);
@@ -4707,8 +4928,8 @@ function updateProfileButtons() {
     const textSpan = elements.saveProfile.querySelector(".preset-action-text");
     const svgIcon = elements.saveProfile.querySelector(".preset-action-svg");
     if (hasPreference) {
-      if (textSpan) textSpan.textContent = `Rename preset "${preference.name}"`;
-      elements.saveProfile.title = `Rename "${preference.name}" preset`;
+      if (textSpan) textSpan.textContent = `Rename "${preference.name}"`;
+      elements.saveProfile.title = `Rename "${preference.name}"`;
       elements.saveProfile.dataset.mode = "edit";
       if (svgIcon) {
         svgIcon.innerHTML = '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>';
@@ -4874,7 +5095,7 @@ function renderProfileWorkshop() {
     const nameSpan = document.createElement("span");
     nameSpan.className = "chip-name";
     nameSpan.textContent = prof.name;
-    nameSpan.title = `${prof.name} (Select via ribbon above)`;
+    nameSpan.title = isActive ? `${prof.name} (Active preset — click to deselect)` : `${prof.name} (Click to select for search or renaming)`;
 
     const delBtn = document.createElement("button");
     delBtn.type = "button";
@@ -4887,6 +5108,20 @@ function renderProfileWorkshop() {
       await deleteProfileById(Number(prof.id));
       const updated = getRibbonProfiles().filter((k) => Number(k) !== Number(prof.id));
       saveRibbonProfiles(updated);
+    });
+
+    chip.addEventListener("click", async (e) => {
+      if (e.target.closest(".chip-pin-btn") || e.target.closest(".chip-del-btn")) return;
+      const isCurrent = Number(elements.profileSelect?.value) === Number(prof.id);
+      if (elements.profileSelect) {
+        elements.profileSelect.value = isCurrent ? "" : String(prof.id);
+        await applySelectedProfile();
+        renderProfileWorkshop();
+        renderProfileRibbon();
+        if (!isCurrent) {
+          runDiscoverySearch();
+        }
+      }
     });
 
     chip.append(pinBtn, nameSpan, delBtn);
@@ -4976,13 +5211,13 @@ function openProfileDialog(mode) {
   elements.profileNameForm.reset();
   elements.profileName.value = mode === "edit" ? preference.name : "";
   elements.profileDialogTitle.textContent = mode === "edit"
-    ? "Rename search profile"
+    ? `Rename "${preference.name}"`
     : "Save search profile";
   elements.profileDialogCopy.textContent = mode === "edit"
     ? `Enter a new name for "${preference.name}".`
     : "Save the current filters so you can use them again.";
   elements.profileSubmit.textContent = mode === "edit"
-    ? "Rename profile"
+    ? "Rename"
     : "Save profile";
   elements.profileDialog.showModal();
   elements.profileName.focus();
@@ -7935,7 +8170,29 @@ function formatBytes(value) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function exitStorageView() {
+  const targetView = state.previousViewBeforeStorage || "discover";
+  if (targetView === "movie-notes") {
+    loadMovieNotes(1);
+  } else if (targetView === "entries") {
+    loadEntries(1);
+  } else if (targetView && targetView !== "discover" && targetView in VIEW_COPY) {
+    setActiveView(targetView);
+    if (elements.libraryFiltersWorkspace) elements.libraryFiltersWorkspace.classList.remove("is-hidden");
+    if (elements.discoverWorkspace) elements.discoverWorkspace.classList.add("is-hidden");
+    setAuxiliaryView(null);
+    applyLibraryFilters(1);
+  } else {
+    activateDiscoverView();
+  }
+}
+
 async function loadStorage() {
+  if (state.currentView && state.currentView !== "storage") {
+    state.previousViewBeforeStorage = state.currentView;
+  } else if (!state.previousViewBeforeStorage) {
+    state.previousViewBeforeStorage = "discover";
+  }
   state.mode = "storage";
   state.currentView = "storage";
   setActiveView(null);
@@ -7944,21 +8201,65 @@ async function loadStorage() {
   try {
     const summary = await fetchJSON("/storage");
     const stats = [
-      [formatBytes(summary.size_bytes), "SQLite database size"],
-      [summary.cached_movies, "Cached movie records"],
-      [summary.personal_movies, "Movies with personal status/data"],
-      [summary.old_unprotected_cache_movies, "Disposable cache older than 90 days"],
-      [summary.soft_deleted_entries, "Deleted Notes retained"],
+      {
+        value: formatBytes(summary.size_bytes),
+        label: "Database Size",
+        desc: "SQLite on disk",
+        icon: "database"
+      },
+      {
+        value: typeof summary.cached_movies === "number" ? summary.cached_movies.toLocaleString() : summary.cached_movies,
+        label: "Cached Movies",
+        desc: "Offline TMDB cache",
+        icon: "movie"
+      },
+      {
+        value: typeof summary.personal_movies === "number" ? summary.personal_movies.toLocaleString() : summary.personal_movies,
+        label: "Personal Library",
+        desc: "Shelves & ratings",
+        icon: "bookmark"
+      },
+      {
+        value: typeof summary.old_unprotected_cache_movies === "number" ? summary.old_unprotected_cache_movies.toLocaleString() : summary.old_unprotected_cache_movies,
+        label: "Stale Cache",
+        desc: "Untouched for 90+ days",
+        icon: "auto_delete"
+      },
+      {
+        value: typeof summary.soft_deleted_entries === "number" ? summary.soft_deleted_entries.toLocaleString() : summary.soft_deleted_entries,
+        label: "Trash Bin",
+        desc: "Deleted notes retained",
+        icon: "delete_outline"
+      },
     ];
     elements.storageSummary.replaceChildren();
-    stats.forEach(([value, label]) => {
+    stats.forEach((item) => {
       const card = document.createElement("div");
       card.className = "storage-stat";
-      const strong = document.createElement("strong");
-      const span = document.createElement("span");
-      strong.textContent = String(value);
-      span.textContent = label;
-      card.append(strong, span);
+
+      const top = document.createElement("div");
+      top.className = "storage-stat-top";
+
+      const label = document.createElement("span");
+      label.className = "storage-stat-label";
+      label.textContent = item.label;
+
+      const glyph = document.createElement("span");
+      glyph.className = "material-symbols-outlined storage-stat-glyph";
+      glyph.setAttribute("aria-hidden", "true");
+      glyph.textContent = item.icon;
+
+      top.append(label, glyph);
+
+      const val = document.createElement("div");
+      val.className = "storage-stat-value";
+      val.textContent = String(item.value);
+
+      const desc = document.createElement("div");
+      desc.className = "storage-stat-desc";
+      desc.textContent = item.desc;
+
+      card.append(top, val, desc);
       elements.storageSummary.append(card);
     });
   } catch (error) {
@@ -8492,9 +8793,16 @@ if (elements.clearNotesSearch) {
 }
 
 if (elements.refreshFeed) {
-  elements.refreshFeed.addEventListener("click", () => {
+  elements.refreshFeed.addEventListener("click", async () => {
+    elements.refreshFeed.classList.add("is-loading");
     clearDiscoveryCache();
-    runDiscoverySearch({ forceRefresh: true });
+    try {
+      await runDiscoverySearch({ forceRefresh: true });
+    } finally {
+      setTimeout(() => {
+        elements.refreshFeed?.classList.remove("is-loading");
+      }, 400);
+    }
   });
 }
 
@@ -8546,12 +8854,11 @@ elements.navLinks.forEach((button) => {
         loadShelf(exitTarget);
         return;
       }
-      if (normalLibraryShelves.includes(state.currentView)) {
-        state.lastNormalShelf = state.currentView;
-        state.movieNotesShelfFilter = state.currentView;
-      } else {
-        state.movieNotesShelfFilter = null;
-      }
+      const targetShelf = normalLibraryShelves.includes(state.currentView)
+        ? state.currentView
+        : (state.lastNormalShelf || "watched");
+      state.lastNormalShelf = targetShelf;
+      state.movieNotesShelfFilter = targetShelf;
       loadMovieNotes(1);
       return;
     }
@@ -8559,16 +8866,12 @@ elements.navLinks.forEach((button) => {
     if (state.currentView === "movie-notes" && normalLibraryShelves.includes(clickedView)) {
       if (state.movieNotesShelfFilter === clickedView) {
         state.movieNotesShelfFilter = null;
-      } else {
-        state.movieNotesShelfFilter = clickedView;
+        loadShelf(clickedView);
+        return;
       }
-      setActiveView("movie-notes");
-      if (state.isSearchingLibrary && state.librarySearchScope === "shelf") {
-        searchPersonalLibrary();
-      } else {
-        setSectionCopy(getMovieNotesHeadingCopy());
-        applyLibraryFilters(1);
-      }
+      state.movieNotesShelfFilter = clickedView;
+      state.lastNormalShelf = clickedView;
+      loadMovieNotes(1);
       return;
     }
 
@@ -9335,10 +9638,13 @@ elements.cleanupCache.addEventListener("click", async () => {
   elements.cleanupCache.disabled = true;
   try {
     const result = await fetchJSON("/storage/cleanup-cache?days=90", { method: "POST" });
-    feedback(elements.storageFeedback, `${result.removed_movies} disposable movie records removed.`);
+    const msg = `${result.removed_movies} disposable movie records removed.`;
+    feedback(elements.storageFeedback, msg);
+    showNotice(msg, "success");
     await loadStorage();
   } catch (error) {
     feedback(elements.storageFeedback, error.message, "error");
+    showNotice(error.message, "error");
   } finally {
     elements.cleanupCache.disabled = false;
   }
@@ -9349,10 +9655,13 @@ elements.purgeDeletedEntries.addEventListener("click", async () => {
   elements.purgeDeletedEntries.disabled = true;
   try {
     const result = await fetchJSON("/storage/deleted-entries", { method: "DELETE" });
-    feedback(elements.storageFeedback, `${result.removed_entries} deleted entries permanently removed.`);
+    const msg = `${result.removed_entries} deleted entries permanently removed.`;
+    feedback(elements.storageFeedback, msg);
+    showNotice(msg, "success");
     await loadStorage();
   } catch (error) {
     feedback(elements.storageFeedback, error.message, "error");
+    showNotice(error.message, "error");
   } finally {
     elements.purgeDeletedEntries.disabled = false;
   }
@@ -9382,9 +9691,12 @@ exportNotesMdBtn?.addEventListener("click", async () => {
     a.download = `nope-notes-${new Date().toISOString().slice(0, 10)}.md`;
     a.click();
     URL.revokeObjectURL(url);
-    feedback(elements.storageFeedback, `Exported ${entries.length} notes to Markdown.`);
+    const msg = `Exported ${entries.length} notes to Markdown.`;
+    feedback(elements.storageFeedback, msg);
+    showNotice(msg, "success");
   } catch (error) {
     feedback(elements.storageFeedback, error.message, "error");
+    showNotice(error.message, "error");
   } finally {
     exportNotesMdBtn.disabled = false;
   }
@@ -9410,9 +9722,12 @@ exportLibraryJsonBtn?.addEventListener("click", async () => {
     a.download = `nope-library-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    feedback(elements.storageFeedback, "Exported full library & notes JSON snapshot.");
+    const msg = "Exported full library & notes JSON snapshot.";
+    feedback(elements.storageFeedback, msg);
+    showNotice(msg, "success");
   } catch (error) {
     feedback(elements.storageFeedback, error.message, "error");
+    showNotice(error.message, "error");
   } finally {
     exportLibraryJsonBtn.disabled = false;
   }

@@ -4,6 +4,34 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
+- [ ] **Grey Service Intelligence & Architecture Overhaul (`app/grey/service.py`)**
+  * **Goal**: Make Grey genuinely intelligent, context-aware, fast, and predictable by fixing context/action hijacking bugs, eliminating N+1 database queries and redundant disk/network overhead, unifying prompt/skill routing, and decomposing the 1,020-line `chat()` method into clean, modular components.
+  * **1. Context & Intelligence Fixes**:
+    * **Eliminate Accidental Movie Hijacking (`lines 683–714`)**: Separate *Currently Open Movie on Screen* (`inspected_movie_id` passed by UI) from *Mentioned Library Movie Lookup*. Remove the naive 4-letter word substring matcher (`len(w) >= 4 and w in t_norm`) that latches onto random movies on everyday words ("time", "good", "dark"), overwrites `inspected_movie_id`, and triggers background `get_related_movies()` calls.
+    * **Eliminate Accidental Note Hijacking (`lines 748–764`)**: Stop matching any 5-letter word from 50 journal note titles (`len(word) > 4`) when no note is open on screen, which falsely injects up to 25,000 characters of an unrelated note as the active screen focus. Require explicit whole-title or clear note reference matching.
+    * **Fix Accidental "Pro Model" Slowdowns (`lines 596–602`)**: Remove overly broad single-word triggers like `"rating"`, `"review"`, or `"director"` from `research_triggers` so simple commands like *"give this a 7 rating"* stay on fast Gemini Flash instead of routing to slow Gemini Pro.
+    * **Remove Hardcoded `set_movie_status` Action Hijacking (`lines 1244–1305`)**: Stop overriding a valid `set_movie_status` action into a journal blog post `update_entry` just because the message contains the word *"note"* or *"list"* (e.g., *"mark as watched and add a note"*). Only route to journal `update_entry` when a specific journal post/entry is actually targeted.
+    * **Richer Library & Personal Notes Context (`get_taste_dossier()`)**: Include personal movie notes (`user_movie_data.notes`) and release years in the dossier so Grey can accurately answer questions about your personal movie notes across shelves.
+  * **2. Prompt & Skill Routing Cleanup**:
+    * **Eliminate Duplicate Skill Directives (`SKILLS_REGISTRY` vs. `app/grey/prompts/skills/*.md`)**: Stop duplicating prompt instructions in both Python `SKILLS_REGISTRY` strings and `.md` files (which currently get concatenated together and sent twice). Keep `SKILLS_REGISTRY` as lightweight metadata and store all prompt instructions cleanly in the markdown files.
+    * **Composable Multi-Skill Routing (`lines 866–896`)**: Replace the mutually exclusive `if/elif` single-skill selector with composable skill loading—keeping core library operations active while layering `notes_editor.md`, `research_partner.md`, `related_curator.md`, or `filmography_explorer.md` whenever relevant to screen state or user intent.
+  * **3. Database, Disk & Network Performance**:
+    * **Consolidate 16+ SQLite Queries & Fix N+1 Loop (`get_taste_dossier()`)**: Eliminate the `N+1` tag query loop (`lines 230–243`) and duplicate `general_entries` query (`lines 246–254`), consolidating the dossier extraction into a few fast queries with lightweight in-memory caching invalidated on library/note updates.
+    * **Persistent HTTP Connection Pooling (`requests.Session()`)**: Replace bare `requests.post()` calls with a persistent `self.http_session = requests.Session()` on `GreyService` to reuse TCP/TLS connections to Google's Gemini endpoint (saving 150–300ms per turn) and tune per-model timeouts.
+    * **In-Memory Prompt & Reaction Caching**: Cache `grey_core.md`, skill `.md` files, and `reactions.json` in memory with lightweight `mtime`-aware hot-reload support, while keeping `data/research/*.md` dynamic.
+  * **4. Code Structure & Modularity**:
+    * **Decompose `chat()` & Extract Action Handlers**: Extract `_handle_create_draft`, `_handle_batch_set_movie_status`, `_handle_set_movie_status`, `_handle_update_entry`, and `_handle_research_file` (plus context/prompt builders) into clean private methods so `chat()` becomes a concise ~120-line orchestrator.
+    * **Extract Note Formatter Module (`app/grey/note_formatter.py`)**: Move the 250-line `_deduplicate_and_format_note_body()` regex/markdown formatter out of `service.py` into its own dedicated helper module.
+    * **Top-Level Imports & Service Initialization**: Hoist scattered inline imports (`MovieService`, `UserMovieRepository`, `GeneralEntryRepository`) to module top-level and initialize them cleanly in `GreyService.__init__()`.
+
+- [ ] **Dedicated API & Network Telemetry Space (Footer / System View)**
+  * **Goal**: Provide a clean, dedicated space (similar to the Storage page, accessible via footer or system navigation) that visualizes outbound TMDB API consumption, cache efficiency, and network health without cluttering the main footer or UI.
+  * **Key Components**:
+    * **Outbound TMDB Metering**: Track total requests made during the session and across historical runs (today/cumulative).
+    * **Cache Savings Ratio**: Quantify bandwidth and network savings achieved by local SQLite caching (e.g. `X live requests vs. Y queries served from local cache`).
+    * **Rate Limit & Health Telemetry**: Display circuit-breaker status, response latencies, and TMDB throttle/health state.
+    * **Dedicated Zen Surface**: Kept cleanly out of the primary footer surface into its own harmonious memory page/modal.
+
 - [ ] **Pluggable Critic Personalities & Roger Ebert Lens for Grey**
   * **Goal**: Replace rigid, repetitive buzzword lexicons with deep, authentic critical perspectives. Allow Grey to channel legendary film critics—starting with Roger Ebert—to provide nuanced, humane, and varied critiques.
   * **Key Components**:
@@ -16,6 +44,58 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Per-Shelf Notes Lens in Library Ribbon (Status + Notes)**
+  * **Eliminated Generic "All Statuses Notes" Bucket**: Transformed the ribbon's `📝` button into a dedicated, status-paired lens (*Shelf + Notes*). It never mixes notes from unrelated statuses into an untamed bucket.
+  * **Status-Aware Memory Reading**: Clicking `📝` on **Nope** shows only rejected films with notes (*"Why did I drop this?"*); on **Watched** it shows watched reflections; on **New discovery** or **Rewatch** it filters to those respective notes.
+  * **Fluid Shelf Switching**: Clicking between shelves while the `📝` lens is active smoothly transitions to the new shelf's notes (e.g. *Watched Notes* $\rightarrow$ *Nope Notes*) with both the shelf chip and the note icon highlighted.
+  * **1-Click Lens Dismissal**: Clicking `📝` again (or clicking the currently paired shelf chip) deactivates the lens and instantly restores the full shelf.
+  * **Contextual Empty States & Headings**: Displays tailored headers (e.g. *Nope Notes*, *Watched Notes*) and contextual empty states with a direct 1-click *"View all [Shelf]"* fallback.
+- [x] **Rock-Solid Library Sort Chips & Tactile "See Results" Button Polish**
+  * **Eliminated Sort Re-Click Snap-Back (Mouse Bounce Protection)**: Replaced fragile toggle-off logic on Library sort chips with idempotent radio selection (`if (chip.classList.contains("is-active")) return;`). Micro-double-clicks, switch bounces, or repeated clicks no longer accidentally flip the selection back to "Recently updated".
+  * **Search-Aware Sorting Tiebreaker**: Updated `applyLibraryFilters` so that selecting a sort chip (e.g. "Newest first", "Oldest first", "Title A-Z") orders movies within search relevance tiers instead of hardcoding title sort.
+  * **Pointer Event Pass-Through**: Added `pointer-events: none` to all inner elements inside `.sort-chip`, ensuring clicks hit the button directly without text-selection or drag hiccups.
+  * **Tactile "See Results" Inner Shade & Refined Ivory Typography**: Applied a rich subtle vertical gradient (`linear-gradient(180deg, rgba(212, 175, 55, 0.22) 0%, rgba(180, 140, 40, 0.12) 100%)`) with an inset top highlight (`inset 0 1px 0 rgba(255, 255, 255, 0.12)`) and warm ivory text (`#F3EFE6`), removing hollow blackness and harsh neon yellow.
+- [x] **Butter-Smooth Library Scope Toggling & Flicker-Free Transitions**
+  * **Eliminated Skeleton Strobing**: Replaced full-grid DOM destruction and aggressive 10-skeleton card flashing on fast local SQLite searches with an in-place opacity crossfade (`opacity: 0.75 -> 1.0`), keeping existing movie cards stable until results load.
+  * **Always-Active Scope Switching**: Clicking `[ This shelf ]` / `[ All shelves ]` now reliably executes the transition at all times (including when the search box is empty), cleanly switching between the current shelf and all personal library movies.
+  * **Stable Shelf Counter**: Prevented `setSectionCopy` from wiping the top-right movie count (`elements.shelfCount`) during library searches, eliminating layout jumps.
+  * **Width-Stabilized Pill**: Added `min-width: 82px` to `#library-scope-toggle` so switching between "This shelf" (10 chars) and "All shelves" (11 chars) does not cause neighbor pill jitter.
+- [x] **Dynamic Search Target Reflection & 1-Click Entity Reset in Library**
+  * **Dynamic Entity Reflection**: When a sidebar keyword, actor, or director is filtering the shelf (and the text search box is empty), the target pill dynamically reflects it (e.g., `[ 🏷️ whodunit × ]`, `[ 🎬 Nolan × ]`, `[ 👤 Bale × ]`) with contextual placeholder `Search within theme "<name>"…`.
+  * **1-Click Pill Reset / Dismiss**: Clicking the active dynamic entity pill (or its `×`) instantly clears the active keyword / cast & crew filters, restores the shelf view, and resets the target pill back to standard `[ 🌐 All ]` without touching the sidebar.
+  * **Smooth Text Fallback**: Typing into or focusing the search input immediately shifts the target button back to the 4-way text target (`All`, `Title`, `Plot`, `Notes`).
+- [x] **Instant Reactive Library Filtering with Passive Anchor "See Results" Button**
+  * **Zero-Latency Reactive Filtering**: Clicking genre chips, language chips, or typing years now filters your library immediately and reactively in real time (<1ms in-memory filtering), removing the artificial staging barrier.
+  * **Visual Layout Anchor (Dummy)**: Kept `#run-library-search` in place as a calm, passive visual companion matching Discover mode pixel-for-pixel, preventing header jumping when switching modes. Clicking it acts as a tidy-up shortcut that collapses any open accordions.
+- [x] **Library Cast & Crew Autocomplete Fix (`/movies/library/people`)**
+  * **Standardized Payload**: Ensured `/movies/library/people` returns `{ "results": [...] }` (and fortified frontend parser to handle both direct arrays and `{ results }` envelopes), restoring seamless autocomplete search for actors and directors in Library mode.
+- [x] **Refined "See Results" Visual Styling & Library Multi-Genre Selection**
+  * **Warm Champagne Gold Hue**: Replaced the harsh neon yellow (`#FACC15`) on `.see-results-btn.is-dirty` with our refined brand champagne tone (`#DEC68B` / `rgba(222, 198, 139, 0.42)`).
+  * **Visible Inner Shade**: Added a soft, warm background tint (`rgba(222, 198, 139, 0.12)`) and inset highlight, eliminating the hollow/flat dark box appearance.
+  * **Library Genre Multi-Select Restored**: Restored independent multi-selection across genre chips in the Library sidebar, allowing users to combine multiple genres with staged execution.
+- [x] **Smart Shelf Ribbon Highlighting across Library Search Scopes**
+  * **All-Shelves Search Neutralization**: When searching across `All shelves` (either via search query or active library filters), individual shelf chips (e.g. `Rewatch`, `Watched`) are no longer highlighted as active, eliminating visual confusion about search boundaries.
+  * **Instant Active State Restoration**: Toggling back to `This shelf` immediately restores the glowing active highlight to the currently selected shelf.
+- [x] **4-Way Library Search Target Toggle (All → Title → Plot → Notes)**
+  * **Added Plot Target**: Integrated `plot` into the library search target toggle with a clean text lines icon and label `Plot`.
+  * **Seamless 4-Way Cycle**: Clicking the target pill cycles smoothly through `All` → `Title` → `Plot` → `Notes` → `All`.
+  * **Search & Rank Integration**: Connects directly to backend plot matching (`overview` field) and local word-boundary regex ranking, updating search placeholder text accordingly (e.g., `Search plots in Rewatch…` or `Search plots across all shelves…`).
+- [x] **Sidebar Search Preset Selection & Direct In-Row Rename Action**
+  * **Sidebar Presets Selectable**: Restored clickable row selection for presets inside the sidebar workshop (`#ribbon-profiles-cloud`). Clicking any preset row selects and activates it, lighting it up with gold accent and immediately transforming the action button below into `Rename preset "<name>"`.
+  * **Direct In-Row Rename Action**: Added a sleek pencil edit icon (`.chip-rename-btn`) on the preset row (revealed on hover beside the delete `×`), allowing instant 1-click renaming without needing to click down into the action button.
+- [x] **Zero-Scroll Zen Storage & Local Data Surface**
+  * **Zero-Scroll Viewport**: Redesigned the Storage page to fit entirely into a single viewport (~380px vertical footprint) without requiring any vertical scrolling.
+  * **Cohesive Zen Visual Aesthetics**: Replaced outdated large gold headers and clunky cards with restrained editorial typography (`20px` heading, `10.5px` uppercase kicker, faint brand yellow `#DEC68B` tabular metrics, dark frosted glass cards).
+  * **Single-Row Telemetry Strip**: Reorganized the 5 SQLite storage statistics into a unified 5-column dashboard strip (`Database Size`, `Cached Movies`, `Personal Library`, `Stale Cache`, and `Trash Bin`) with iconography and clear helper labels.
+  * **Structured Action Zones**: Divided actions into three sleek horizontal strips: Data Portability & Backups (Export Notes `.md` and Export Library `.json`), Cache Maintenance (Clear TMDB Cache older than 90 days), and Permanent Purge (Purge Trash Bin). Integrated floating toast notices for instant confirmation.
+- [x] **Fix Library Shelf Sort Chip View Leaks & Discovery Hijack**
+  * **Root Cause Neutralized**: Discover sort event listeners (`initializeSortChips` / `syncSortChips`) were broadly querying all `.sort-chip` elements across the DOM instead of scoping strictly to `#sort-chip-cloud`. Clicking any sort chip inside the Library shelf (`#lib-sort-cloud`) was triggering Discovery mode's search engine (`runDiscoverySearch()`), which wiped out the shelf and redirected to an empty Discovery view.
+  * **Strict Scoping**: Isolated Discover sort controls strictly to `#sort-chip-cloud .sort-chip`. Library sort chips are completely insulated and handled exclusively by `applyLibraryFilters()`.
+  * **Toggle / Unselect Support**: Enabled radio-toggle behavior on Library sort chips so clicking an already active non-default sort chip (e.g. `Newest first`) cleanly toggles back to the default `Recently updated` sort and updates the shelf in-place without page hops.
+- [x] **Live TMDB Sync Button for Presets & Discovery (Sidebar Header)**
+  * **Placed Beside Reset**: Added a dedicated `[↻ Sync]` action link immediately beside `[↺ Reset]` in the sidebar filters header (`FILTERS` row) in the exact order requested (`Reset` first, then `Sync`).
+  * **Fresh Live API Execution**: Clicking `Sync` clears the client cache and invokes `runDiscoverySearch({ forceRefresh: true })`, bypassing local cache to pull fresh, live movie results from TMDB for the currently active preset or active filter combination.
+  * **Visual Harmony & Loading Spin**: Matches the subtle `11px` typography and muted color of `Reset`, with a smooth spin animation on the refresh icon while the live network request is in flight.
 - [x] **Harmonious Footer Spacing: Eradicate 120px Dead Void Below Pagination**
   * **Eliminated Compounding Void**: Removed the compounding 180px gap below bottom pagination by reducing pagination `margin-bottom` from `56px` to `24px`, lowering `.library` `padding-bottom` to `12px`, and reducing `footer` `margin-top` to `20px`. The space from the pagination bar down to the footer hairline divider is now a balanced, cohesive ~56px–60px.
 - [x] **Keyboard Navigation for Pagination across Discover, Library & Notes**

@@ -317,7 +317,8 @@ def search_personal_library(query: str = "", status: str | None = None):
 )
 def search_library_people(query: str = "", type: str | None = None, status: str | None = None):
     try:
-        return movie_service.search_library_people(query=query, credit_type=type, status=status)
+        results = movie_service.search_library_people(query=query, credit_type=type, status=status)
+        return {"results": results}
     except ValueError as error:
         raise HTTPException(
             status_code=400,

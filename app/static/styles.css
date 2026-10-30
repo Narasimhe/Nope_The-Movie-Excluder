@@ -1064,29 +1064,6 @@ button.entry-tag:hover {
 .memory-page-heading p:last-child {
   color: #96929c;
 }
-.storage-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .8rem;
-}
-.storage-stat {
-  padding: 1rem; border: 1px solid var(--line-strong); border-radius: 10px; background: #15161a;
-}
-.storage-stat strong {
-  display: block; margin-bottom: .25rem; color: var(--accent-bright); font-size: 1.35rem;
-}
-.storage-stat span {
-  color: #8f8b94; font-size: .72rem;
-}
-.storage-actions {
-  display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.4rem;
-}
-.storage-actions button {
-  padding: .65rem .8rem; border: 1px solid var(--line-strong); border-radius: 8px; background: #17171d; color: #c9c5bb; cursor: pointer;
-}
-.storage-actions .danger-button {
-  border-color: rgba(255, 107, 107, .3); color: #ff9292;
-}
 .related-heading {
   display: flex;
   align-items: flex-end;
@@ -2466,20 +2443,20 @@ footer span {
   flex: 1;
   min-height: 32px;
   padding: 0 12px;
-  border: 1px solid rgba(242, 201, 76, 0.4);
-  border-radius: 7px;
-  background: rgba(242, 201, 76, 0.12);
-  color: var(--accent);
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #E5E7EB;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: normal;
   text-align: center;
   cursor: pointer;
   transition: all 140ms ease;
 }
 .sidebar-search-actions .see-results-btn:hover {
-  background: rgba(242, 201, 76, 0.22);
-  border-color: rgba(242, 201, 76, 0.7);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
   color: #fff;
 }
 .sidebar-search-actions .reset-filters-btn {
@@ -2639,7 +2616,29 @@ footer span {
   flex: 0 0 auto !important;
 }
 
-.library-scope-toggle-btn,
+.library-scope-toggle-btn {
+  min-width: 82px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  padding: 0 9px !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #c5c2cb !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+  user-select: none !important;
+  box-sizing: border-box !important;
+  box-shadow: none !important;
+}
+
 .library-target-toggle-btn {
   display: inline-flex !important;
   align-items: center !important;
@@ -2674,6 +2673,26 @@ footer span {
   background: rgba(212, 175, 55, 0.08) !important;
   border-color: rgba(212, 175, 55, 0.45) !important;
   color: #DEC68B !important;
+}
+
+.library-target-toggle-btn.is-entity-target {
+  background: rgba(212, 175, 55, 0.12) !important;
+  border-color: rgba(212, 175, 55, 0.5) !important;
+  color: #DEC68B !important;
+  max-width: 150px !important;
+}
+
+.library-target-toggle-btn.is-entity-target #library-target-text {
+  max-width: 115px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.library-target-toggle-btn.is-entity-target:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  color: #fca5a5 !important;
 }
 
 .library-scope-icon-wrap,
@@ -3086,12 +3105,11 @@ footer span {
 
 /* Library Shelf Filters Workspace */
 .library-filters-workspace {
-  margin-top: 14px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
   display: flex;
   flex-direction: column;
-  gap: 12px;
 }
 .library-search-actions {
   display: flex;
@@ -6568,11 +6586,12 @@ body.grey-docked-open .related-card {
 }
 
 /* Movie Notes + Shelf Paired Active State */
-.library-shelves-grid .nav-link.is-notes-paired {
-  border-color: rgba(242, 201, 76, 0.55);
-  background: rgba(242, 201, 76, 0.12);
-  color: #f5f3ee;
-  box-shadow: 0 0 0 1px rgba(242, 201, 76, 0.18);
+.library-shelves-grid .nav-link.is-notes-paired,
+.library-shelf-ribbon .ribbon-chip.is-notes-paired {
+  border-color: rgba(222, 198, 139, 0.92) !important;
+  background: rgba(222, 198, 139, 0.08) !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
 }
 
 /* Movie Notes Poster Instant Hover Preview Popover */
@@ -7863,100 +7882,233 @@ body.grey-docked-open .entry-list.is-list-mode {
 .app-layout:has(#app-sidebar.is-hidden) {
   grid-template-columns: minmax(0, 1fr) !important;
 }
+.app-layout:has(#storage-page:not(.is-hidden)) .library {
+  padding-top: 6px !important;
+}
 .storage-page {
-  max-width: 820px;
+  max-width: 920px;
   width: 100%;
   margin: 0 auto;
-}
-.storage-page .memory-page-heading {
+  padding: 6px 20px 24px;
   display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1.25rem;
-  margin-bottom: 1.65rem;
-  padding-bottom: 1.1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-direction: column;
+  box-sizing: border-box;
 }
-.storage-page .memory-page-heading h2 {
-  margin: 0.2rem 0 0.35rem;
-  font-size: clamp(1.75rem, 3vw, 2.35rem);
-  font-weight: 800;
-  letter-spacing: -0.025em;
-  color: #f7f6f2;
+
+/* 1. Heading */
+.storage-page-heading {
+  margin-bottom: 16px;
 }
-.storage-page .memory-page-heading p:not(.section-kicker) {
+.storage-page-heading h2 {
   margin: 0;
-  color: #9b98a3;
-  font-size: 0.86rem;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: #F3F4F6;
 }
+
+/* 2. Telemetry Metrics Strip (5 Columns) */
 .storage-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
+  margin-bottom: 24px;
+}
+@media (max-width: 960px) {
+  .storage-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .storage-summary {
+    grid-template-columns: 1fr;
+  }
 }
 .storage-stat {
-  padding: 1.15rem 1.2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px 18px;
+  background: rgba(18, 18, 22, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 11px;
-  background: #14151b;
-  transition: border-color 0.15s ease;
+  transition: all 0.16s ease;
+  min-height: 104px;
+  box-sizing: border-box;
 }
 .storage-stat:hover {
-  border-color: rgba(242, 201, 76, 0.32);
+  border-color: rgba(222, 198, 139, 0.25);
+  background: rgba(24, 24, 30, 0.75);
 }
-.storage-stat strong {
-  display: block;
-  margin-bottom: 0.35rem;
-  color: #f2c94c;
-  font-size: 1.45rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
-}
-.storage-stat span {
-  color: #9b98a3;
-  font-size: 0.78rem;
-  font-weight: 500;
-}
-.storage-actions {
+.storage-stat-top {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 1.65rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
 }
-.storage-actions button {
-  height: 36px;
+.storage-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9CA3AF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.storage-stat-glyph {
+  font-size: 18px;
+  color: rgba(222, 198, 139, 0.65);
+  flex-shrink: 0;
+}
+.storage-stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  color: #DEC68B;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
+  margin-bottom: 6px;
+}
+.storage-stat-desc {
+  font-size: 11.5px;
+  color: #71717A;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 3. Action Zones (Clean Horizontal Strips) */
+.storage-sections-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.storage-card-zone {
+  padding: 16px 20px;
+  background: rgba(18, 18, 22, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  transition: border-color 0.16s ease;
+}
+.storage-card-zone:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.storage-card-zone--danger {
+  border-color: rgba(239, 68, 68, 0.16);
+  background: rgba(239, 68, 68, 0.025);
+}
+.storage-card-zone--danger:hover {
+  border-color: rgba(239, 68, 68, 0.28);
+}
+.storage-zone-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+}
+.storage-zone-icon {
+  font-size: 20px;
+  color: #DEC68B;
+  flex-shrink: 0;
+}
+.storage-card-zone--danger .storage-zone-icon {
+  color: #EF4444;
+}
+.storage-zone-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #F3F4F6;
+  line-height: 1.3;
+}
+.storage-zone-desc {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: #9CA3AF;
+  line-height: 1.45;
+}
+.storage-zone-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.storage-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
   padding: 0 14px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  background: #17181f;
-  color: #dcd9d0;
-  font-size: 0.8rem;
-  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.03);
+  color: #E5E7EB;
+  font-size: 12.5px;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.14s ease;
+  white-space: nowrap;
 }
-.storage-actions button:hover {
-  background: #22232c;
-  border-color: rgba(255, 255, 255, 0.24);
-  color: #ffffff;
+.storage-action-btn span.material-symbols-outlined {
+  font-size: 16px;
+  color: #9CA3AF;
 }
-.storage-actions .storage-export-btn {
-  border-color: rgba(242, 201, 76, 0.38);
-  background: rgba(242, 201, 76, 0.08);
-  color: #f2c94c;
+.storage-action-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #FFFFFF;
 }
-.storage-actions .storage-export-btn:hover {
-  background: rgba(242, 201, 76, 0.16);
-  border-color: rgba(242, 201, 76, 0.65);
-  color: #fff6d1;
+.storage-action-btn:hover span.material-symbols-outlined {
+  color: #DEC68B;
 }
-.storage-actions .danger-button:hover {
-  background: rgba(239, 68, 68, 0.14);
-  border-color: rgba(239, 68, 68, 0.5);
-  color: #fca5a5;
+.storage-action-btn--primary {
+  border-color: rgba(222, 198, 139, 0.28);
+  background: rgba(222, 198, 139, 0.07);
+  color: #DEC68B;
+}
+.storage-action-btn--primary span.material-symbols-outlined {
+  color: #DEC68B;
+}
+.storage-action-btn--primary:hover {
+  background: rgba(222, 198, 139, 0.14);
+  border-color: rgba(222, 198, 139, 0.45);
+  color: #FFF6D1;
+}
+.storage-action-btn--danger {
+  border-color: rgba(239, 68, 68, 0.22);
+  background: rgba(239, 68, 68, 0.06);
+  color: #FCA5A5;
+}
+.storage-action-btn--danger span.material-symbols-outlined {
+  color: #F87171;
+}
+.storage-action-btn--danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #FFFFFF;
+}
+
+/* 4. Feedback line */
+.storage-page .inline-feedback {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: #9CA3AF;
+  min-height: 18px;
+}
+.storage-page .inline-feedback[data-kind="error"] {
+  color: #F87171;
+}
+.storage-page .inline-feedback[data-kind="success"] {
+  color: #4ADE80;
 }
 
 
@@ -7984,7 +8136,16 @@ body.grey-docked-open .entry-list.is-list-mode {
   border-radius: 14px !important;
   padding: 16px !important;
   box-sizing: border-box !important;
+  margin-top: 0 !important;
   margin-bottom: 22px !important;
+}
+
+#workspace-controls,
+.advanced-controls,
+#advanced-search-form {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
 }
 
 /* 1. See Results Button (Calm Neutral Dark, No Yellow/Brown Tint) */
@@ -8019,11 +8180,16 @@ body.grey-docked-open .entry-list.is-list-mode {
   color: #FFFFFF !important;
 }
 .sidebar-search-actions .see-results-btn.is-dirty {
-  background: rgba(250, 204, 21, 0.05) !important;
-  border-color: rgba(250, 204, 21, 0.40) !important;
-  color: #FACC15 !important;
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.22) 0%, rgba(180, 140, 40, 0.12) 100%) !important;
+  border: 1px solid rgba(212, 175, 55, 0.45) !important;
+  color: #F3EFE6 !important;
   font-weight: 600 !important;
-  box-shadow: none !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+}
+.sidebar-search-actions .see-results-btn.is-dirty:hover {
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.32) 0%, rgba(180, 140, 40, 0.20) 100%) !important;
+  border-color: rgba(212, 175, 55, 0.70) !important;
+  color: #FFFFFF !important;
 }
 
 /* 2. FILTERS Header & Reset Link Row */
@@ -8470,6 +8636,9 @@ body.grey-docked-open .entry-list.is-list-mode {
   color: #DEC68B !important;
   box-shadow: none !important;
 }
+.sort-chip * {
+  pointer-events: none !important;
+}
 
 /* Library Status: 50/50 2-Column Grid of Symmetrical 999px Pills */
 .status-options {
@@ -8709,17 +8878,24 @@ input[type="number"] {
   color: #CE8484 !important;
   border-color: rgba(190, 80, 80, 0.35) !important;
 }
-/* In personal library shelves, status badges remain hidden */
-body:not([data-active-view="discover"]) .movie-card .status-badge,
-body[data-active-view="watched"] .status-badge,
-body[data-active-view="watch_later"] .status-badge,
-body[data-active-view="rewatch"] .status-badge,
-body[data-active-view="favorites"] .status-badge,
-body[data-active-view="excluded"] .status-badge,
-body[data-active-view="new_discovery"] .status-badge,
-body[data-active-view="movie-notes"] .status-badge,
-body[data-active-view="entries"] .status-badge {
+/* In personal library shelves, status badges on movie cards remain strictly hidden */
+body:not([data-active-view="discover"]) .movie-card .status-badge {
   display: none !important;
+}
+
+/* Related movies inside single movie details view always display their status badge */
+.related-card .status-badge {
+  display: flex !important;
+  top: 3px !important;
+  left: 3px !important;
+  width: 19px !important;
+  height: 19px !important;
+  min-width: 19px !important;
+}
+.related-card .status-badge .status-badge-glyph {
+  font-size: 11px !important;
+  width: 11px !important;
+  height: 11px !important;
 }
 
 /* 10. Workspace & Header Alignment (Search Bar, Movie Count, Footer) */
@@ -11059,7 +11235,7 @@ body.grey-docked-open .movie-grid-viewport {
   font-weight: 400 !important;
   line-height: 1 !important;
   color: inherit !important;
-  cursor: default !important;
+  cursor: pointer !important;
   user-select: none !important;
   flex: 1 1 auto !important;
   white-space: nowrap !important;
@@ -11364,4 +11540,76 @@ footer {
   margin-top: 20px !important;
   margin-bottom: 24px !important;
   padding-top: 1.25rem !important;
+}
+
+/* ==========================================================================
+   Sidebar Filters Header: Reset & Sync Controls (Top Left)
+   ========================================================================== */
+.sidebar-filters-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin: 16px 0 10px 0 !important;
+  padding: 0 !important;
+}
+
+.sidebar-header-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.sidebar-reset-link,
+.sidebar-action-link,
+.sidebar-fetch-live-link {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #9CA3AF !important;
+  font-family: inherit !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  padding: 2px 4px !important;
+  line-height: 1 !important;
+  user-select: none !important;
+  transition: color 120ms ease, opacity 120ms ease !important;
+}
+
+.sidebar-reset-link:hover,
+.sidebar-action-link:hover,
+.sidebar-fetch-live-link:hover {
+  color: #F3F4F6 !important;
+}
+
+.sidebar-reset-link .reset-icon,
+.sidebar-fetch-live-link .fetch-live-icon {
+  width: 12px !important;
+  height: 12px !important;
+  color: inherit !important;
+  stroke: currentColor !important;
+  opacity: 0.85 !important;
+  flex-shrink: 0 !important;
+  transition: transform 180ms ease, opacity 120ms ease !important;
+}
+
+.sidebar-reset-link:hover .reset-icon {
+  opacity: 1 !important;
+  transform: rotate(-45deg) !important;
+}
+
+.sidebar-fetch-live-link:hover .fetch-live-icon {
+  opacity: 1 !important;
+  transform: rotate(45deg) !important;
+}
+
+.sidebar-fetch-live-link.is-loading .fetch-live-icon {
+  animation: spinIcon 650ms linear infinite !important;
+}
+
+@keyframes spinIcon {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
