@@ -32,6 +32,10 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Purged Research Mode from Grey Assistant (`app/grey/service.py`, `app/grey/prompts/`, `app/web/index.html`, `app/static/app.js`)**
+  * **Complete Code & Prompt Purge**: Removed `/research` skill, `research_partner.md` prompt, `read_research_file` tool call, `save_research_file`/`append_research_file`/`delete_research_file` file actions, and progressive research markdown context injection (`{{RESEARCH_FILES_INDEX}}`) from Grey's core prompt cascade.
+  * **UI & Slash Command Cleanup**: Removed the `/research` button from the slash commands menu in `app/web/index.html`, purged the `/research` handler from `app/static/app.js`, and updated model tooltips to reference deep queries instead of research files.
+  * **Test Suite Verification**: Retired obsolete `test_grey_research_sessions.py` and research bloat tests; verified 218 passing tests in 19s. Existing user research markdown files in `data/research/` remain preserved on disk.
 - [x] **Restored All Blog / Journal Banners & Storage Test Sandbox Isolation (`app/storage_repository.py`)**
   * **Root Cause & Prevention**: Fixed a bug where `StorageRepository.purge_deleted_entries()` hardcoded `banners_dir` to production `data/banners`. When running unit tests with a temporary in-memory/isolated SQLite database containing no banner entries, orphaned cleanup was deleting production banner image files. Fixed `banners_dir` to derive dynamically from `Path(database.DATABASE_PATH).parent / "banners"`, fully isolating test databases.
   * **Full Banner Recovery**: Recovered all 20 historical user banner images (`f0e73afcd2434919.png`, `05cc6b66e77d4396.png`, `af8bb366267b4305.png`, `fa28b3d3dfed407a.jpg`, `c94489fd02d5466d.png`, etc.) directly from Git commit history into `data/banners/`.

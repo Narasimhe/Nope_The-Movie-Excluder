@@ -10539,10 +10539,10 @@ function updateGreyModelUI(activeModelUsed) {
     elements.greyModelTag?.setAttribute("title", "Active Model: Gemini 3.8 Flash. Click to switch to Pro.");
   } else if (state.greyModelMode === "pro") {
     elements.greyModelName.textContent = "Pro";
-    elements.greyModelTag?.setAttribute("title", "Active Model: Gemini Pro (Deep Research). Click to switch to Auto.");
+    elements.greyModelTag?.setAttribute("title", "Active Model: Gemini Pro (Deep Dive). Click to switch to Auto.");
   } else {
     elements.greyModelName.textContent = "Auto";
-    elements.greyModelTag?.setAttribute("title", "Model Mode: Auto (Flash for speed, Pro for research). Click to switch to Flash.");
+    elements.greyModelTag?.setAttribute("title", "Model Mode: Auto (Flash for speed, Pro for deep queries). Click to switch to Flash.");
   }
 }
 
@@ -10913,8 +10913,6 @@ function initGreyCompanion() {
     hideSlashMenu();
     if (cmd === "/related") {
       sendGreyMessage("/related");
-    } else if (cmd === "/research") {
-      sendGreyMessage("/research");
     } else {
       if (elements.greyInput) {
         elements.greyInput.value = `${cmd} `;

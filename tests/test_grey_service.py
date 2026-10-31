@@ -1133,41 +1133,6 @@ def test_grey_does_not_hijack_movie_on_common_four_letter_words():
                 assert "Active Movie TMDB ID: None" in system_instruction
 
 
-def test_grey_two_tier_progressive_research_context_avoids_bloat_on_normal_turns():
-    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
-        temp_db = Path(temp_dir) / "test.db"
-        research_dir = Path(temp_dir) / "research"
-        research_dir.mkdir(parents=True, exist_ok=True)
-        (research_dir / "noir_notes.md").write_text("# Secret Noir Body Content 12345\n", encoding="utf-8")
-
-        with patch.object(database, "DATABASE_PATH", temp_db):
-            initialize_database()
-            service = GreyService(db_path=str(temp_db))
-            service.research_dir = research_dir
-            service.api_key = "test_key"
-
-            with patch("requests.post") as mock_post:
-                mock_resp = MagicMock()
-                mock_resp.status_code = 200
-                mock_resp.json.return_value = {
-                    "candidates": [{"content": {"parts": [{"text": json.dumps({"text": "Reply", "action": None, "pills": []})}]}}]
-                }
-                mock_post.return_value = mock_resp
-
-                # Normal movie turn: only filename summary, NOT full body content
-                service.chat("Is Sicario good?")
-                payload = mock_post.call_args.kwargs.get("json") or mock_post.call_args[1].get("json")
-                sys_normal = payload["systemInstruction"]["parts"][0]["text"]
-                assert "noir_notes.md" in sys_normal
-                assert "Secret Noir Body Content 12345" not in sys_normal
-
-                # Research turn: full body content is injected
-                service.chat("/research what is in noir_notes?")
-                payload_res = mock_post.call_args.kwargs.get("json") or mock_post.call_args[1].get("json")
-                sys_res = payload_res["systemInstruction"]["parts"][0]["text"]
-                assert "Secret Noir Body Content 12345" in sys_res
-
-
 def test_grey_on_demand_tool_call_fetches_note_and_shelf():
     with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
         temp_db = Path(temp_dir) / "test.db"

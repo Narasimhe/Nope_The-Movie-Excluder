@@ -44,14 +44,6 @@ SKILLS_REGISTRY: dict[str, dict[str, Any]] = {
         "skill_file": "library_ops.md",
         "default_query": "Add the approved YES movies to my New Discovery shelf.",
     },
-    "research": {
-        "command": "/research",
-        "name": "Cinema Research Files",
-        "description": "Manages focused 1-5 research markdown files in data/research/*.md.",
-        "requires_dossier": True,
-        "skill_file": "research_partner.md",
-        "default_query": "What research files do I have on disk?",
-    },
 }
 
 STATUS_NORMALIZATION_MAP: dict[str, str] = {
@@ -102,8 +94,6 @@ class GreyService:
         self.db_path = db_path
         self.api_key = os.getenv("GEMINI_API_KEY", "").strip()
         self.prompts_dir = Path(__file__).resolve().parent / "prompts"
-        self.research_dir = Path(__file__).resolve().parent.parent.parent / "data" / "research"
-        self.research_dir.mkdir(parents=True, exist_ok=True)
         self.reactions_dir = Path(__file__).resolve().parent.parent.parent / "assets" / "gifs_n_media"
         self.reactions_dir.mkdir(parents=True, exist_ok=True)
         self.reactions_file = Path(__file__).resolve().parent / "reactions.json"
@@ -185,65 +175,6 @@ class GreyService:
         result = "\n".join(items)
         self._reactions_cache = (dir_mtime, meta_mtime, result)
         return result
-
-    def get_research_files_summary(self) -> str:
-        """Tier 1 lightweight 1-line filenames index for normal turns (prevents 15,000-char bloat)."""
-        if not self.research_dir.exists():
-            return "No research files on disk yet."
-        files = sorted(
-            self.research_dir.glob("*.md"),
-            key=lambda f: f.stat().st_mtime,
-            reverse=True,
-        )[:5]
-        if not files:
-            return "No research files on disk yet."
-        names = [f"`{f.name}` ({f.stat().st_size} bytes)" for f in files]
-        return "Active files on disk: " + ", ".join(names) + " (use tool_call `read_research_file` to read contents)."
-
-    def get_research_files_index(self) -> str:
-        """Tier 2 full research markdown contents (loaded when /research or research files are active)."""
-        if not self.research_dir.exists():
-            return "No research files on disk yet."
-        files = sorted(
-            self.research_dir.glob("*.md"),
-            key=lambda f: f.stat().st_mtime,
-            reverse=True,
-        )[:5]
-        if not files:
-            return "No research files on disk yet."
-        items = []
-        for f in files:
-            try:
-                content = f.read_text(encoding="utf-8", errors="ignore").strip()
-                size = f.stat().st_size
-                if not content:
-                    items.append(
-                        f"### File: `{f.name}` (Empty, 0 bytes)\n*(File currently contains no text)*"
-                    )
-                else:
-                    snippet = content[:3000] + (
-                        "\n... [remaining text truncated]" if len(content) > 3000 else ""
-                    )
-                    items.append(f"### File: `{f.name}` ({size} bytes)\n```markdown\n{snippet}\n```")
-            except Exception:
-                items.append(f"### File: `{f.name}` ({f.stat().st_size} bytes)")
-        return "\n\n".join(items)
-
-    def resolve_research_file(self, query: str) -> Path | None:
-        if not self.research_dir.exists():
-            return None
-        clean_q = re.sub(r"[^a-zA-Z0-9]", "", (query or "").lower())
-        if not clean_q:
-            return None
-        files = list(self.research_dir.glob("*.md"))
-        for f in files:
-            if re.sub(r"[^a-zA-Z0-9]", "", f.stem.lower()) == clean_q:
-                return f
-        for f in files:
-            f_clean = re.sub(r"[^a-zA-Z0-9]", "", f.stem.lower())
-            if clean_q in f_clean or f_clean in clean_q:
-                return f
-        return None
 
     def _get_connection(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
@@ -478,7 +409,7 @@ class GreyService:
         if model_mode == "flash":
             return DEFAULT_FLASH_MODEL, "Gemini 3.8 Flash"
         if is_research:
-            return DEFAULT_PRO_MODEL, "Gemini Pro (Research)"
+            return DEFAULT_PRO_MODEL, "Gemini Pro (Deep Dive)"
         return DEFAULT_FLASH_MODEL, "Gemini 3.8 Flash"
 
     def _resolve_active_skill(
@@ -489,7 +420,7 @@ class GreyService:
         active_person: dict[str, Any] | None,
         active_skill_key: str | None,
         history: list[dict[str, str]] | None,
-    ) -> tuple[str | None, dict[str, Any] | None, str, str, bool]:
+    ) -> tuple[str | None, dict[str, Any] | None, str, str]:
         """Resolve slash commands and Tier 1/Tier 2 progressive skill instructions."""
         active_skill_key = active_skill_key or None
         user_query = message.strip()
@@ -523,70 +454,10 @@ class GreyService:
                 p in lq for p in ["add the yes movies", "add all yes", "batch add", "batch move"]
             ):
                 active_skill_key = "batch"
-            elif any(
-                p in lq
-                for p in [
-                    "save this chat",
-                    "save this conversation",
-                    "save as research",
-                    "save research",
-                    "add to my research",
-                    "add this to research",
-                    "append to research",
-                    "research session",
-                    "research index",
-                    "show research index",
-                    "what research do i have",
-                ]
-            ):
-                active_skill_key = "research"
 
         active_skill = SKILLS_REGISTRY.get(active_skill_key) if active_skill_key else None
         if active_skill and not user_query:
             user_query = active_skill.get("default_query", user_query)
-
-        active_rf_stems = (
-            [f.stem.lower() for f in self.research_dir.glob("*.md")]
-            if self.research_dir.exists()
-            else []
-        )
-        last_turn_text = (history[-1].get("text") or "").lower() if history else ""
-        is_research_followup = any(
-            w in lq
-            for w in [
-                "try again",
-                "what about",
-                "tell me more",
-                "show it",
-                "what is in",
-                "what's in",
-                "read",
-                "check again",
-            ]
-        ) and any(stem in last_turn_text for stem in active_rf_stems)
-
-        wants_research_context = (
-            active_skill_key == "research"
-            or any(
-                w in lq
-                for w in [
-                    "research file",
-                    "research files",
-                    "save this chat",
-                    "save as research",
-                    "save to research",
-                    "create research",
-                    "new research",
-                    "research session",
-                    "research index",
-                    "add to my research",
-                    "append to research",
-                    "what research do i have",
-                ]
-            )
-            or any(stem in lq for stem in active_rf_stems if len(stem) >= 4)
-            or is_research_followup
-        )
 
         has_note_write_intent = any(
             re.search(rf"\b{re.escape(v)}\b", lq)
@@ -605,8 +476,6 @@ class GreyService:
         skill_filename = None
         if active_skill and active_skill.get("skill_file"):
             skill_filename = active_skill["skill_file"]
-        elif wants_research_context:
-            skill_filename = "research_partner.md"
         elif mentions_note_topic:
             if has_note_write_intent:
                 skill_filename = "notes_editor.md"
@@ -622,7 +491,6 @@ class GreyService:
                     active_skill,
                     user_query,
                     skill_directive_text,
-                    wants_research_context,
                 )
         elif current_view == "filmography" or (
             active_person and isinstance(active_person, dict) and active_person.get("name")
@@ -667,7 +535,7 @@ class GreyService:
         skill_path = self.prompts_dir / "skills" / skill_filename
         skill_directive_text = self._read_cached_file(skill_path).strip() or "None"
 
-        return active_skill_key, active_skill, user_query, skill_directive_text, wants_research_context
+        return active_skill_key, active_skill, user_query, skill_directive_text
 
     def _resolve_screen_and_mentioned_context(
         self,
@@ -962,13 +830,6 @@ class GreyService:
                     f"Status={r['status'] or 'untracked'}, Verdict={r['verdict'] or 'None'}, Notes={r['notes'] or 'None'}"
                     for r in rows
                 )
-
-            if tool_name == "read_research_file":
-                fname = params.get("filename") or params.get("query") or ""
-                matched = self.resolve_research_file(str(fname))
-                if matched and matched.exists():
-                    return f"### Research File `{matched.name}`:\n{matched.read_text(encoding='utf-8', errors='ignore')[:8000]}"
-                return self.get_research_files_index()
         except Exception as exc:
             logger.warning("Tool execution error (%s): %s", tool_name, exc)
             return f"Tool error: {exc}"
@@ -1542,69 +1403,6 @@ class GreyService:
             logger.error(f"Failed to update entry: {update_err}")
             return action
 
-    def _handle_research_file_action(self, action: dict[str, Any], data: dict[str, Any]) -> None:
-        act_type = action.get("type")
-        params = action.get("params") or {}
-        if act_type == "save_research_file":
-            try:
-                raw_fname = (params.get("filename") or params.get("title") or "research").strip()
-                if not raw_fname.endswith(".md"):
-                    raw_fname += ".md"
-                clean_fname = re.sub(r"[^\w\.\-]", "_", raw_fname).lower()
-                if not clean_fname.endswith(".md"):
-                    clean_fname += ".md"
-                file_path = self.research_dir / clean_fname
-                content = (params.get("content") or "").strip()
-                if not content and data.get("text"):
-                    content = (
-                        f"# {params.get('title') or clean_fname[:-3].replace('_', ' ').title()}\n\n"
-                        f"{data['text']}"
-                    )
-                file_path.write_text(content + "\n", encoding="utf-8")
-                if not isinstance(action.get("params"), dict):
-                    action["params"] = {}
-                action["params"]["filename"] = clean_fname
-                action["params"]["filepath"] = str(file_path)
-            except Exception as r_save_err:
-                logger.error(f"Failed to save research file: {r_save_err}")
-
-        elif act_type == "append_research_file":
-            try:
-                target_query = params.get("filename") or params.get("title") or ""
-                entry_text = (params.get("entry") or params.get("text") or "").strip()
-                matched_file = self.resolve_research_file(target_query)
-                if not matched_file:
-                    raw_fname = (target_query or "research.md").strip()
-                    clean_fname = re.sub(r"[^\w\.\-]", "_", raw_fname).lower()
-                    if not clean_fname.endswith(".md"):
-                        clean_fname += ".md"
-                    matched_file = self.research_dir / clean_fname
-                    matched_file.write_text(
-                        f"# {target_query.replace('_', ' ').title()}\n\n", encoding="utf-8"
-                    )
-
-                with open(matched_file, "a", encoding="utf-8") as af:
-                    af.write(f"\n{entry_text}\n")
-
-                if not isinstance(action.get("params"), dict):
-                    action["params"] = {}
-                action["params"]["filename"] = matched_file.name
-                action["params"]["filepath"] = str(matched_file)
-            except Exception as r_app_err:
-                logger.error(f"Failed to append to research file: {r_app_err}")
-
-        elif act_type == "delete_research_file":
-            try:
-                target_query = params.get("filename") or params.get("title") or ""
-                matched_file = self.resolve_research_file(target_query)
-                if matched_file and matched_file.exists():
-                    matched_file.unlink()
-                    if not isinstance(action.get("params"), dict):
-                        action["params"] = {}
-                    action["params"]["filename"] = matched_file.name
-            except Exception as r_del_err:
-                logger.error(f"Failed to delete research file: {r_del_err}")
-
     def chat(
         self,
         message: str,
@@ -1654,7 +1452,6 @@ class GreyService:
             active_skill,
             user_query,
             skill_directive_text,
-            wants_research_context,
         ) = self._resolve_active_skill(
             message=message,
             current_view=current_view,
@@ -1709,12 +1506,6 @@ class GreyService:
         if not system_template:
             system_template = self._read_cached_file(self.prompts_dir / "grey_system_prompt.md")
 
-        # Two-Tier Progressive Context: only inject full 15,000-char research files when research is active
-        research_files_str = (
-            self.get_research_files_index()
-            if wants_research_context
-            else self.get_research_files_summary()
-        )
         reactions_index_str = self.get_reactions_index()
 
         # Hybrid 1-Line RAM Title Map for notes (replaces 50-object JSON dump while preserving full title visibility)
@@ -1735,7 +1526,6 @@ class GreyService:
             .replace("{{INSPECTED_NOTE_ID}}", str(inspected_note_id or "None"))
             .replace("{{ACTIVE_PERSON_INFO}}", active_person_info)
             .replace("{{VISIBLE_MOVIES_LIST}}", visible_movies_str)
-            .replace("{{RESEARCH_FILES_INDEX}}", research_files_str)
             .replace("{{AVAILABLE_REACTIONS}}", reactions_index_str)
             .replace("{{FAVORITES_JSON}}", json.dumps(dossier["high_rated"][:5]))
             .replace("{{DISCARDED_COUNT}}", str(dossier["discarded_count"]))
@@ -1884,13 +1674,6 @@ class GreyService:
                     inspected_title=inspected_title,
                     is_post_target_mention=is_post_target_mention,
                 )
-
-            if action and action.get("type") in (
-                "save_research_file",
-                "append_research_file",
-                "delete_research_file",
-            ):
-                self._handle_research_file_action(action, data)
 
             reaction = data.get("reaction")
             valid_reaction = None
