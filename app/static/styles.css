@@ -1066,12 +1066,12 @@ button.entry-tag:hover {
 }
 .related-heading {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
 .related-familiar-toggle {
-  margin-bottom: 1rem;
+  margin: 0;
   padding: .38rem .55rem;
   border: 1px solid rgba(242, 201, 76, .3);
   border-radius: 7px;
@@ -2847,7 +2847,8 @@ footer span {
   max-width: 670px !important;
   padding: 0 !important;
   margin: 0 !important;
-  overflow: hidden !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
   box-sizing: border-box !important;
 }
 
@@ -6370,94 +6371,8 @@ body.grey-docked-open .entries-page {
 }
 
 /* ==========================================================================
-   Single Movie Detail Page when Grey is Docked
+   Single Movie Detail Page when Grey is Docked (Maintained at §2 / line 10260+)
    ========================================================================== */
-body.grey-docked-open .movie-detail-page {
-  padding: 0 0 3.5rem !important;
-}
-body.grey-docked-open .movie-detail-page .detail-page-header {
-  width: 100% !important;
-  max-width: none !important;
-  margin: 0 !important;
-  padding: 10px max(18px, calc((100% - 980px) / 2)) !important;
-  box-sizing: border-box;
-}
-body.grey-docked-open .movie-detail-page .detail-page-content {
-  width: min(980px, calc(100% - 36px)) !important;
-  max-width: 980px !important;
-  margin-left: auto;
-  margin-right: auto;
-  padding: 1.25rem 0 0 !important;
-}
-body.grey-docked-open .movie-detail-page .detail-brand {
-  display: none !important;
-}
-body.grey-docked-open .movie-detail-page .detail-page-header {
-  grid-template-columns: auto minmax(0, 1fr) !important;
-  gap: 0.85rem;
-}
-body.grey-docked-open .movie-detail-page .detail-hero {
-  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
-  gap: 1.75rem;
-}
-body.grey-docked-open .movie-detail-page .dialog-body {
-  min-width: 0;
-}
-body.grey-docked-open .movie-detail-page .dialog-body h1 {
-  font-size: clamp(1.75rem, 3.2vw, 2.55rem);
-  line-height: 1.1;
-  word-break: break-word;
-}
-body.grey-docked-open .movie-detail-page .detail-meta-row {
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-body.grey-docked-open .movie-detail-page .dialog-overview {
-  max-width: 100%;
-  line-height: 1.6;
-  margin-top: 1.25rem;
-  overflow-wrap: break-word;
-}
-body.grey-docked-open .movie-detail-page .credits-lines {
-  max-width: 100%;
-  margin: 1.25rem 0 1.8rem;
-  overflow-wrap: break-word;
-  word-break: normal;
-}
-body.grey-docked-open .movie-detail-page .credits-lines p {
-  line-height: 1.6;
-  overflow-wrap: break-word;
-}
-body.grey-docked-open .movie-detail-page .personal-panel,
-body.grey-docked-open .movie-detail-page .verdict-panel,
-body.grey-docked-open .movie-detail-page .detail-notes,
-body.grey-docked-open .movie-detail-page .related-panel {
-  max-width: 100%;
-  box-sizing: border-box;
-}
-body.grey-docked-open .related-movies {
-  grid-template-columns: repeat(auto-fill, minmax(76px, 86px)) !important;
-  gap: 8px 6px !important;
-}
-body.grey-docked-open .related-card {
-  max-width: 86px !important;
-}
-
-@media (max-width: 1180px) {
-  body.grey-docked-open .movie-detail-page {
-    padding: 0 1.25rem 3rem !important;
-  }
-  body.grey-docked-open .movie-detail-page .detail-hero {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
-  }
-  body.grey-docked-open .movie-detail-page .detail-poster-column {
-    width: min(220px, 60vw);
-  }
-  body.grey-docked-open .movie-detail-page .dialog-poster-wrap {
-    max-height: 310px;
-  }
-}
 
 /* ==========================================================================
    Notion-Style Expandable Note Toggles
@@ -8601,29 +8516,46 @@ body.grey-docked-open .entry-list.is-list-mode:not(.is-hidden) {
 /* 5. Sort Results: Flat 50/50 2-Column Grid of Symmetrical 999px Pills */
 .sort-chip-cloud {
   display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   gap: 6px !important;
   padding: 4px 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  min-width: 0 !important;
 }
 .sort-chip {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  gap: 8px !important;
+  gap: 6px !important;
   height: 28px !important;
-  padding: 0 12px !important;
+  padding: 0 8px !important;
   border-radius: 8px !important;
   background: rgba(255, 255, 255, 0.02) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: #9CA3AF !important;
-  font-size: 12px !important;
+  font-size: 11.5px !important;
   font-weight: 400 !important;
   cursor: pointer !important;
   box-shadow: none !important;
   background-image: none !important;
   white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
   box-sizing: border-box !important;
+  min-width: 0 !important;
+  width: 100% !important;
   transition: all 140ms ease !important;
+}
+.sort-chip span:last-child {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
+}
+.sort-chip .sort-chip-glyph {
+  font-size: 14px !important;
+  flex-shrink: 0 !important;
 }
 .sort-chip:hover {
   background: rgba(255, 255, 255, 0.05) !important;
@@ -8839,8 +8771,8 @@ input[type="number"] {
   align-items: center !important;
   justify-content: center !important;
   padding: 0 !important;
-  background: rgba(10, 10, 12, 0.88) !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  background: rgba(15, 15, 18, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
   backdrop-filter: blur(4px) !important;
   border-radius: 6px !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5) !important;
@@ -8850,6 +8782,8 @@ input[type="number"] {
   display: none !important;
 }
 .status-badge .status-badge-glyph {
+  font-weight: 800 !important;
+  font-variation-settings: 'FILL' 1, 'wght' 800, 'GRAD' 0, 'opsz' 20 !important;
   font-size: 13px !important;
   width: 13px !important;
   height: 13px !important;
@@ -8886,16 +8820,21 @@ body:not([data-active-view="discover"]) .movie-card .status-badge {
 /* Related movies inside single movie details view always display their status badge */
 .related-card .status-badge {
   display: flex !important;
-  top: 3px !important;
-  left: 3px !important;
-  width: 19px !important;
-  height: 19px !important;
-  min-width: 19px !important;
+  top: 4px !important;
+  left: 4px !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  background: rgba(15, 15, 18, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 5px !important;
 }
 .related-card .status-badge .status-badge-glyph {
-  font-size: 11px !important;
-  width: 11px !important;
-  height: 11px !important;
+  font-weight: 800 !important;
+  font-variation-settings: 'FILL' 1, 'wght' 800, 'GRAD' 0, 'opsz' 20 !important;
+  font-size: 12px !important;
+  width: 12px !important;
+  height: 12px !important;
 }
 
 /* 10. Workspace & Header Alignment (Search Bar, Movie Count, Footer) */
@@ -8971,9 +8910,9 @@ footer {
   width: 100% !important;
   max-width: none !important;
   margin: 0 !important;
-  height: 64px !important;
-  min-height: 64px !important;
-  max-height: 64px !important;
+  height: 54px !important;
+  min-height: 54px !important;
+  max-height: 54px !important;
   padding: 0 64px !important;
   background: transparent !important;
   backdrop-filter: none !important;
@@ -9009,6 +8948,59 @@ footer {
   align-items: center !important;
   gap: 12px !important;
   width: auto !important;
+}
+
+.detail-header-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 28px !important;
+}
+
+.detail-sync-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  background: transparent !important;
+  border: none !important;
+  color: #9CA3AF !important;
+  font-family: inherit !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  padding: 4px 6px !important;
+  line-height: 1 !important;
+  user-select: none !important;
+  transition: color 140ms ease, opacity 140ms ease !important;
+}
+
+.detail-sync-btn:hover {
+  color: #F3F4F6 !important;
+}
+
+.detail-sync-btn .fetch-live-icon {
+  width: 12px !important;
+  height: 12px !important;
+  color: inherit !important;
+  stroke: currentColor !important;
+  opacity: 0.85 !important;
+  flex-shrink: 0 !important;
+  transition: transform 180ms ease, opacity 120ms ease !important;
+}
+
+.detail-sync-btn:hover .fetch-live-icon {
+  opacity: 1 !important;
+  transform: rotate(45deg) !important;
+}
+
+.detail-sync-btn.is-loading,
+.detail-sync-btn:active {
+  color: #DEC68B !important;
+}
+
+.detail-sync-btn.is-loading .fetch-live-icon {
+  opacity: 1 !important;
+  color: #DEC68B !important;
+  animation: spinIcon 650ms linear infinite !important;
 }
 
 /* Neutral Calm Surface for Both Nav Pills (Back button & Stepper) */
@@ -9110,7 +9102,7 @@ footer {
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
-  padding: 24px 64px 72px 64px !important;
+  padding: 10px 64px 72px 64px !important;
   box-sizing: border-box !important;
 }
 
@@ -9710,7 +9702,9 @@ footer {
 /* Unified Segmented Watch Status Track (Pure Typography, Zero Pills) */
 .cockpit-shelf-row {
   display: inline-flex !important;
+  flex-wrap: wrap !important;
   align-items: center !important;
+  gap: 4px 2px !important;
   background: rgba(255, 255, 255, 0.02) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-radius: 8px !important;
@@ -9740,9 +9734,24 @@ footer {
   user-select: none !important;
   white-space: nowrap !important;
   outline: none !important;
+  flex-shrink: 0 !important;
 }
 
-body.grey-docked-open .cockpit-shelf-pill,
+body.grey-docked-open .cockpit-shelf-row {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  max-width: 100% !important;
+  width: 100% !important;
+}
+
+body.grey-docked-open .cockpit-shelf-pill {
+  padding: 0 7px !important;
+  gap: 4px !important;
+  font-size: 11px !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
 @media (max-width: 1280px) {
   .cockpit-shelf-pill {
     padding: 0 8px !important;
@@ -9978,7 +9987,11 @@ body.grey-docked-open .cockpit-shelf-pill,
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  margin-bottom: 12px !important; /* Crisp 12px distance to poster grid */
+  width: 100% !important;
+  max-width: 670px !important;
+  box-sizing: border-box !important;
+  margin: 0 0 12px 0 !important; /* Crisp 12px distance to poster grid */
+  padding: 0 !important;
 }
 
 .related-heading h2,
@@ -9988,15 +10001,44 @@ body.grey-docked-open .cockpit-shelf-pill,
   color: #DEC68B !important; /* Faded brand yellow */
   letter-spacing: -0.01em !important;
   margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.2 !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
-.related-familiar-toggle,
-#related-familiar-toggle {
+.related-familiar-toggle:not(.is-hidden),
+#related-familiar-toggle:not(.is-hidden) {
   font-size: 11px !important;
   font-weight: 500 !important;
   color: #9CA3AF !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-radius: 999px !important;
   padding: 4px 12px !important;
+  margin: 0 !important;
+  height: 26px !important;
+  min-height: 26px !important;
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  background: transparent !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transition: all 140ms ease !important;
+}
+
+.related-familiar-toggle.is-hidden,
+#related-familiar-toggle.is-hidden {
+  display: none !important;
+}
+
+.related-familiar-toggle:hover,
+#related-familiar-toggle:hover {
+  color: #F3F4F6 !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: rgba(255, 255, 255, 0.05) !important;
 }
 
 /* Responsive alignment for Single Movie Page */
@@ -10091,12 +10133,42 @@ body.grey-docked-open .app-layout {
 }
 
 /* Discover / Library clusters & movie grid when Grey is open */
+body.grey-docked-open .discover-toolbar-row,
+body.grey-docked-open .library-toolbar-row {
+  flex-wrap: wrap !important;
+  gap: 10px 16px !important;
+  width: 100% !important;
+  max-width: 670px !important;
+}
+
 body.grey-docked-open .discover-search-cluster,
-body.grey-docked-open .library-search-cluster,
+body.grey-docked-open .library-search-cluster {
+  flex: 1 1 260px !important;
+  max-width: 670px !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+body.grey-docked-open .result-count {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+}
+
 body.grey-docked-open .toolbar-search,
 body.grey-docked-open .shelf-ribbon-wrapper {
   width: 100% !important;
   max-width: 670px !important;
+}
+
+body.grey-docked-open .library-shelf-ribbon {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  max-width: 670px !important;
+  width: 100% !important;
+}
+
+body.grey-docked-open .library-shelf-ribbon .ribbon-chip {
+  flex-shrink: 0 !important;
 }
 
 body.grey-docked-open .movie-grid:not(.is-hidden),
@@ -10119,26 +10191,56 @@ body.grey-docked-open .movie-detail-page .detail-page-header {
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
-  height: 64px !important;
-  min-height: 64px !important;
-  max-height: 64px !important;
-  padding: 0 32px !important;
+  height: 54px !important;
+  min-height: 54px !important;
+  max-height: 54px !important;
+  padding: 0 24px !important;
   box-sizing: border-box !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
 }
 
+body.grey-docked-open .detail-header-inner {
+  width: 100% !important;
+  max-width: min(970px, 100%) !important;
+  margin: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  min-width: 0 !important;
+  gap: 16px !important;
+}
+
 body.grey-docked-open .detail-header-left {
-  width: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+  overflow: hidden !important;
   justify-content: flex-start !important;
+}
+
+body.grey-docked-open .detail-trail {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
+}
+
+body.grey-docked-open .detail-header-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: clamp(12px, 2vw, 24px) !important;
+  flex-shrink: 0 !important;
 }
 
 body.grey-docked-open .movie-detail-page .detail-page-content {
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
-  padding: 24px 32px 64px 32px !important;
+  padding: 10px 24px 64px 24px !important;
   box-sizing: border-box !important;
 }
 
@@ -10150,7 +10252,8 @@ body.grey-docked-open .movie-detail-page .detail-hero {
   align-items: start !important;
   justify-content: start !important;
   width: 100% !important;
-  max-width: 100% !important;
+  max-width: min(970px, 100%) !important;
+  margin: 0 !important;
 }
 
 body.grey-docked-open .detail-poster-column {
@@ -10980,13 +11083,14 @@ body.grey-docked-open .movie-grid-viewport:not(.is-hidden) {
 
 
 /* ==========================================================================
-   Detail Poster Status Badge (High-Contrast Top-Left Corner Badge)
+   Detail Poster Status Badge (High-Contrast Top-Right Corner Badge)
    ========================================================================== */
 .detail-poster-status-badge {
   position: absolute !important;
   z-index: 10 !important;
-  top: 12px !important;
-  left: 12px !important;
+  top: 10px !important;
+  right: 10px !important;
+  left: auto !important;
   width: 32px !important; /* Active Size: Large (32px) */
   height: 32px !important;
   padding: 0 !important;
@@ -10995,8 +11099,8 @@ body.grey-docked-open .movie-grid-viewport:not(.is-hidden) {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: rgba(9, 9, 11, 0.92) !important; /* Deep dark background so bright posters never wash it out */
-  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  background: rgba(15, 15, 18, 0.85) !important; /* Crisp, solid semi-opaque dark fill */
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   border-radius: 8px !important;
@@ -11007,6 +11111,8 @@ body.grey-docked-open .movie-grid-viewport:not(.is-hidden) {
 }
 
 .detail-poster-status-badge .detail-status-badge-glyph {
+  font-weight: 800 !important;
+  font-variation-settings: 'FILL' 1, 'wght' 800, 'GRAD' 0, 'opsz' 24 !important;
   font-size: 18px !important;
   width: 18px !important;
   height: 18px !important;
@@ -11022,7 +11128,8 @@ body.grey-docked-open .movie-grid-viewport:not(.is-hidden) {
   width: 24px !important;
   height: 24px !important;
   top: 8px !important;
-  left: 8px !important;
+  right: 8px !important;
+  left: auto !important;
   border-radius: 6px !important;
 }
 .dialog-poster-wrap.badge-sm .detail-status-badge-glyph,
@@ -11030,14 +11137,16 @@ body.grey-docked-open .movie-grid-viewport:not(.is-hidden) {
   font-size: 13px !important;
   width: 13px !important;
   height: 13px !important;
+  font-weight: 800 !important;
 }
 
 .dialog-poster-wrap.badge-lg .detail-poster-status-badge,
 .detail-poster-status-badge.size-lg {
   width: 32px !important;
   height: 32px !important;
-  top: 12px !important;
-  left: 12px !important;
+  top: 10px !important;
+  right: 10px !important;
+  left: auto !important;
   border-radius: 8px !important;
 }
 .dialog-poster-wrap.badge-lg .detail-status-badge-glyph,
@@ -11045,6 +11154,7 @@ body.grey-docked-open .movie-grid-viewport:not(.is-hidden) {
   font-size: 18px !important;
   width: 18px !important;
   height: 18px !important;
+  font-weight: 800 !important;
 }
 
 /* Stronger High-Contrast Status Color Schemes */
@@ -11669,11 +11779,26 @@ footer {
 body.grey-docked-open .is-hidden,
 body.grey-docked-open .movie-grid.is-hidden,
 body.grey-docked-open .movie-grid.is-compact.is-hidden,
+body.grey-docked-open .movie-grid-viewport.is-hidden,
+.movie-grid-viewport.is-hidden,
 body.grey-docked-open .entry-reader .entry-reader-toolbar.is-hidden,
+#related-familiar-toggle.is-hidden,
+.related-familiar-toggle.is-hidden,
 #movie-grid.is-hidden,
 #pagination.is-hidden,
 #entry-pagination.is-hidden,
 #entries-page.is-hidden,
 #entry-reader.is-hidden {
   display: none !important;
+}
+
+/* ==========================================================================
+   Zero-Flash Route Pre-Resolution (Instant View Boot)
+   ========================================================================== */
+html.is-route-movie #app-shell {
+  display: none !important;
+}
+
+html.is-route-movie #movie-detail-page {
+  display: block !important;
 }

@@ -264,6 +264,7 @@ const elements = {
   dialogClose: document.querySelector("#dialog-close"),
   detailBackLabel: document.querySelector("#detail-back-label"),
   detailTrail: document.querySelector("#detail-trail"),
+  detailSyncBtn: document.querySelector("#detail-sync-btn"),
   detailNavStepper: document.querySelector("#detail-nav-stepper"),
   detailPrevBtn: document.querySelector("#detail-prev-btn"),
   detailNextBtn: document.querySelector("#detail-next-btn"),
@@ -3800,6 +3801,16 @@ function applyLibraryFilters(targetPage = 1) {
       elements.pagination.classList.add("is-hidden");
     }
   }
+
+  if (state.selectedMovie && elements.detailPage && !elements.detailPage.classList.contains("is-hidden")) {
+    state.detailNavQueue = [...(list || [])];
+    try {
+      if (list && list.length > 0) {
+        sessionStorage.setItem("nope_detail_nav_ids", JSON.stringify(list.map((m) => getMovieNavId(m))));
+      }
+    } catch (_) {}
+    updateDetailNavStepper(state.selectedMovie.tmdb_id);
+  }
 }
 
 function hasActiveLibraryFilters() {
@@ -6011,6 +6022,34 @@ function createRelatedMovieCard(movie) {
   return button;
 }
 
+function alignRelatedHeading() {
+  const grid = elements.relatedMovies;
+  const heading = document.querySelector(".related-heading");
+  if (!heading || !grid) return;
+  const cards = grid.querySelectorAll(".related-card");
+  if (!cards.length) {
+    heading.style.maxWidth = "";
+    return;
+  }
+  requestAnimationFrame(() => {
+    const firstTop = cards[0].offsetTop;
+    let lastInTopRow = cards[0];
+    for (let i = 1; i < cards.length; i++) {
+      if (Math.abs(cards[i].offsetTop - firstTop) < 6) {
+        lastInTopRow = cards[i];
+      } else {
+        break;
+      }
+    }
+    const gridRect = grid.getBoundingClientRect();
+    const lastCardRect = lastInTopRow.getBoundingClientRect();
+    const targetWidth = Math.round(lastCardRect.right - gridRect.left);
+    if (targetWidth > 0) {
+      heading.style.maxWidth = `${targetWidth}px`;
+    }
+  });
+}
+
 async function loadRelatedMovies(movieId) {
   elements.relatedMovies.innerHTML = '<p class="related-message">Finding related movies…</p>';
   elements.relatedFamiliarToggle.classList.add("is-hidden");
@@ -6031,6 +6070,9 @@ async function loadRelatedMovies(movieId) {
         ? `Hide tracked movies (${trackedCount})`
         : `Show ${trackedCount} tracked ${trackedCount === 1 ? "movie" : "movies"}`;
       elements.relatedFamiliarToggle.classList.remove("is-hidden");
+    } else {
+      elements.relatedFamiliarToggle.textContent = "";
+      elements.relatedFamiliarToggle.classList.add("is-hidden");
     }
     elements.relatedMovies.replaceChildren();
     if (!movies.length) {
@@ -6043,6 +6085,7 @@ async function loadRelatedMovies(movieId) {
     movies.forEach((movie) => {
       elements.relatedMovies.append(createRelatedMovieCard(movie));
     });
+    alignRelatedHeading();
   } catch (error) {
     if (state.selectedMovie?.tmdb_id !== movieId) return;
     elements.relatedMovies.innerHTML = '<p class="related-message">Related movies could not be loaded.</p>';
@@ -6128,6 +6171,11 @@ async function openMovieDetails(
       activeList = Array.isArray(state.movies) && state.movies.length > 0 ? state.movies : (state.allFilteredMovies || []);
     }
     state.detailNavQueue = [...activeList];
+    try {
+      if (activeList.length > 0) {
+        sessionStorage.setItem("nope_detail_nav_ids", JSON.stringify(activeList.map((m) => getMovieNavId(m))));
+      }
+    } catch (_) {}
   }
   state.selectedMovie = null;
   state.detailRelatedMovies = [];
@@ -6222,6 +6270,7 @@ function closeMovieDetails() {
   try {
     sessionStorage.removeItem("nope_open_movie_id");
   } catch (_) {}
+  document.documentElement.classList.remove("is-route-movie");
   const returnView = state.currentView || "discover";
   if (history.replaceState) {
     history.replaceState(null, "", `#${returnView}`);
@@ -6264,6 +6313,17 @@ function updateDetailNavStepper(currentMovieId) {
   if (!elements.detailPrevBtn || !elements.detailNextBtn) return;
   let queue = state.detailNavQueue || [];
   const numId = Number(currentMovieId);
+
+  if (!queue.length || queue.length <= 1) {
+    try {
+      const storedIds = JSON.parse(sessionStorage.getItem("nope_detail_nav_ids") || "[]");
+      if (Array.isArray(storedIds) && storedIds.length > 1 && storedIds.includes(numId)) {
+        queue = storedIds.map((id) => ({ tmdb_id: id, id }));
+        state.detailNavQueue = queue;
+      }
+    } catch (_) {}
+  }
+
   let idx = queue.findIndex((m) => getMovieNavId(m) === numId);
 
   if (idx === -1 && Array.isArray(state.movies)) {
@@ -6275,18 +6335,14 @@ function updateDetailNavStepper(currentMovieId) {
     }
   }
 
-  if (!queue.length) {
+  if (!queue.length || queue.length <= 1 || idx === -1) {
     if (elements.detailNavStepper) elements.detailNavStepper.classList.add("is-hidden");
-    return;
-  }
-  if (elements.detailNavStepper) elements.detailNavStepper.classList.remove("is-hidden");
-
-  if (idx === -1) {
     elements.detailPrevBtn.disabled = true;
     elements.detailNextBtn.disabled = true;
     return;
   }
 
+  if (elements.detailNavStepper) elements.detailNavStepper.classList.remove("is-hidden");
   elements.detailPrevBtn.disabled = idx <= 0;
   elements.detailNextBtn.disabled = idx >= queue.length - 1;
 }
@@ -9023,6 +9079,30 @@ elements.emptySearchButton.addEventListener("click", () => {
   window.scrollTo({ top: 0, behavior: "smooth" });
 });
 
+async function syncCurrentMovieFromTMDB() {
+  if (!state.selectedMovie || !state.selectedMovie.tmdb_id) return;
+  const syncBtn = elements.detailSyncBtn || document.querySelector("#detail-sync-btn");
+  if (syncBtn?.classList.contains("is-loading")) return;
+
+  syncBtn?.classList.add("is-loading");
+  try {
+    const freshMovie = await fetchJSON(`/movies/${state.selectedMovie.tmdb_id}?force_refresh=true`);
+    if (freshMovie && (freshMovie.tmdb_id || freshMovie.id)) {
+      state.selectedMovie = freshMovie;
+      renderMovieDetails(freshMovie);
+      renderDetailTrail();
+      loadRelatedMovies(freshMovie.tmdb_id);
+      showNotice(`Synced "${freshMovie.title || "movie"}" live from TMDB`);
+    }
+  } catch (err) {
+    showNotice(err.message || "Failed to sync movie from TMDB");
+  } finally {
+    setTimeout(() => {
+      syncBtn?.classList.remove("is-loading");
+    }, 450);
+  }
+}
+
 elements.dialogClose.addEventListener("click", () => {
   navigateBackFromMovie();
 });
@@ -9039,6 +9119,10 @@ elements.detailNextBtn?.addEventListener("click", () => {
     saveSelectedNotes({ silent: true });
   }
   navigateNextMovie();
+});
+
+elements.detailSyncBtn?.addEventListener("click", () => {
+  syncCurrentMovieFromTMDB();
 });
 
 elements.returnToOrigin.addEventListener("click", () => {
@@ -9071,6 +9155,7 @@ elements.relatedFamiliarToggle.addEventListener("click", () => {
   state.showRelatedTracked = state.showRelatedTracked === false ? true : false;
   loadRelatedMovies(state.selectedMovie.tmdb_id);
 });
+window.addEventListener("resize", alignRelatedHeading);
 elements.notes?.addEventListener("input", handleMovieNotesInput);
 elements.notes?.addEventListener("keydown", (event) => {
   if ((event.ctrlKey || event.metaKey) && (event.key === "s" || event.key === "S")) {
@@ -9081,6 +9166,16 @@ elements.notes?.addEventListener("keydown", (event) => {
 elements.clearVerdict.addEventListener("click", () => saveSelectedVerdict(null));
 elements.workspaceCollapse.addEventListener("click", () => {
   setWorkspaceCollapsed(!state.filtersCollapsed);
+});
+elements.notes.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    e.preventDefault();
+    if (movieNotesDebounceTimer) {
+      saveSelectedNotes({ silent: true });
+    }
+    elements.notes.blur();
+    elements.detailPage?.focus();
+  }
 });
 elements.notes.addEventListener("focus", () => {
   elements.notes.placeholder = "";
@@ -9878,6 +9973,7 @@ function toggleGreyDrawer(forceOpen) {
     if (elements.greyMessages) {
       elements.greyMessages.scrollTop = elements.greyMessages.scrollHeight;
     }
+    setTimeout(alignRelatedHeading, 120);
   } else {
     const isDetailOpen = elements.detailPage && !elements.detailPage.classList.contains("is-hidden");
     const internalDetailScroll = elements.detailPage ? elements.detailPage.scrollTop : 0;
@@ -9891,6 +9987,7 @@ function toggleGreyDrawer(forceOpen) {
     if (isDetailOpen) {
       window.scrollTo({ top: internalDetailScroll, behavior: "instant" });
     }
+    setTimeout(alignRelatedHeading, 120);
   }
 }
 
@@ -10813,6 +10910,13 @@ async function initializeApp() {
   const validAuxViews = ["storage"];
 
   // Immediately apply view state to DOM BEFORE any async operations so discovery NEVER flashes
+  if (openMovieIdFromHash) {
+    elements.shell?.classList.add("is-hidden");
+    elements.detailPage?.classList.remove("is-hidden");
+    document.documentElement.classList.remove("is-route-movie");
+    openMovieDetails(openMovieIdFromHash);
+  }
+
   if (validLibraryViews.includes(initialView)) {
     setActiveView(initialView);
     if (elements.discoverWorkspace) elements.discoverWorkspace.classList.add("is-hidden");
@@ -10862,7 +10966,21 @@ async function initializeApp() {
   populateJournalYears();
   resetEntryFiltersToCurrent();
 
-  if (validLibraryViews.includes(initialView)) {
+  if (openMovieIdFromHash) {
+    // Non-blocking background preparation of origin view so return navigation is ready
+    if (validLibraryViews.includes(initialView)) {
+      Promise.all([
+        loadProfiles().catch(() => {}),
+        restoreSearchState().catch(() => {}),
+        loadShelf(initialView).catch(() => {}),
+      ]);
+    } else {
+      Promise.all([
+        loadProfiles().catch(() => {}),
+        restoreSearchState().catch(() => {}),
+      ]);
+    }
+  } else if (validLibraryViews.includes(initialView)) {
     await Promise.all([
       loadProfiles().catch(() => {}),
       restoreSearchState().catch(() => {}),
@@ -10908,7 +11026,7 @@ async function initializeApp() {
     await setDiscoveryMode(restoredMode || "super", true);
   }
 
-  if (openMovieIdFromHash) {
+  if (openMovieIdFromHash && (!state.selectedMovie || String(state.selectedMovie.tmdb_id) !== String(openMovieIdFromHash))) {
     openMovieDetails(openMovieIdFromHash);
   }
 }

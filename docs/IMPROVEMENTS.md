@@ -4,31 +4,10 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
-- [ ] **Eliminate Initial View Flash on Page Refresh Across All Screens (Library, Movie Details, Notes, Discover)**
-  * **CSS — Hide All View Containers by Default**: In `app/static/styles.css`, set all top-level view sections/containers (`#app-shell`, `#movie-detail-page`, `#discover-workspace`, `#entries-page`, `#entry-reader`, `#storage-page`, etc.) to `display: none;` by default until an explicit active/ready state or class is attached.
-  * **HTML — Remove Hardcoded Active State**: Ensure `app/web/index.html` does not hardcode any default view container or `data-active-view="discover"` as visibly rendered on initial page load before route resolution.
-  * **JavaScript — Resolve Route Before Showing Container**: In `initializeApp()` in `app/static/app.js` (or an inline head script before first paint), inspect `window.location` (hash/storage) first and reveal *only* the container matching the resolved route (`#movie:<id>`, `#entry-reader:<id>`, `#entries`, `#storage`, `#discover`, or Library shelves) immediately—loading any background origin shelf silently without flashing the Library or Discover screen first.
-
-- [ ] **Grey Docked Mode — Responsive Layout & Overflow Fixes**
-  * **Prevent Library Movie Grid Bleeding into Notes Workspace**: Fix `body.grey-docked-open .movie-grid` and `.movie-grid-viewport` CSS overrides so the Library/Discovery poster grid respects `.is-hidden` and never renders inside the Notes tab when the Grey drawer is open.
-  * **Fix Simultaneous Read & Edit Toolbars in Notes Reader**: Fix `body.grey-docked-open .entry-reader .entry-reader-toolbar` overriding `.is-hidden` so the Read toolbar (`← Notes | Edit | Delete`) and Edit toolbar (`← Notes | Move to Drafts | Done`) never display simultaneously in Grey mode.
-  * **Constrain Left Filter Sidebar & Sort Grid**: Ensure the Filters sidebar container and its 2-column "Sort Results" button grid (`Recently updated`, `Newest first`, `Oldest first`, `Title A–Z`) enforce `box-sizing: border-box`, `width: 100%`, and `min-width: 0` on flex/grid children so buttons shrink or wrap cleanly without overflowing past the right border of the sidebar card when the viewport narrows.
-  * **Prevent Center Column Header & Shelf Ribbon Clipping**: Give the center main content container `min-width: 0` and clean right-side breathing room next to the scrollbar when Grey is docked open. Allow the top search bar row (including the total movie count on the right) and the shelf filter pill row (`New discovery`, `Watch later`, `Watched`, `Rewatch`, `Nope`) to flex and wrap gracefully so the movie count and the `× Nope` button are never clipped at the right edge.
-  * **Single Movie Page Responsiveness in Grey Mode**: Fix the action bar / status controls on the Single Movie Detail page when the Grey drawer is open so the `Nope` button never overflows or escapes outside its container box.
-
 - [ ] **Search Presets & Pagination / View Mode Toggle (Discovery & Library)**
   * **Active Search Preset Highlighting**: Actively highlight the currently selected search preset in both the top preset ribbon and the sidebar preset list so it is always obvious which preset is driving the current results, and visually indicate when filters diverge from the active preset.
   * **Update Existing Search Preset Control**: Restore a clear UI control in the Filters sidebar when a preset is active and its filters are tweaked (e.g., an *"Update preset"* action alongside Rename/Delete) so users can overwrite and save changes directly to the active preset.Let the update icon come on the preset buttons themselves -- they appear only in hover mode just like the delete "x" button -- make sure the icon is righta and in similar style / aesthetic / weight as the delete preset 'x' button.
   * **Numbered Pagination & Continuous/Paged Mode Toggle**: Replace basic prev/next stepping with numbered page navigation (`1 2 3 4 5 …`) and add a single compact toggle button (switching between an **Infinity icon** for continuous scroll and an **Open-Page icon** for numbered pagination) across both Discovery and Library modes.
-
-- [ ] **Single Movie Detail Page & Poster Badges Polish**
-  * **Move Main Poster Status Badge to Top-Right**: Reposition the status icon badge on the main movie poster from `top: 10px; left: 10px;` to `top: 10px; right: 10px;` so it sits immediately adjacent to the film title column.
-  * **Thicken Related Movie Poster Badges**: Increase the icon stroke/weight (`font-weight: 800` for glyphs) on related movie poster status badges, and give the circular badge backplate a crisp, solid semi-opaque dark fill (`background: rgba(15, 15, 18, 0.85); border: 1px solid rgba(255, 255, 255, 0.2);`) so the icon punches through any poster artwork. This should be the same for the discover posters. 
-  * **Direct Single-Movie TMDB Sync**: Add a dedicated 1-click *"Sync from TMDB"* button on the Single Movie Detail page that force-fetches and caches fresh details, cast, and crew from TMDB exclusively for that movie when cast/crew data is missing or stale.
-  * **Escape Personal Movie Notes Field via Keyboard**: Allow pressing `Escape` inside the personal movie notes textarea to blur the input and return focus to the page so users are never trapped in the text field when trying to use arrow keys to navigate to the next or previous movie.Discuss this first one how to implement this intelligently - dont rush it.
-  * **Fix the brief flash of the Library screen** when refreshing the Single Movie page:Resolve Route Before Revealing Views:
-- Hide all main view containers (Library, Movie Detail, Notes) by default on initial page load instead of showing the Library view first.
-- Read the active URL / saved session state on startup and reveal only the matching target screen so refreshing a single movie page stays directly on that movie without flashing the Library.
 
 Implement the Continuous/Page mode icon toggle and a smart floating Scroll-to-Top button:
 
@@ -37,6 +16,7 @@ Implement the Continuous/Page mode icon toggle and a smart floating Scroll-to-To
 - Visuals: Use a quiet, compact icon-only toggle (e.g., `∞` for continuous scroll and `☷` / page glyph for paged mode). 
 - Style: Keep it minimalist and borderless with a subtle semi-opaque dark backplate (`border-radius: 6px` to `8px`). Use the active soft gold accent for the selected mode icon and a muted opacity (`0.5`) for the inactive icon.
 - Functionality: Clicking toggles between infinite scrolling and paginated navigation.
+- Continuous Stepper Auto-Fetch: In Continuous Mode (`∞`), clicking `Next ›` (or pressing `→`) at the end of the loaded queue automatically fetches the next page in the background and continues stepping seamlessly without stopping. In Paged Mode (`☷`), it stays bounded to the current page.
 
 2. Smart Floating Scroll-to-Top Button:
 - Position: Dock in the bottom-right corner, immediately to the left of the floating Grey trigger pill (e.g., `bottom: 18px; right: calc(grey_pill_width + 28px);` or in a shared fixed flex container with `gap: 10px; align-items: center;`).
@@ -85,6 +65,29 @@ Implement the Continuous/Page mode icon toggle and a smart floating Scroll-to-To
 ---
 
 ## ✅ Completed Tasks
+- [x] **Detail View Header Edge Alignment & Related Movies Baseline & Poster Locking (`app/static/styles.css`, `app/static/app.js`, `app/web/index.html`)**
+  * **Back to Discover Left Edge Alignment**: Removed legacy overriding header padding/margins from lines 6379-6461 so `← Back to Discover` and the main poster left edge align at the exact same pixel offset across both non-Grey and Grey docked modes.
+  * **Metadata Card & Stepper/Sync Right Edge Alignment**: Synchronized `.detail-header-inner` and `.detail-hero` width to `min(970px, 100%)` so the navigation stepper and sync button (`[ ‹ Prev | Next › ] [ ↻ Sync ]`) align with the right edge of the movie metadata card.
+  * **Related Movies Baseline & Last Poster Lock**: Cleared legacy `margin-bottom: 1rem` from `#related-familiar-toggle` to align it on the exact vertical baseline of `Related Movies`. Added `alignRelatedHeading()` in `app.js` to dynamically lock the right boundary of the heading to the right edge of the last poster in the top row across all screen sizes and Grey mode toggles.
+  * **Fixed Ghost Circle When Zero Tracked Movies**: Scoped toggle display to `:not(.is-hidden)` and reinforced `#related-familiar-toggle.is-hidden { display: none !important; }` so movies with zero tracked related titles remain hidden without rendering an empty circular border.
+- [x] **Grey Docked Mode Responsive Layout & Overflow Polish (`app/static/styles.css`, `app/web/index.html`)**
+  * **Strict Visibility Guard**: Added `.movie-grid-viewport.is-hidden` and `body.grey-docked-open .movie-grid-viewport.is-hidden` to prevent the poster grid from ever rendering inside the Notes workspace in Grey mode.
+  * **Sidebar Sort Results Constraint**: Updated `.sort-chip-cloud` to `grid-template-columns: repeat(2, minmax(0, 1fr))` with `box-sizing: border-box` and `.sort-chip` text truncation (`min-width: 0`, `text-overflow: ellipsis`) so sort buttons never overflow past the sidebar container border.
+  * **Center Header & Shelf Ribbon Clipping**: Replaced rigid `overflow: hidden` on `.library-shelf-ribbon` with clean `overflow-x: auto` (hidden scrollbars) and allowed `.discover-toolbar-row` / `.library-toolbar-row` to flex and wrap gracefully in docked Grey mode so the `Nope` shelf button and movie count are never clipped.
+  * **Single Movie Page Responsiveness & Aligned Header**: Repaired malformed comma before `@media` rule in `.cockpit-shelf-pill`, enabled `flex-wrap: wrap` on `.cockpit-shelf-row`, and aligned header padding (`padding: 0 24px`) with content in Grey mode so the `Nope` cockpit button and `[ ‹ Prev | Next › ] [ ↻ Sync ]` controls maintain exact spacing and never overflow.
+- [x] **Top-Right Main Poster Status Badge, High-Contrast Thickened Badges & Notes Keyboard Escape (`app/static/styles.css`, `app/static/app.js`, `app/web/index.html`)**
+  * **Top-Right Main Poster Badge**: Repositioned `.detail-poster-status-badge` from top-left (`left: 12px`) to top-right (`top: 10px; right: 10px; left: auto;`), placing it immediately adjacent to the film title and overview column.
+  * **Thickened High-Contrast Poster Badges**: Enhanced status glyphs across main, discover, and related movie poster cards with `font-weight: 800` and filled circular backplates (`background: rgba(15, 15, 18, 0.85); border: 1px solid rgba(255, 255, 255, 0.2);`), ensuring high visibility across dark and light movie artwork alike.
+  * **Escape Key Unfocus from Notes**: Added an `Escape` keydown handler on the personal movie notes textarea that flushes any pending debounced save, blurs the textarea, and returns focus to the detail page container, allowing effortless subsequent `←` / `→` arrow key navigation between movies.
+- [x] **Direct Single-Movie TMDB Sync, Prev/Next Preservation & 24px Header Lift (`app/main.py`, `app/movie_service.py`, `app/static/app.js`, `app/static/styles.css`, `app/web/index.html`)**
+  * **Header A [ ‹ Prev | Next › ] [ ↻ Sync ] Order & Spacing**: Placed `[ ‹ Prev | Next › ]` and `[ ↻ Sync ]` in exact requested order in the detail header with a clean 28px gap, using the Discover sync icon and 12px keyword typography that turns brand champagne gold while spinning.
+  * **Direct TMDB Force-Sync**: Connected `GET /movies/{tmdb_id}?force_refresh=true` to freshly fetch, cache in SQLite, and update credits, directors, cast, and metadata on screen in-place.
+  * **Fixed Stepper Disappearing on Refresh**: Persisted navigation queue IDs in `sessionStorage` and restored them on boot/shelf loads so `‹ Prev | Next ›` remains active and visible on single movie refreshes.
+  * **24px Viewport Lift**: Reduced header height to 54px and content padding-top to 10px, lifting the single movie page content by 24px without altering Prev/Next positioning.
+- [x] **Eliminate Initial View Flash on Page Refresh Across All Screens (`app/static/app.js`, `app/static/styles.css`, `app/web/index.html`)**
+  * **Head Pre-Resolution Script**: Added an early synchronous snippet in `<head>` that immediately attaches `html.is-route-movie` if `#movie:<id>` is detected, instantly suppressing `#app-shell` and showing `#movie-detail-page` with zero frame flashing.
+  * **HTML Hardcoded State Cleared**: Removed `data-active-view="discover"` from `<body>` and marked `#discover-canvas-header` with `is-hidden` by default so discovery headers never flash when booting directly into Library or Notes.
+  * **Eager Route Handshake & Non-Blocking Shelf Loading**: In `initializeApp()`, immediately invoked `openMovieDetails(id)` without blocking on background shelf API calls; background shelf hydration runs silently in parallel so the Single Movie page appears without delay.
 - [x] **Direct Numbered Page Links & Jump-to-Page in Zen Pagination (`app/static/app.js`, `app/static/styles.css`, `app/web/index.html`)**
   * **Interactive Numbered Folio Sequence**: Replaced the static center `1 / 149` counter with a responsive, clickable numbered sequence (e.g. `1  2  3  4  5 … 149` or `1 … 14  15  16 … 149`) that jumps directly to any clicked page.
   * **Zen Minimalist Typography**: Maintained seamless alignment between `< Prev` and `Next >`. Styled the active page in soft champagne gold (`#DEC68B`, font-weight 600) without heavy box borders or buttons, with muted gray links for inactive pages and subtle hover transitions.

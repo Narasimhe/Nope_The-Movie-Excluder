@@ -55,11 +55,12 @@ class MovieService:
     def _resolve_genre_names(self, g_ids: list[int]) -> list[dict]:
         return self.movie_repository.resolve_genre_names(g_ids)
 
-    def get_movie(self, tmdb_id: int) -> dict:
+    def get_movie(self, tmdb_id: int, force_refresh: bool = False) -> dict:
         local_movie = self.movie_repository.get_movie(tmdb_id)
 
         if (
-            local_movie is None
+            force_refresh
+            or local_movie is None
             or local_movie.get("metadata_fetched_at") is None
             or int(local_movie.get("metadata_version") or 1) < 2
         ):

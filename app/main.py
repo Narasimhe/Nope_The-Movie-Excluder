@@ -816,7 +816,7 @@ def get_related_movies(
     tags=["movies"],
     summary="Get movie details",
 )
-def get_movie_details(tmdb_id: int):
+def get_movie_details(tmdb_id: int, force_refresh: bool = False):
     return movie_service.get_movie(tmdb_id)
 
 
