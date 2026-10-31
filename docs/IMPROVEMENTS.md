@@ -4,38 +4,6 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
-- [ ] **Search Presets & Pagination / View Mode Toggle (Discovery & Library)**
-  * **Active Search Preset Highlighting**: Actively highlight the currently selected search preset in both the top preset ribbon and the sidebar preset list so it is always obvious which preset is driving the current results, and visually indicate when filters diverge from the active preset.
-  * **Update Existing Search Preset Control**: Restore a clear UI control in the Filters sidebar when a preset is active and its filters are tweaked (e.g., an *"Update preset"* action alongside Rename/Delete) so users can overwrite and save changes directly to the active preset.Let the update icon come on the preset buttons themselves -- they appear only in hover mode just like the delete "x" button -- make sure the icon is righta and in similar style / aesthetic / weight as the delete preset 'x' button.
-  * **Numbered Pagination & Continuous/Paged Mode Toggle**: Replace basic prev/next stepping with numbered page navigation (`1 2 3 4 5 …`) and add a single compact toggle button (switching between an **Infinity icon** for continuous scroll and an **Open-Page icon** for numbered pagination) across both Discovery and Library modes.
-
-Implement the Continuous/Page mode icon toggle and a smart floating Scroll-to-Top button:
-
-1. Compact View Mode Icon Toggle (Filter Bar):
-- Position: Place on the far-right of the second row (filter pills row), horizontally aligned with the genre/theme filter pills and directly beneath the total movie count label.
-- Visuals: Use a quiet, compact icon-only toggle (e.g., `∞` for continuous scroll and `☷` / page glyph for paged mode). 
-- Style: Keep it minimalist and borderless with a subtle semi-opaque dark backplate (`border-radius: 6px` to `8px`). Use the active soft gold accent for the selected mode icon and a muted opacity (`0.5`) for the inactive icon.
-- Functionality: Clicking toggles between infinite scrolling and paginated navigation.
-- Continuous Stepper Auto-Fetch: In Continuous Mode (`∞`), clicking `Next ›` (or pressing `→`) at the end of the loaded queue automatically fetches the next page in the background and continues stepping seamlessly without stopping. In Paged Mode (`☷`), it stays bounded to the current page.
-
-2. Smart Floating Scroll-to-Top Button:
-- Position: Dock in the bottom-right corner, immediately to the left of the floating Grey trigger pill (e.g., `bottom: 18px; right: calc(grey_pill_width + 28px);` or in a shared fixed flex container with `gap: 10px; align-items: center;`).
-- Style: Compact rounded-square badge (34×34px, `border-radius: 8px`), semi-transparent dark background (`rgba(20, 20, 24, 0.85)` with a 1px faint border), containing a crisp upward arrow/chevron (`↑`).
-- Smart Visibility:
-  * Keep hidden by default: `opacity: 0; pointer-events: none; transform: translateY(6px); transition: opacity 0.25s ease, transform 0.25s ease;`.
-  * Add a scroll listener (or IntersectionObserver): attach a `.visible` class (`opacity: 1; pointer-events: auto; transform: translateY(0);`) only after scrolling down past 450px (~2 rows of movie posters).
-  * Smoothly fade back out when scrolling back near the top (< 450px).
-- Click Behavior: On click, trigger `window.scrollTo({ top: 0, behavior: 'smooth' })`.
-
-- [ ] **Notes UI Restyle, Editor Status & Movie Hover Card Polish**
-  * **Notes Main UI & Sidebar Thematic Redo**: Tone down overly bright/thick note titles in List mode for a calmer editorial hierarchy. In the Notes sidebar, soften the overly yellow *"All notes"* active state to match our warm champagne-gold Zen palette, and replace the Drafts icon with a clean stroke icon matching the Library/Discover sidebar style.
-  * **Notes List Tag Positioning**: Keep category/tag pills in List mode positioned at a comfortable, consistent gap right after the note title rather than floating too far out to the right when the list widens.
-  * **Theme-Consistent "Saved" Indicator**: Replace the bright green *"Saved"* badge in the notes editor with a subtle, theme-consistent status indicator (warm muted stone/champagne typography) that blends naturally with the dark Zen UI.
-  * **Movie Hover Card Layout & Typography**: On the `@Movie Title (Year)` hover preview card:
-    * Render the release year in the same font weight as the movie title.
-    * Prevent wide note cards from pushing the rating/vote metadata all the way to the far right edge; use a generous, consistent spacing gap after `Movie Title (Year)`.
-    * Format the metadata block as `[Star Icon] Rating  [Vote Icon] Vote Count`, using the same vote icon as the Single Movie Detail page, coloring both the star and vote icons in theme yellow, and styling the rating and vote numbers in bold white.
-
 - [ ] **Storage Telemetry Labels & Filmography Zen Alignment**
   * **Storage Page "Personal Library" Label Cutoff**: Fix card width, padding, or label sizing on the Footer > Storage page so the *"Personal Library"* metric labels and sublabels never clip or truncate.
   * **Actor & Director Filmography Zen Restyle**: Align the Actor/Director filmography view with the app's dark Zen editorial aesthetic—refining header hierarchy, badge contrast, card spacing, and muted warm-stone typography.
@@ -65,6 +33,36 @@ Implement the Continuous/Page mode icon toggle and a smart floating Scroll-to-To
 ---
 
 ## ✅ Completed Tasks
+- [x] **Poster Hover Preview Card Year & Metadata Alignment (`app/static/app.js`, `app/static/styles.css`, `app/web/index.html`)**
+  * **Bare Release Year**: Stripped parentheses from the release year in `.poster-note-popover` so it sits bare right after the title with a clean single space gap (e.g. `Inception 2010`).
+  * **Unified Metadata Placement & Proximity**: Switched `.poster-note-popover-header` alignment from `space-between` to `flex-start` with a consistent `16px` gap, ensuring rating and vote count metadata sit directly next to the title/year across both title-only previews and previews with personal notes.
+- [x] **Sidebar Library Status Placement & Preset Decoupling (`app/web/index.html`, `app/static/app.js`)**
+  * **Sidebar Hierarchy Repositioning**: Moved *Library Status* directly beneath *Sort Results* at the top of the Discover sidebar accordion, keeping both global presentation/lens controls grouped together before movie criteria filters.
+  * **Full Decoupling of Library Status from Presets (Option 1)**: Removed personal library status from preset divergence checks and preset application (`applySelectedProfile`), ensuring search presets focus purely on TMDB discovery criteria without overwriting or dirtying active personal library status toggles.
+- [x] **Search Preset Divergence & Instant Chip Feedback Refinement (`app/static/app.js`, `app/web/index.html`)**
+  * **Minimum Vote Count Key Parity**: Fixed key mismatch in `isProfileFiltersDiverged` where the filter key was checked as `vote_count_minimum` instead of `minimum_vote_count`, ensuring changes to the minimum votes input immediately trigger the preset divergence check and update icon. Also added coverage for `maximum_rating`, `runtime_min`, `runtime_max`, `include_actor_ids`, and company/keyword exclusion keys.
+  * **Update Icon Scoped Exclusively to Ribbon Presets**: Removed the update icon button from the Search Profiles accordion workshop chips so the update icon appears exclusively on the top ribbon presets as requested.
+  * **Sort Order Excluded from Preset Divergence**: Removed `sort_by` from `isProfileFiltersDiverged` so modifying result ordering (e.g. Highest rated, Most popular, Newest) is treated strictly as view presentation and never marks a preset as modified or triggers the update icon.
+  * **Instant Chip Feedback**: Wired genre chips, language/country pickers, keywords, and entity tags (cast, directors) directly into `syncRibbonActiveState()` and `renderProfileWorkshop()` so toggling or removing any filter chip immediately surfaces or clears the preset update icon in real time without needing a form event or search submission.
+- [x] **Reader & Blog Notes Typography Scale Refinement (`app/static/styles.css`, `app/web/index.html`)**
+  * **Balanced Editorial Font Sizing**: Scaled down body text and headings in `.entry-reader` and `.reader-body-textarea` to harmonize with the compact Zen UI aesthetic.
+  * **Body & Textarea**: Scaled from `1.06rem` (~17px) / `1.76` line-height down to `0.94rem` (~15px) / `1.62` line-height (and `0.90rem` / `1.58` in docked Grey mode) with paragraph margins reduced from `1.25rem` to `1.05rem`.
+  * **Note Titles**: Scaled down note title input and display from `clamp(2rem, 4vw, 2.55rem)` down to `clamp(1.5rem, 2.8vw, 1.75rem)` in full view (and `clamp(1.35rem, 2.2vw, 1.55rem)` in Grey docked mode) with tightened margins (`margin-bottom: 0.75rem`).
+  * **Section Headings**: Scaled `h2` down from `1.6rem` to `1.22rem` (margin: `1.6rem 0 0.65rem`) and `h3` down from `1.28rem` to `1.05rem` (margin: `1.3rem 0 0.55rem`) for cohesive visual hierarchy.
+- [x] **Notes UI Restyle, Editor Status & Movie Hover Card Polish (`app/static/styles.css`, `app/static/app.js`, `app/web/index.html`)**
+  * **Movie Grid Creeping into Notes Fix (Grey Mode)**: Resolved an issue where library posters bled into the top of the Notes workspace when Grey was docked open. The root cause was that Grey mode grid overrides checked `:not(.is-hidden)` while auxiliary views only set `.force-hidden` and left the `#movie-grid-viewport` untoggled. Unified both classes on grid and viewport, guarded with `:not(.force-hidden)`, and established a CSS firewall ensuring the movie grid and viewport are never rendered whenever `#entries-page` or `#entry-reader` is active.
+  * **Notes Toolbar Zen Dimensions & Palette Alignment**: Compacted the toolbar from chunky 44px blocks down to a refined 32px height matching the Library/Discover toolbars. Replaced the loud solid canary yellow `+ New note` button with a subtle, warm champagne-accented Zen pill (`rgba(222, 198, 139, 0.10)`), toned down the List/Cards switcher active state to soft champagne (`#DEC68B`), eliminated the yellow neon box shadow, and aligned search input padding, typography, and focus ring with the Zen aesthetic.
+  * **Grey Docked Mode Note Toolbar Visibility Fix**: Corrected selector over-matching (`body.grey-docked-open .entry-reader-toolbar:not(.is-hidden)`) that was inadvertently forcing both the reading view toolbar and editing canvas toolbar to render simultaneously in Grey mode. Explicitly scoped `display: none !important` and `display: flex !important` based on `.is-editing` state.
+  * **Clean Segmented Switcher & Subpixel Antialiasing**: Eliminated the concentric double-box border by setting the active switcher button border to transparent within its outer container, removed the colliding vertical separator line, and enforced grayscale font antialiasing (`-webkit-font-smoothing: antialiased`, `-moz-osx-font-smoothing: grayscale`) across the body and UI buttons to completely eliminate Windows ClearType chromatic (red/cyan) text fringing.
+  * **Unified Tag Chip Shape (List Mode & Single Note Mode Parity)**: Aligned single note reader/editor tag chips (`.reader-tag-chip`, `.entry-reader-tags .entry-tag`, and `.reader-tag-input`) from squarish `border-radius: 6px` to the exact rounded `999px` pill style and muted champagne border used in list mode.
+  * **List Mode Row Actions Proximity**: Removed `margin-left: auto` from `.ledger-right`, docking the pin, archive, and delete action buttons directly adjacent to the note title and tag pills with a comfortable 12px gap instead of stranding them at the far right edge of the monitor.
+  * **Calm Editorial Hierarchy in List Mode**: Toned down overly bright/thick note titles (`font-weight: 500; color: #d8d5cf;`), highlighting warmly on hover and maintaining clear balance on pinned rows.
+  * **Soft Champagne Zen Active State & Outline Drafts Icon**: Softened `.notes-tag-link.is-active` from saturated yellow to warm champagne-gold (`#DEC68B` / `rgba(222, 198, 139, 0.10)`), and replaced the solid emoji with a clean outline SVG icon for Drafts, All Notes, and Archive in the sidebar.
+  * **Direct Note Title & Tag Proximity**: Positioned category/tag pills directly inside `.ledger-title-wrap` immediately adjacent to note titles with a comfortable 9px gap, preventing tags from floating far to the right on wide displays while keeping row actions cleanly docked on the far right.
+  * **Timeline Month Note Count Proximity**: Repositioned `(n notes)` directly following `YYYY · MONTH` with a clean spacing gap, allowing the decorative horizontal rule to span the remainder of the row instead of pushing the count to the far right edge.
+  * **Single Movie Detail Vote Icon Parity**: Replaced the Material icon on the movie detail page with the exact yellow SVG vote icon (`stroke: #F2C94C`, stroke-width: 2.2) used in the hover preview card.
+  * **Muted Stone/Champagne Save Indicators**: Replaced neon green indicators in the notes editor and movie detail notes with warm muted stone/champagne typography (`#d1cdb8`), removing visual clutter while preserving reassuring status clarity.
+  * **Movie Hover Card Layout & Metadata Styling**: Release year now matches the exact font weight of the movie title (`550`); preserved generous 14px header spacing; formatted metadata with crisp yellow SVG icons and bold white numbers for both ratings (`[Star Icon] Rating`) and votes (`[Vote Icon] Vote Count`).
 - [x] **Detail View Header Edge Alignment & Related Movies Baseline & Poster Locking (`app/static/styles.css`, `app/static/app.js`, `app/web/index.html`)**
   * **Back to Discover Left Edge Alignment**: Removed legacy overriding header padding/margins from lines 6379-6461 so `← Back to Discover` and the main poster left edge align at the exact same pixel offset across both non-Grey and Grey docked modes.
   * **Metadata Card & Stepper/Sync Right Edge Alignment**: Synchronized `.detail-header-inner` and `.detail-hero` width to `min(970px, 100%)` so the navigation stepper and sync button (`[ ‹ Prev | Next › ] [ ↻ Sync ]`) align with the right edge of the movie metadata card.
@@ -1194,6 +1192,28 @@ efreshCompactCloud where background excluded status prevented Hindi from receivi
     * **Refined Hover Card Header ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js) & [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
       - Integrated rating and vote count into `.poster-note-popover-header` as a neat, balanced pair (e.g. `★ 7.5 (17.7k)`) aligned with the movie title and year.
       - Styled in soft brand yellow (`#DEC68B`) with muted vote numbers, keeping the hover card minimal and elegant.
+
+- [x] **Intelligent & Conditional Browse Mode Toggle (Paged `book-open` vs Continuous `∞`) & Floating Scroll-to-Top**
+  * **Goal**: Provide seamless switching between Paged and Continuous scroll with Option 1 Lucide icons (`book-open` vs `∞`), position the toggle on the far right of the filter ribbon directly beneath the movie count, auto-hide the toggle intelligently when a shelf or search has only a single page (<= 30 movies or single TMDB page like Watch Later), enable endless single-movie stepper auto-fetching in continuous mode, and ensure instant cache-backed continuous scrolling in Discover view and reliable Scroll-to-Top positioning in Grey mode.
+  * **Key Changes**:
+    * **Intelligent Visibility Guard ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**:
+      - Added `shouldShowShelfViewToggle()`: evaluates whether `totalPages > 1` and total movie items exceed page size (`> 30` in library, `> 20` in discover).
+      - If a shelf or status has only a few movies (e.g. Watch Later, small filtered queries), the toggle remains completely hidden and unobtrusive.
+      - Automatically appears when multi-page navigation is possible across Library shelves and Discover.
+    * **Unified Discover Cache & Prefetch Continuous Scroll ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**:
+      - Extracted unified `fetchDiscoveryBatch()` used by `executeDiscoverySearch()`, `prefetchDiscoveryPage()`, and `loadNextContinuousBatch()`.
+      - Corrected continuous endpoint to use `/movies/discover/super-advanced` (or `/advanced`) and unified `discoveryCache` Map: when scrolling down, subsequent batches are retrieved instantly from memory cache and the following page is prefetched speculatively.
+    * **Zen Toggle Styling & Alignment ([`index.html`](file:///f:/Movie_Excluder/movie-excluder/app/web/index.html) & [`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
+      - Inserted `.shelf-view-toggle` into `.discover-ribbon-row` and `.library-ribbon-row` with `margin-left: auto`, perfectly locking to the right edge directly beneath `#result-count` and `#shelf-count`.
+      - Styled 28px pill with `book-open` and `infinity` SVG icons; active state glows in soft Zen gold (`#DEC68B` / `rgba(222, 198, 139, 0.14)`).
+      - Remembers preference across sessions in `localStorage`.
+    * **Continuous Stepper Auto-Fetch ([`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**:
+      - In Continuous Mode, stepping through movies with `[ ‹ Prev | Next › ]` (or arrow keys) automatically fetches the next batch when reaching the end of the loaded queue, making single-movie navigation endless.
+    * **Floating Scroll-to-Top Badge & Grey Mode Docking Parity ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css) & [`app.js`](file:///f:/Movie_Excluder/movie-excluder/app/static/app.js))**:
+      - Refined `#back-to-top-btn` into a compact 34×34px badge (`border-radius: 8px`, `rgba(20, 20, 24, 0.90)` with `backdrop-filter: blur(12px)`).
+      - Fixed alignment: in normal mode, positioned at `right: 144px; bottom: 26px; z-index: 1060`, vertically centered and leaving a clean 11px gap to the left of the 109px-wide Grey pill with zero overlap.
+      - Fixed Grey mode library scrolling: in `body.grey-docked-open`, `.site-shell` is the scrolling container rather than `window`; added `getActiveScrollPosition()` checking `elements.shell.scrollTop`, wired shell scroll listeners, and positioned button at `right: calc(420px + 24px); bottom: 26px; z-index: 1060`.
+      - Smoothly fades in after 450px of scroll in both normal and Grey modes; clicking it smoothly scrolls the active scroll container to top.
 
 - [x] **Keyword Chips Beneath Poster & Static Zero-Hover Interaction for Keyword & Genre Chips**
   * **Goal**: Relocate keyword chips beneath the poster in the poster column, and convert both keyword and genre chips into static, non-interactive textual chips with no hover or highlight effects.

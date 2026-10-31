@@ -186,6 +186,7 @@ const elements = {
   form: document.querySelector("#movie-search"),
   query: document.querySelector("#search-query"),
   grid: document.querySelector("#movie-grid"),
+  gridViewport: document.querySelector("#movie-grid-viewport"),
   empty: document.querySelector("#empty-state"),
   emptyTitle: document.querySelector("#empty-title"),
   emptyCopy: document.querySelector("#empty-copy"),
@@ -422,7 +423,13 @@ const state = {
   lastNormalShelf: "favorites",
   mode: "shelf",
   currentView: "new_discovery",
-  browseMode: "paged",
+  browseMode: (function () {
+    try {
+      return localStorage.getItem("nope_browse_mode") === "continuous" ? "continuous" : "paged";
+    } catch (_) {
+      return "paged";
+    }
+  })(),
   continuousPage: 1,
   continuousLoading: false,
   selectedMovie: null,
@@ -1013,6 +1020,8 @@ function buildTriStatePicker(containerId, config) {
       renderActiveFilterTags();
       scheduleSearchStateSave();
       refreshCompactClouds();
+      syncRibbonActiveState();
+      renderProfileWorkshop();
     });
 
     chip.addEventListener("contextmenu", (e) => {
@@ -1026,6 +1035,8 @@ function buildTriStatePicker(containerId, config) {
       renderActiveFilterTags();
       scheduleSearchStateSave();
       refreshCompactClouds();
+      syncRibbonActiveState();
+      renderProfileWorkshop();
     });
   });
 
@@ -1540,6 +1551,9 @@ function renderSelectedEntities(key) {
       if (key.startsWith("lib")) {
         if (typeof syncLibraryTargetBtn === "function") syncLibraryTargetBtn();
         searchPersonalLibrary();
+      } else {
+        syncRibbonActiveState();
+        renderProfileWorkshop();
       }
     });
     chip.append(name, remove);
@@ -1561,6 +1575,9 @@ function renderSelectedEntities(key) {
       if (key.startsWith("lib")) {
         if (typeof syncLibraryTargetBtn === "function") syncLibraryTargetBtn();
         searchPersonalLibrary();
+      } else {
+        syncRibbonActiveState();
+        renderProfileWorkshop();
       }
     });
     container.append(clear);
@@ -1589,6 +1606,9 @@ function addSelectedEntity(key, entity) {
     if (key.startsWith("lib")) {
       if (typeof syncLibraryTargetBtn === "function") syncLibraryTargetBtn();
       searchPersonalLibrary();
+    } else {
+      syncRibbonActiveState();
+      renderProfileWorkshop();
     }
   }
 
@@ -2403,11 +2423,20 @@ function setupFilterPills() {
     document.querySelector("#run-advanced-search")?.classList.add("is-dirty");
     updateFilterPillBadges();
     renderActiveFilterTags();
+    syncRibbonActiveState();
+    renderProfileWorkshop();
   });
 
   elements.advancedForm?.addEventListener("input", () => {
     document.querySelector("#run-advanced-search")?.classList.add("is-dirty");
     updateFilterPillBadges();
+    syncRibbonActiveState();
+    renderProfileWorkshop();
+  });
+
+  elements.personalFilters?.addEventListener("change", () => {
+    updateFilterPillBadges();
+    renderActiveFilterTags();
   });
 
   updateFilterPillBadges();
@@ -2686,9 +2715,25 @@ function showPosterNotePreview(anchorEl, movie) {
   const isTitleOnly = !rawNotes;
 
   let metaHtml = "";
-  if (rating) {
-    const votesStr = compactVotes ? ` <span class="poster-note-popover-votes">(${compactVotes})</span>` : "";
-    metaHtml = `<span class="poster-note-popover-rating">★ ${escapeHTML(rating)}${votesStr}</span>`;
+  if (rating || compactVotes) {
+    const parts = [];
+    if (rating) {
+      parts.push(`
+        <span class="popover-stat-item">
+          <svg class="popover-meta-icon popover-star-icon" viewBox="0 0 24 24" width="11" height="11" fill="#F2C94C" stroke="#F2C94C" stroke-width="1" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span class="popover-stat-val">${escapeHTML(rating)}</span>
+        </span>
+      `);
+    }
+    if (compactVotes) {
+      parts.push(`
+        <span class="popover-stat-item">
+          <svg class="popover-meta-icon popover-vote-icon" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="#F2C94C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span class="popover-stat-val">${escapeHTML(compactVotes)}</span>
+        </span>
+      `);
+    }
+    metaHtml = `<span class="poster-note-popover-meta">${parts.join("")}</span>`;
   }
 
   pop.classList.toggle("is-title-only", isTitleOnly);
@@ -2697,7 +2742,7 @@ function showPosterNotePreview(anchorEl, movie) {
     <div class="poster-note-popover-header">
       <span class="poster-note-popover-title-wrap">
         <span class="poster-note-popover-title">${escapeHTML(title)}</span>
-        ${yearText ? `<span class="poster-note-popover-year">(${escapeHTML(String(yearText))})</span>` : ""}
+        ${yearText ? `<span class="poster-note-popover-year">${escapeHTML(String(yearText))}</span>` : ""}
       </span>
       ${metaHtml}
     </div>
@@ -3168,7 +3213,11 @@ function setAuxiliaryView(view = null) {
   const visible = Boolean(view);
   document.querySelector(".section-heading")?.classList.toggle("is-hidden", visible);
   elements.grid?.classList.toggle("force-hidden", visible);
+  elements.grid?.classList.toggle("is-hidden", visible);
+  elements.gridViewport?.classList.toggle("force-hidden", visible);
+  elements.gridViewport?.classList.toggle("is-hidden", visible);
   elements.empty?.classList.toggle("force-hidden", visible);
+  elements.empty?.classList.toggle("is-hidden", visible);
   const discoverHeader = document.querySelector("#discover-canvas-header");
   if (discoverHeader) {
     discoverHeader.classList.toggle("is-hidden", visible || state.currentView !== "discover");
@@ -3396,16 +3445,140 @@ function getMovieNotesHeadingCopy() {
 }
 
 const CONTINUOUS_ELIGIBLE_SHELVES = [
+  "discover",
   "watched",
   "rewatch",
   "favorites",
   "excluded",
   "new_discovery",
   "movie-notes",
+  "watch_later",
 ];
 
 function isContinuousEligibleView() {
   return CONTINUOUS_ELIGIBLE_SHELVES.includes(state.currentView);
+}
+
+function shouldShowShelfViewToggle() {
+  const detailOpen = Boolean(
+    elements.detailPage && !elements.detailPage.classList.contains("is-hidden")
+  );
+  if (detailOpen) return false;
+
+  if (state.currentView === "discover") {
+    const totalPages = Number(state.searchTotalPages || 0);
+    const totalResults = Number(
+      state.totalResults || (state.movies ? state.movies.length : 0)
+    );
+    return totalPages > 1 && totalResults > 20;
+  }
+
+  if (!isContinuousEligibleView()) return false;
+
+  const list =
+    state.allFilteredMovies ||
+    state.unfilteredShelfMovies ||
+    state.movies ||
+    [];
+  const pageSize = 30;
+  const totalMatches = list.length;
+  const totalPages = Math.max(1, Math.ceil(totalMatches / pageSize));
+
+  return totalPages > 1 && totalMatches > pageSize;
+}
+
+const discoveryCache = new Map();
+
+function clearDiscoveryCache() {
+  discoveryCache.clear();
+}
+
+function getDiscoveryCacheKey(spec, page) {
+  return JSON.stringify({ spec, page });
+}
+
+async function fetchDiscoveryBatch(spec, page) {
+  const cacheKey = getDiscoveryCacheKey(spec, page);
+  if (discoveryCache.has(cacheKey)) {
+    return discoveryCache.get(cacheKey);
+  }
+
+  const url = spec.mode === "advanced"
+    ? "/movies/discover/advanced"
+    : "/movies/discover/super-advanced";
+  const body = {
+    filters: spec.filters || {},
+    ...spec.personalFilters,
+  };
+
+  const basePage = (page - 1) * 3;
+  const fetchOne = (p) => fetchJSON(url, {
+    method: "POST",
+    body: JSON.stringify({ ...body, page: p }),
+  });
+
+  const fetchSpeculative = (p) => {
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ results: [] }), 1500));
+    return Promise.race([
+      fetchOne(p).catch(() => ({ results: [] })),
+      timeoutPromise,
+    ]);
+  };
+
+  const [p1, p2, p3] = await Promise.all([
+    fetchOne(basePage + 1),
+    fetchSpeculative(basePage + 2),
+    fetchSpeculative(basePage + 3),
+  ]);
+
+  const rawCombined = [
+    ...(Array.isArray(p1.results) ? p1.results : []),
+    ...(Array.isArray(p2.results) ? p2.results : []),
+    ...(Array.isArray(p3.results) ? p3.results : []),
+  ];
+
+  let limit = 24;
+  if (rawCombined.length < 24 && rawCombined.length >= 18) {
+    limit = 18;
+  } else if (rawCombined.length < 18 && rawCombined.length >= 12) {
+    limit = 12;
+  } else if (rawCombined.length >= 24) {
+    limit = 24;
+  } else {
+    limit = rawCombined.length;
+  }
+  const combined = rawCombined.slice(0, limit);
+
+  const rawTmdbPages = Number(p1.tmdb_total_pages || p1.raw_tmdb_total_pages || 1);
+  const hasNextPage = Boolean(p3.has_next_page || (basePage + 3 < rawTmdbPages));
+  const estimatedTotalPages = Math.min(166, Math.max(1, Math.ceil(rawTmdbPages / 3)));
+  const response = {
+    results: combined,
+    page: page,
+    tmdb_total_pages: hasNextPage ? Math.max(page + 1, estimatedTotalPages) : page,
+    tmdb_total_results: Number(p1.tmdb_total_results || p1.raw_tmdb_total_results || rawCombined.length),
+    has_next_page: hasNextPage,
+    pagination_exact: p1.pagination_exact !== false,
+  };
+
+  discoveryCache.set(cacheKey, response);
+  return response;
+}
+
+async function prefetchDiscoveryPage(spec, page) {
+  const nextKey = getDiscoveryCacheKey(spec, page);
+  if (discoveryCache.has(nextKey)) return;
+  try {
+    await fetchDiscoveryBatch(spec, page);
+  } catch (_) {}
+}
+
+function getActiveScrollPosition() {
+  const isGreyOpen = document.body.classList.contains("grey-docked-open");
+  if (isGreyOpen && elements.shell) {
+    return elements.shell.scrollTop || 0;
+  }
+  return window.scrollY || document.documentElement.scrollTop || 0;
 }
 
 function updateBackToTopVisibility() {
@@ -3413,21 +3586,21 @@ function updateBackToTopVisibility() {
   const detailOpen = Boolean(
     elements.detailPage && !elements.detailPage.classList.contains("is-hidden")
   );
-  const isContinuousShelf = Boolean(
-    state.browseMode === "continuous" &&
-    isContinuousEligibleView() &&
-    state.currentView !== "watch_later" &&
-    state.movieNotesShelfFilter !== "watch_later" &&
-    state.currentView !== "discover"
-  );
-  const isNotesView = Boolean(
-    state.currentView === "entries" ||
-    (elements.entriesPage && !elements.entriesPage.classList.contains("is-hidden")) ||
-    (elements.entryReader && !elements.entryReader.classList.contains("is-hidden"))
-  );
-  const shouldShow =
-    !detailOpen && window.scrollY > 380 && (isContinuousShelf || isNotesView);
+  const scrollPos = getActiveScrollPosition();
+  const shouldShow = !detailOpen && scrollPos > 450;
+  elements.backToTopBtn.classList.toggle("visible", shouldShow);
   elements.backToTopBtn.classList.toggle("is-hidden", !shouldShow);
+}
+
+function handleContinuousScrollCheck() {
+  if (state.browseMode !== "continuous" || state.continuousLoading) return;
+  const isGreyOpen = document.body.classList.contains("grey-docked-open");
+  if (isGreyOpen && elements.shell) {
+    const distanceToBottom = elements.shell.scrollHeight - elements.shell.scrollTop - elements.shell.clientHeight;
+    if (distanceToBottom < 650) {
+      loadNextContinuousBatch();
+    }
+  }
 }
 
 function updateDetailHeaderElevation() {
@@ -3445,17 +3618,17 @@ function updateDetailHeaderElevation() {
 }
 
 function updateShelfViewToggleUI() {
-  if (!elements.shelfViewToggle) return;
-  // Watch Later is strictly excluded by deliberation
-  if (!isContinuousEligibleView() || state.currentView === "watch_later" || state.movieNotesShelfFilter === "watch_later") {
-    elements.shelfViewToggle.classList.add("is-hidden");
-    state.browseMode = "paged";
-    updateBackToTopVisibility();
-    return;
-  }
-  elements.shelfViewToggle.classList.remove("is-hidden");
-  elements.viewModePaged?.classList.toggle("is-active", state.browseMode === "paged");
-  elements.viewModeContinuous?.classList.toggle("is-active", state.browseMode === "continuous");
+  const showToggle = shouldShowShelfViewToggle();
+  const toggles = document.querySelectorAll(".shelf-view-toggle");
+  toggles.forEach((el) => {
+    el.classList.toggle("is-hidden", !showToggle);
+  });
+
+  const pagedBtns = document.querySelectorAll('.shelf-view-toggle [data-mode="paged"]');
+  const continuousBtns = document.querySelectorAll('.shelf-view-toggle [data-mode="continuous"]');
+  pagedBtns.forEach((btn) => btn.classList.toggle("is-active", state.browseMode === "paged"));
+  continuousBtns.forEach((btn) => btn.classList.toggle("is-active", state.browseMode === "continuous"));
+
   updateBackToTopVisibility();
 }
 
@@ -3496,9 +3669,68 @@ function attachContinuousSentinel() {
   continuousScrollObserver.observe(continuousSentinelEl);
 }
 
-function loadNextContinuousBatch() {
+async function loadNextContinuousBatch() {
   if (state.browseMode !== "continuous" || !isContinuousEligibleView()) return;
   if (state.continuousLoading) return;
+
+  if (state.currentView === "discover") {
+    const totalPages = Number(state.searchTotalPages || 1);
+    const currentPage = Number(state.searchPage || 1);
+    if (currentPage >= totalPages) {
+      removeContinuousSentinel();
+      return;
+    }
+
+    state.continuousLoading = true;
+    removeContinuousSentinel();
+    const nextPage = currentPage + 1;
+
+    try {
+      let nextBatch = [];
+      if (state.currentSearchSpec) {
+        const response = await fetchDiscoveryBatch(state.currentSearchSpec, nextPage);
+        nextBatch = Array.isArray(response.results) ? response.results : [];
+        state.searchPage = Number(response.page || nextPage);
+        state.searchTotalPages = Number(response.tmdb_total_pages || totalPages);
+        if (response.has_next_page || state.searchPage < state.searchTotalPages) {
+          prefetchDiscoveryPage(state.currentSearchSpec, state.searchPage + 1);
+        }
+      } else {
+        const rawQuery = (elements.input?.value || "").trim();
+        if (rawQuery) {
+          const response = await fetchJSON(`/movies/search?query=${encodeURIComponent(rawQuery)}&page=${nextPage}`);
+          nextBatch = Array.isArray(response.results) ? response.results : [];
+          state.searchPage = Number(response.page || nextPage);
+          state.searchTotalPages = Number(response.total_pages || totalPages);
+        }
+      }
+
+      if (nextBatch.length > 0) {
+        const divider = document.createElement("div");
+        divider.className = "continuous-batch-divider";
+        divider.setAttribute("role", "separator");
+        divider.setAttribute("aria-hidden", "true");
+        elements.grid.append(divider);
+
+        nextBatch.forEach((movie) => {
+          elements.grid.append(createMovieCard(movie));
+        });
+
+        state.movies = [...(state.movies || []), ...nextBatch];
+        state.detailNavQueue = [...state.movies];
+      }
+
+      if (state.searchPage < state.searchTotalPages) {
+        attachContinuousSentinel();
+      }
+    } catch (err) {
+      console.warn("Failed to load continuous discovery batch:", err);
+    } finally {
+      state.continuousLoading = false;
+    }
+    return;
+  }
+
   const list = state.allFilteredMovies || [];
   const pageSize = 30;
   const totalPages = Math.max(1, Math.ceil(list.length / pageSize));
@@ -3526,6 +3758,7 @@ function loadNextContinuousBatch() {
 
     state.continuousPage = nextPage;
     state.movies = list.slice(0, nextPage * pageSize);
+    state.detailNavQueue = [...state.movies];
   }
 
   if (nextPage < totalPages) {
@@ -3746,7 +3979,7 @@ function applyLibraryFilters(targetPage = 1) {
   const totalPages = Math.max(1, Math.ceil(totalMatches / pageSize));
   updateShelfViewToggleUI();
 
-  const isContinuous = state.browseMode === "continuous" && isContinuousEligibleView();
+  const isContinuous = state.browseMode === "continuous" && shouldShowShelfViewToggle();
   if (isContinuous) {
     elements.pagination.classList.add("is-hidden");
     elements.pagination.classList.add("force-hidden");
@@ -4371,36 +4604,75 @@ function setupLibraryFilters() {
 }
 
 function setupShelfViewToggle() {
-  elements.viewModePaged?.addEventListener("click", () => {
-    if (state.browseMode === "paged") return;
-    state.browseMode = "paged";
-    updateShelfViewToggleUI();
-    applyLibraryFilters(1);
-    scrollToResults();
+  const pagedBtns = document.querySelectorAll('.shelf-view-toggle [data-mode="paged"]');
+  const continuousBtns = document.querySelectorAll('.shelf-view-toggle [data-mode="continuous"]');
+
+  pagedBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (state.browseMode === "paged") return;
+      state.browseMode = "paged";
+      try {
+        localStorage.setItem("nope_browse_mode", "paged");
+      } catch (_) {}
+      updateShelfViewToggleUI();
+      if (state.currentView === "discover") {
+        if (state.pageLoader) {
+          state.pageLoader(state.searchPage || 1);
+        } else if (state.currentSearchSpec) {
+          executeDiscoverySearch(state.currentSearchSpec, state.searchPage || 1);
+        }
+      } else {
+        applyLibraryFilters(1);
+      }
+      scrollToResults();
+    });
   });
 
-  elements.viewModeContinuous?.addEventListener("click", () => {
-    if (state.browseMode === "continuous") return;
-    state.browseMode = "continuous";
-    updateShelfViewToggleUI();
-    applyLibraryFilters(1);
+  continuousBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (state.browseMode === "continuous") return;
+      state.browseMode = "continuous";
+      try {
+        localStorage.setItem("nope_browse_mode", "continuous");
+      } catch (_) {}
+      updateShelfViewToggleUI();
+      if (state.currentView === "discover") {
+        elements.pagination.classList.add("is-hidden");
+        elements.pagination.classList.add("force-hidden");
+        removeContinuousSentinel();
+        if (state.searchTotalPages > 1) {
+          attachContinuousSentinel();
+        }
+      } else {
+        applyLibraryFilters(1);
+      }
+    });
   });
+
+  function performScrollToTop() {
+    const isGreyOpen = document.body.classList.contains("grey-docked-open");
+    if (isGreyOpen && elements.shell) {
+      elements.shell.scrollTo({ top: 0, behavior: "smooth" });
+    }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.documentElement.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   // Back to top floating circular icon button & detail header elevation
   window.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
+  elements.shell?.addEventListener("scroll", updateBackToTopVisibility, { passive: true });
+  elements.shell?.addEventListener("scroll", handleContinuousScrollCheck, { passive: true });
   window.addEventListener("scroll", updateDetailHeaderElevation, { passive: true });
   elements.detailPage?.addEventListener("scroll", updateDetailHeaderElevation, { passive: true });
 
-  elements.backToTopBtn?.addEventListener("click", () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  });
+  elements.backToTopBtn?.addEventListener("click", performScrollToTop);
 
   // Quick keyboard shortcuts: Home or 't'
   window.addEventListener("keydown", (e) => {
     if (e.target && /^(?:input|textarea|select)$/i.test(e.target.tagName)) return;
     if (e.key === "Home" || (e.key.toLowerCase() === "t" && !e.ctrlKey && !e.altKey && !e.metaKey)) {
       if (!elements.detailPage || elements.detailPage.classList.contains("is-hidden")) {
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        performScrollToTop();
       }
     }
   });
@@ -4437,9 +4709,6 @@ async function loadShelf(view, page = 1) {
   state.currentView = view;
   if (view) {
     document.body.dataset.activeView = view;
-  }
-  if (view === "watch_later") {
-    state.browseMode = "paged";
   }
   updateShelfViewToggleUI();
   setActiveView(view);
@@ -4631,12 +4900,25 @@ async function searchMovies(query, page = 1) {
     state.totalResults = Number(response.total_results || 0);
     state.pageLoader = (target) => searchMovies(cleanedQuery, target);
     renderMovies(state.movies, "search", state.totalResults);
-    renderPagination(
-      elements.pagination,
-      state.searchPage,
-      state.searchTotalPages,
-      async (target) => { await searchMovies(cleanedQuery, target); scrollToResults(); },
-    );
+    updateShelfViewToggleUI();
+
+    const isContinuous = state.browseMode === "continuous" && shouldShowShelfViewToggle();
+    if (isContinuous) {
+      elements.pagination.classList.add("is-hidden");
+      elements.pagination.classList.add("force-hidden");
+      removeContinuousSentinel();
+      if (state.searchTotalPages > 1) {
+        attachContinuousSentinel();
+      }
+    } else {
+      removeContinuousSentinel();
+      renderPagination(
+        elements.pagination,
+        state.searchPage,
+        state.searchTotalPages,
+        async (target) => { await searchMovies(cleanedQuery, target); scrollToResults(); },
+      );
+    }
   } catch (error) {
     if (requestNumber !== state.requestNumber) {
       return;
@@ -4715,85 +4997,6 @@ function buildSearchSpec() {
   };
 }
 
-const discoveryCache = new Map();
-
-function clearDiscoveryCache() {
-  discoveryCache.clear();
-}
-
-function getDiscoveryCacheKey(spec, page) {
-  return JSON.stringify({ spec, page });
-}
-
-async function prefetchDiscoveryPage(spec, page) {
-  const nextKey = getDiscoveryCacheKey(spec, page);
-  if (discoveryCache.has(nextKey)) return;
-
-  const url = spec.mode === "advanced"
-    ? "/movies/discover/advanced"
-    : "/movies/discover/super-advanced";
-  const body = {
-    filters: spec.filters || {},
-    ...spec.personalFilters,
-  };
-
-  const basePage = (page - 1) * 3;
-  const fetchOne = (p) => fetchJSON(url, {
-    method: "POST",
-    body: JSON.stringify({ ...body, page: p }),
-  });
-
-  const fetchSpeculative = (p) => {
-    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ results: [] }), 1500));
-    return Promise.race([
-      fetchOne(p).catch(() => ({ results: [] })),
-      timeoutPromise,
-    ]);
-  };
-
-  try {
-    const [p1, p2, p3] = await Promise.all([
-      fetchOne(basePage + 1),
-      fetchSpeculative(basePage + 2),
-      fetchSpeculative(basePage + 3),
-    ]);
-
-    const rawCombined = [
-      ...(Array.isArray(p1.results) ? p1.results : []),
-      ...(Array.isArray(p2.results) ? p2.results : []),
-      ...(Array.isArray(p3.results) ? p3.results : []),
-    ];
-    // Always round down to complete rows of 6 so the last row is never mostly empty!
-    let limit = 24;
-    if (rawCombined.length < 24 && rawCombined.length >= 18) {
-      limit = 18;
-    } else if (rawCombined.length < 18 && rawCombined.length >= 12) {
-      limit = 12;
-    } else if (rawCombined.length >= 24) {
-      limit = 24;
-    } else {
-      limit = rawCombined.length;
-    }
-    const combined = rawCombined.slice(0, limit);
-
-    const rawTmdbPages = Number(p1.tmdb_total_pages || p1.raw_tmdb_total_pages || 1);
-    const hasNextPage = Boolean(p3.has_next_page || (basePage + 3 < rawTmdbPages));
-    const estimatedTotalPages = Math.min(166, Math.max(1, Math.ceil(rawTmdbPages / 3)));
-    const response = {
-      results: combined,
-      page: page,
-      tmdb_total_pages: hasNextPage ? Math.max(page + 1, estimatedTotalPages) : page,
-      tmdb_total_results: Number(p1.tmdb_total_results || p1.raw_tmdb_total_results || rawCombined.length),
-      has_next_page: hasNextPage,
-      pagination_exact: p1.pagination_exact !== false,
-    };
-
-    discoveryCache.set(nextKey, response);
-  } catch {
-    // Background prefetch errors are safely ignored
-  }
-}
-
 async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } = {}) {
   hideFilmographyToolbar();
   const requestNumber = ++state.requestNumber;
@@ -4824,15 +5027,6 @@ async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } =
 
   const cacheKey = getDiscoveryCacheKey(spec, page);
 
-  const url = spec.mode === "advanced"
-    ? "/movies/discover/advanced"
-    : "/movies/discover/super-advanced";
-  const body = {
-    filters: spec.filters || {},
-    force_refresh: Boolean(forceRefresh),
-    ...spec.personalFilters,
-  };
-
   const applyResponse = (response) => {
     state.movies = Array.isArray(response.results) ? response.results : [];
 
@@ -4850,16 +5044,30 @@ async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } =
     state.totalResults = totalCount;
     const formattedTotal = totalCount.toLocaleString();
     elements.count.textContent = `${formattedTotal} ${totalCount === 1 ? "movie" : "movies"}`;
-    renderPagination(
-      elements.pagination,
-      state.searchPage,
-      state.searchTotalPages,
-      async (target) => { await executeDiscoverySearch(spec, target); scrollToResults(); },
-      {
-        exact: state.paginationExact,
-        hasNext: Boolean(response.has_next_page),
-      },
-    );
+
+    updateShelfViewToggleUI();
+
+    const isContinuous = state.browseMode === "continuous" && shouldShowShelfViewToggle();
+    if (isContinuous) {
+      elements.pagination.classList.add("is-hidden");
+      elements.pagination.classList.add("force-hidden");
+      removeContinuousSentinel();
+      if (state.searchTotalPages > 1) {
+        attachContinuousSentinel();
+      }
+    } else {
+      removeContinuousSentinel();
+      renderPagination(
+        elements.pagination,
+        state.searchPage,
+        state.searchTotalPages,
+        async (target) => { await executeDiscoverySearch(spec, target); scrollToResults(); },
+        {
+          exact: state.paginationExact,
+          hasNext: Boolean(response.has_next_page),
+        },
+      );
+    }
     scheduleSearchStateSave();
 
     // Prefetch the next 60 movies in the background
@@ -4877,63 +5085,11 @@ async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } =
   showLoadingCards();
   elements.count.textContent = forceRefresh ? "Refreshing from TMDB…" : "Searching…";
 
-  const basePage = (page - 1) * 3;
-  const fetchOne = (p) => fetchJSON(url, {
-    method: "POST",
-    body: JSON.stringify({ ...body, page: p }),
-  });
-
-  const fetchSpeculative = (p) => {
-    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ results: [] }), 1500));
-    return Promise.race([
-      fetchOne(p).catch(() => ({ results: [] })),
-      timeoutPromise,
-    ]);
-  };
-
   try {
-    const [p1, p2, p3] = await Promise.all([
-      fetchOne(basePage + 1),
-      fetchSpeculative(basePage + 2),
-      fetchSpeculative(basePage + 3),
-    ]);
-
+    const response = await fetchDiscoveryBatch(spec, page);
     if (requestNumber !== state.requestNumber) {
       return;
     }
-
-    const rawCombined = [
-      ...(Array.isArray(p1.results) ? p1.results : []),
-      ...(Array.isArray(p2.results) ? p2.results : []),
-      ...(Array.isArray(p3.results) ? p3.results : []),
-    ];
-
-    // Always fill complete rows of 6 (24 for 4 full rows, or 18 for 3 full rows)
-    let limit = 24;
-    if (rawCombined.length < 24 && rawCombined.length >= 18) {
-      limit = 18;
-    } else if (rawCombined.length < 18 && rawCombined.length >= 12) {
-      limit = 12;
-    } else if (rawCombined.length >= 24) {
-      limit = 24;
-    } else {
-      limit = rawCombined.length;
-    }
-    const combined = rawCombined.slice(0, limit);
-
-    const rawTmdbPages = Number(p1.tmdb_total_pages || p1.raw_tmdb_total_pages || 1);
-    const hasNextPage = Boolean(p3.has_next_page || (basePage + 3 < rawTmdbPages));
-    const estimatedTotalPages = Math.min(166, Math.max(1, Math.ceil(rawTmdbPages / 3)));
-    const response = {
-      results: combined,
-      page: page,
-      tmdb_total_pages: hasNextPage ? Math.max(page + 1, estimatedTotalPages) : page,
-      tmdb_total_results: Number(p1.tmdb_total_results || p1.raw_tmdb_total_results || rawCombined.length),
-      has_next_page: hasNextPage,
-      pagination_exact: p1.pagination_exact !== false,
-    };
-
-    discoveryCache.set(cacheKey, response);
     applyResponse(response);
     if (forceRefresh) {
       showNotice("Refreshed live results from TMDB.");
@@ -4951,16 +5107,47 @@ async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } =
 
 async function runDiscoverySearch({ forceRefresh = false } = {}) {
   document.querySelector("#run-advanced-search")?.classList.remove("is-dirty");
+  syncRibbonActiveState();
+  renderProfileWorkshop();
   await executeDiscoverySearch(buildSearchSpec(), 1, { forceRefresh });
 }
 
-function syncRibbonActiveState() {
-  const activeId = elements.profileSelect?.value ? String(elements.profileSelect.value) : null;
-  const ribbon = document.querySelector("#profile-ribbon");
-  if (!ribbon) return;
-  ribbon.querySelectorAll(".ribbon-chip").forEach((chip) => {
-    chip.classList.toggle("is-active", Boolean(activeId && chip.dataset.profile === activeId));
-  });
+function isProfileFiltersDiverged(preference) {
+  if (!preference) return false;
+  try {
+    const curFilters = collectAdvancedFilters();
+    const savedFilters = preference.filters || {};
+
+    const normArr = (arr) => (Array.isArray(arr) ? [...arr].map(String).sort().join(",") : "");
+    const normVal = (v) => (v === undefined || v === null || v === "") ? "" : String(v);
+
+    const keys = [
+      "minimum_rating", "maximum_rating",
+      "minimum_vote_count",
+      "release_year_from", "release_year_to",
+      "runtime_min", "runtime_max",
+      "genre_logic"
+    ];
+    for (const k of keys) {
+      if (normVal(curFilters[k]) !== normVal(savedFilters[k])) return true;
+    }
+
+    const arrKeys = [
+      "include_genre_ids", "exclude_genre_ids",
+      "include_original_languages", "exclude_original_languages",
+      "include_origin_countries", "exclude_origin_countries",
+      "include_director_ids", "include_actor_ids", "include_cast_ids",
+      "include_keyword_ids", "exclude_keyword_ids",
+      "include_company_ids", "exclude_company_ids"
+    ];
+    for (const k of arrKeys) {
+      if (normArr(curFilters[k]) !== normArr(savedFilters[k])) return true;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 function updateProfileButtons() {
@@ -4975,20 +5162,11 @@ function updateProfileButtons() {
   if (elements.saveProfile) {
     const textSpan = elements.saveProfile.querySelector(".preset-action-text");
     const svgIcon = elements.saveProfile.querySelector(".preset-action-svg");
-    if (hasPreference) {
-      if (textSpan) textSpan.textContent = `Rename "${preference.name}"`;
-      elements.saveProfile.title = `Rename "${preference.name}"`;
-      elements.saveProfile.dataset.mode = "edit";
-      if (svgIcon) {
-        svgIcon.innerHTML = '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>';
-      }
-    } else {
-      if (textSpan) textSpan.textContent = "Save current search as preset";
-      elements.saveProfile.title = "Save current search as preset";
-      elements.saveProfile.dataset.mode = "create";
-      if (svgIcon) {
-        svgIcon.innerHTML = '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>';
-      }
+    if (textSpan) textSpan.textContent = "Save current search as preset";
+    elements.saveProfile.title = "Save current search as preset";
+    elements.saveProfile.dataset.mode = "create";
+    if (svgIcon) {
+      svgIcon.innerHTML = '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>';
     }
   }
 
@@ -5053,6 +5231,24 @@ function getAllProfilesList() {
   }));
 }
 
+function syncRibbonActiveState() {
+  const activeId = elements.profileSelect?.value ? String(elements.profileSelect.value) : null;
+  const ribbon = document.querySelector("#profile-ribbon");
+  if (!ribbon) return;
+
+  const activePreference = (state.preferences || []).find((p) => String(p.preference_id) === activeId);
+  const isDiverged = isProfileFiltersDiverged(activePreference);
+
+  ribbon.querySelectorAll(".ribbon-chip").forEach((chip) => {
+    const isThisActive = Boolean(activeId && chip.dataset.profile === activeId);
+    chip.classList.toggle("is-active", isThisActive);
+    const wasDiverged = chip.classList.contains("is-diverged");
+    if (isThisActive && isDiverged !== wasDiverged) {
+      renderProfileRibbon();
+    }
+  });
+}
+
 function renderProfileRibbon() {
   const ribbon = document.querySelector("#profile-ribbon");
   if (!ribbon) return;
@@ -5063,18 +5259,44 @@ function renderProfileRibbon() {
     .map((k) => allProfiles.find((p) => Number(p.id) === Number(k)))
     .filter(Boolean);
 
+  const activeProfileId = elements.profileSelect?.value ? Number(elements.profileSelect.value) : null;
+  const activePreference = (state.preferences || []).find((p) => Number(p.preference_id) === activeProfileId);
+  const isDiverged = isProfileFiltersDiverged(activePreference);
+
   ribbon.replaceChildren();
   activeProfiles.forEach((prof) => {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "ribbon-chip";
+    const isActive = activeProfileId === Number(prof.id);
+    const chip = document.createElement("div");
+    chip.role = "button";
+    chip.tabIndex = 0;
+    chip.className = `ribbon-chip${isActive ? " is-active" : ""}${isActive && isDiverged ? " is-diverged" : ""}`;
     chip.dataset.profile = String(prof.id);
+    chip.title = prof.name;
+
     const label = document.createElement("span");
     label.className = "ribbon-chip-text";
     label.textContent = prof.name;
     chip.append(label);
-    chip.title = prof.name;
-    chip.addEventListener("click", () => {
+
+    if (isActive && isDiverged) {
+      const updateBtn = document.createElement("button");
+      updateBtn.type = "button";
+      updateBtn.className = "chip-update-btn";
+      updateBtn.title = `Update "${prof.name}" with current filters`;
+      updateBtn.setAttribute("aria-label", `Update ${prof.name}`);
+      updateBtn.innerHTML = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>';
+      updateBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        await updateSelectedProfile(prof.name);
+        renderProfileRibbon();
+        renderProfileWorkshop();
+        runDiscoverySearch();
+      });
+      chip.append(updateBtn);
+    }
+
+    chip.addEventListener("click", (e) => {
+      if (e.target.closest(".chip-update-btn")) return;
       if (elements.query) {
         elements.query.value = "";
       }
@@ -5092,7 +5314,18 @@ function renderProfileRibbon() {
         runDiscoverySearch();
       }
       renderProfileWorkshop();
+      renderProfileRibbon();
     });
+
+    chip.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        if (!e.target.closest(".chip-update-btn")) {
+          e.preventDefault();
+          chip.click();
+        }
+      }
+    });
+
     ribbon.append(chip);
   });
   syncRibbonActiveState();
@@ -5107,13 +5340,22 @@ function renderProfileWorkshop() {
   const allProfiles = getAllProfilesList();
   const activeProfileId = elements.profileSelect?.value ? Number(elements.profileSelect.value) : null;
 
+  // Starred (pinned) presets precede unstarred presets
+  const sortedProfiles = [...allProfiles].sort((a, b) => {
+    const aPinned = ribbonKeys.has(Number(a.id));
+    const bPinned = ribbonKeys.has(Number(b.id));
+    if (aPinned && !bPinned) return -1;
+    if (!aPinned && bPinned) return 1;
+    return 0;
+  });
+
   if (countEl) {
     const pinnedCount = allProfiles.filter((p) => ribbonKeys.has(Number(p.id))).length;
     countEl.textContent = `${pinnedCount}/6`;
   }
 
   ribbonCloud.replaceChildren();
-  allProfiles.forEach((prof) => {
+  sortedProfiles.forEach((prof) => {
     const isPinned = ribbonKeys.has(Number(prof.id));
     const isActive = activeProfileId === Number(prof.id);
     const chip = document.createElement("div");
@@ -5143,7 +5385,7 @@ function renderProfileWorkshop() {
     const nameSpan = document.createElement("span");
     nameSpan.className = "chip-name";
     nameSpan.textContent = prof.name;
-    nameSpan.title = isActive ? `${prof.name} (Active preset — click to deselect)` : `${prof.name} (Click to select for search or renaming)`;
+    nameSpan.title = isActive ? `${prof.name} (Active preset — click to deselect)` : `${prof.name} (Click to select for renaming/updating)`;
 
     const delBtn = document.createElement("button");
     delBtn.type = "button";
@@ -5165,10 +5407,7 @@ function renderProfileWorkshop() {
         elements.profileSelect.value = isCurrent ? "" : String(prof.id);
         await applySelectedProfile();
         renderProfileWorkshop();
-        renderProfileRibbon();
-        if (!isCurrent) {
-          runDiscoverySearch();
-        }
+        syncRibbonActiveState();
       }
     });
 
@@ -5218,7 +5457,6 @@ async function applySelectedProfile() {
   }
 
   await setAdvancedFilters(preference.filters || {});
-  setPersonalFilters(preference.personal_filters || {});
   scheduleSearchStateSave();
 }
 
@@ -5278,7 +5516,7 @@ async function saveNewProfile(name) {
     body: JSON.stringify({
       name,
       filters: collectAdvancedFilters(),
-      personal_filters: collectPersonalFilters(),
+      personal_filters: null,
       is_default: false,
     }),
   });
@@ -5302,7 +5540,7 @@ async function updateSelectedProfile(name) {
     body: JSON.stringify({
       name,
       filters: collectAdvancedFilters(),
-      personal_filters: collectPersonalFilters(),
+      personal_filters: null,
     }),
   });
   await loadProfiles(response.preference.preference_id);
@@ -5906,13 +6144,7 @@ function renderMovieDetails(movie) {
     if (movie.vote_count) {
       const votesSpan = document.createElement("span");
       votesSpan.className = "title-meta-item title-meta-votes";
-      const voteIcon = document.createElement("span");
-      voteIcon.className = "material-symbols-outlined title-meta-vote-icon";
-      voteIcon.setAttribute("aria-hidden", "true");
-      voteIcon.textContent = "how_to_vote";
-      const countSpan = document.createElement("span");
-      countSpan.textContent = ` ${Number(movie.vote_count).toLocaleString()} votes`;
-      votesSpan.append(voteIcon, countSpan);
+      votesSpan.innerHTML = `<svg class="title-meta-vote-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#F2C94C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="title-meta-vote-count">${Number(movie.vote_count).toLocaleString()} votes</span>`;
       titleMetaEl.append(votesSpan);
     }
   }
@@ -6344,7 +6576,19 @@ function updateDetailNavStepper(currentMovieId) {
 
   if (elements.detailNavStepper) elements.detailNavStepper.classList.remove("is-hidden");
   elements.detailPrevBtn.disabled = idx <= 0;
-  elements.detailNextBtn.disabled = idx >= queue.length - 1;
+
+  let hasMoreToFetch = false;
+  if (state.browseMode === "continuous") {
+    if (state.currentView === "discover") {
+      hasMoreToFetch = Number(state.searchPage || 1) < Number(state.searchTotalPages || 1);
+    } else {
+      const list = state.allFilteredMovies || [];
+      const totalPages = Math.max(1, Math.ceil(list.length / 30));
+      hasMoreToFetch = Number(state.continuousPage || 1) < totalPages;
+    }
+  }
+
+  elements.detailNextBtn.disabled = idx >= queue.length - 1 && !hasMoreToFetch;
 }
 
 function navigatePrevMovie() {
@@ -6366,7 +6610,7 @@ function navigatePrevMovie() {
   }
 }
 
-function navigateNextMovie() {
+async function navigateNextMovie() {
   let queue = state.detailNavQueue || [];
   if (!queue.length || !state.selectedMovie) return;
   const currentId = Number(state.selectedMovie.tmdb_id);
@@ -6382,6 +6626,33 @@ function navigateNextMovie() {
   if (idx !== -1 && idx < queue.length - 1) {
     const next = queue[idx + 1];
     openMovieDetails(getMovieNavId(next), { trailMode: "nav" });
+    return;
+  }
+
+  if (state.browseMode === "continuous") {
+    if (state.currentView === "discover") {
+      if (Number(state.searchPage || 1) < Number(state.searchTotalPages || 1)) {
+        await loadNextContinuousBatch();
+        queue = state.detailNavQueue || state.movies || [];
+        idx = queue.findIndex((m) => getMovieNavId(m) === currentId);
+        if (idx !== -1 && idx < queue.length - 1) {
+          const next = queue[idx + 1];
+          openMovieDetails(getMovieNavId(next), { trailMode: "nav" });
+        }
+      }
+    } else {
+      const list = state.allFilteredMovies || [];
+      const totalPages = Math.max(1, Math.ceil(list.length / 30));
+      if (Number(state.continuousPage || 1) < totalPages) {
+        await loadNextContinuousBatch();
+        queue = state.detailNavQueue || state.movies || [];
+        idx = queue.findIndex((m) => getMovieNavId(m) === currentId);
+        if (idx !== -1 && idx < queue.length - 1) {
+          const next = queue[idx + 1];
+          openMovieDetails(getMovieNavId(next), { trailMode: "nav" });
+        }
+      }
+    }
   }
 }
 
@@ -6531,9 +6802,9 @@ async function saveSelectedNotes({ silent = false } = {}) {
     updateVisibleMovie(response.user_movie_data);
     clearDiscoveryCache();
     if (elements.notesFeedback && !silent) {
-      feedback(elements.notesFeedback, "✓ Saved");
+      feedback(elements.notesFeedback, "Saved");
       window.setTimeout(() => {
-        if (elements.notesFeedback && elements.notesFeedback.textContent === "✓ Saved") {
+        if (elements.notesFeedback && elements.notesFeedback.textContent === "Saved") {
           elements.notesFeedback.textContent = "";
         }
       }, 1600);
@@ -7819,15 +8090,15 @@ function renderEntries(entries) {
       labelText.textContent = `${bucket.year} · ${bucket.monthName.toUpperCase()}`;
       labelWrap.append(tick, labelText);
 
-      const line = document.createElement("span");
-      line.className = "timeline-header-line";
-      line.setAttribute("aria-hidden", "true");
-
       const countSpan = document.createElement("span");
       countSpan.className = "timeline-header-count";
       countSpan.textContent = `(${bucket.items.length} ${bucket.items.length === 1 ? "note" : "notes"})`;
 
-      header.append(labelWrap, line, countSpan);
+      const line = document.createElement("span");
+      line.className = "timeline-header-line";
+      line.setAttribute("aria-hidden", "true");
+
+      header.append(labelWrap, countSpan, line);
       section.append(header);
 
       const ledgerGroup = document.createElement("div");
@@ -7887,9 +8158,6 @@ function renderEntries(entries) {
           titleWrap.append(draftBadge);
         }
 
-        const rightWrap = document.createElement("div");
-        rightWrap.className = "ledger-right";
-
         const entryTags = entry.tags || [];
         if (entryTags.length) {
           const tagsBox = document.createElement("div");
@@ -7898,8 +8166,11 @@ function renderEntries(entries) {
             const pill = createEntryTag(tag);
             tagsBox.append(pill);
           });
-          rightWrap.append(tagsBox);
+          titleWrap.append(tagsBox);
         }
+
+        const rightWrap = document.createElement("div");
+        rightWrap.className = "ledger-right";
 
         const actions = document.createElement("div");
         actions.className = "ledger-actions";
@@ -8554,7 +8825,7 @@ async function uploadBannerFile(file) {
     const data = await response.json();
     state.readerBannerUrl = data.url;
     renderReaderBannerEditor();
-    setReaderSaveStatus("✓ Banner uploaded", "saved", 2200);
+    setReaderSaveStatus("Banner uploaded", "saved", 2200);
     scheduleReaderAutoSave();
   } catch (err) {
     setReaderSaveStatus("", "saved", 0);
@@ -8716,7 +8987,7 @@ async function saveReaderEntry(
     state.editingEntryId = updated.entry_id;
     state.editingEntryStatus = updated.status;
     state.readerBannerUrl = updated.image_url || null;
-    setReaderSaveStatus(isSavingDraft ? "✓ Draft saved" : "✓ Saved", "saved", 2200);
+    setReaderSaveStatus(isSavingDraft ? "Draft saved" : "Saved", "saved", 2200);
     renderNotesTags().catch(() => {});
     renderNotesTimeline().catch(() => {});
     const idx = state.entryResults.findIndex((e) => e.entry_id === updated.entry_id);
@@ -9743,7 +10014,7 @@ if (elements.entryReaderPublish) {
       state.entryReaderEntry = published;
       renderNotesTags().catch(() => {});
       openEntryReader(published, state.entryReaderIndex, { preserveScroll: true });
-      setReaderSaveStatus("✓ Published", "saved", 2200);
+      setReaderSaveStatus("Published", "saved", 2200);
     } catch (err) {
       showNotice(err.message);
     } finally {
@@ -9965,6 +10236,8 @@ function toggleGreyDrawer(forceOpen) {
 
     if (isDetailOpen && elements.detailPage) {
       elements.detailPage.scrollTop = currentWindowScroll;
+    } else if (elements.shell) {
+      elements.shell.scrollTop = currentWindowScroll;
     }
     window.scrollTo({ top: 0, behavior: "instant" });
 
@@ -9974,9 +10247,11 @@ function toggleGreyDrawer(forceOpen) {
       elements.greyMessages.scrollTop = elements.greyMessages.scrollHeight;
     }
     setTimeout(alignRelatedHeading, 120);
+    updateBackToTopVisibility();
   } else {
     const isDetailOpen = elements.detailPage && !elements.detailPage.classList.contains("is-hidden");
     const internalDetailScroll = elements.detailPage ? elements.detailPage.scrollTop : 0;
+    const shellScroll = elements.shell ? elements.shell.scrollTop : 0;
 
     document.documentElement.classList.remove("grey-docked-open");
     document.body.classList.remove("grey-docked-open");
@@ -9986,8 +10261,11 @@ function toggleGreyDrawer(forceOpen) {
 
     if (isDetailOpen) {
       window.scrollTo({ top: internalDetailScroll, behavior: "instant" });
+    } else {
+      window.scrollTo({ top: shellScroll, behavior: "instant" });
     }
     setTimeout(alignRelatedHeading, 120);
+    updateBackToTopVisibility();
   }
 }
 
