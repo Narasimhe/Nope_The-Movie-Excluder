@@ -6312,7 +6312,7 @@ body.grey-docked-open .entry-reader {
   margin: 0 !important;
   padding: 0 0 3.5rem !important;
 }
-body.grey-docked-open .entry-reader .entry-reader-toolbar {
+body.grey-docked-open .entry-reader .entry-reader-toolbar:not(.is-hidden) {
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
@@ -6907,8 +6907,8 @@ body.grey-docked-open .back-to-top-pill {
   opacity: 0.75;
   font-size: 0.74rem;
 }
-.entry-list.is-list-mode,
-body.grey-docked-open .entry-list.is-list-mode {
+.entry-list.is-list-mode:not(.is-hidden),
+body.grey-docked-open .entry-list.is-list-mode:not(.is-hidden) {
   display: flex !important;
   flex-direction: column !important;
   gap: 1.85rem !important;
@@ -10099,8 +10099,8 @@ body.grey-docked-open .shelf-ribbon-wrapper {
   max-width: 670px !important;
 }
 
-body.grey-docked-open .movie-grid,
-body.grey-docked-open .movie-grid.is-compact {
+body.grey-docked-open .movie-grid:not(.is-hidden),
+body.grey-docked-open .movie-grid.is-compact:not(.is-hidden) {
   display: grid !important;
   grid-template-columns: repeat(auto-fill, minmax(95px, 105px)) !important;
   gap: 10px 8px !important;
@@ -10689,7 +10689,7 @@ h1#dialog-title,
 /* ==========================================================================
    Zen Folio Pagination: Minimal, Borderless, Directly Centered under Grid
    ========================================================================== */
-.movie-grid-viewport {
+.movie-grid-viewport:not(.is-hidden) {
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
@@ -10699,14 +10699,18 @@ h1#dialog-title,
   padding: 0 !important;
 }
 
-body.grey-docked-open .movie-grid-viewport {
+.movie-grid-viewport:has(> #movie-grid.is-hidden) {
+  display: none !important;
+}
+
+body.grey-docked-open .movie-grid-viewport:not(.is-hidden) {
   width: 100% !important;
   max-width: 670px !important;
 }
 
-.pagination,
-#pagination,
-#entry-pagination {
+.pagination:not(.is-hidden),
+#pagination:not(.is-hidden),
+#entry-pagination:not(.is-hidden) {
   display: flex !important;
   flex-wrap: nowrap !important;
   align-items: center !important;
@@ -10802,13 +10806,40 @@ body.grey-docked-open .movie-grid-viewport {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  gap: 8px !important;
   font-variant-numeric: tabular-nums !important;
-  letter-spacing: 0.04em !important;
+  letter-spacing: 0.02em !important;
   font-size: 13.5px !important;
   line-height: 1 !important;
   user-select: none !important;
 }
 
+.pagination-folio-page {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  padding: 2px 5px !important;
+  margin: 0 !important;
+  color: #9CA3AF !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  font-family: inherit !important;
+  font-variant-numeric: tabular-nums !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: color 140ms ease !important;
+}
+
+.pagination-folio-page:hover:not(.is-active) {
+  color: #F3F4F6 !important;
+}
+
+.pagination-folio-page.is-active,
 .pagination-folio-current {
   color: #DEC68B !important;
   font-weight: 600 !important;
@@ -10820,10 +10851,27 @@ body.grey-docked-open .movie-grid-viewport {
   transition: text-decoration 140ms ease !important;
 }
 
+.pagination-folio-page.is-active:hover,
 .pagination-folio-current:hover,
 .pagination-folio-current:focus-visible {
   text-decoration: underline !important;
   outline: none !important;
+}
+
+.pagination-folio-ellipsis {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #6B7280 !important;
+  font-size: 13.5px !important;
+  padding: 0 2px !important;
+  user-select: none !important;
+  cursor: pointer !important;
+  transition: color 140ms ease !important;
+}
+
+.pagination-folio-ellipsis:hover {
+  color: #DEC68B !important;
 }
 
 .pagination-folio-sep {
@@ -11612,4 +11660,20 @@ footer {
 @keyframes spinIcon {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   Strict Visibility Guard: Ensure .is-hidden always wins in Grey Docked Mode
+   ========================================================================== */
+.is-hidden,
+body.grey-docked-open .is-hidden,
+body.grey-docked-open .movie-grid.is-hidden,
+body.grey-docked-open .movie-grid.is-compact.is-hidden,
+body.grey-docked-open .entry-reader .entry-reader-toolbar.is-hidden,
+#movie-grid.is-hidden,
+#pagination.is-hidden,
+#entry-pagination.is-hidden,
+#entries-page.is-hidden,
+#entry-reader.is-hidden {
+  display: none !important;
 }

@@ -1261,6 +1261,57 @@ def test_grey_phase2_zero_sql_mention_http_session_and_history_cap():
                 assert "[earlier turn truncated]" in first_turn_text
 
 
+def test_grey_google_search_grounding_and_zero_plot_synopsis():
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
+        temp_db = Path(temp_dir) / "test.db"
+        with patch.object(database, "DATABASE_PATH", temp_db):
+            initialize_database()
+            with database.get_connection() as conn:
+                conn.execute(
+                    "INSERT INTO movies (tmdb_id, title, release_date, vote_average, overview) VALUES (888, 'Red Lights', '2012-03-02', 6.2, 'SECRET_PLOT_BLURB_DO_NOT_SEND')"
+                )
+                conn.execute(
+                    "INSERT INTO movie_credits (tmdb_id, tmdb_person_id, name, credit_type, position) VALUES (888, 1, 'Rodrigo Cortés', 'director', 0)"
+                )
+                conn.execute(
+                    "INSERT INTO movie_credits (tmdb_id, tmdb_person_id, name, credit_type, position) VALUES (888, 2, 'Cillian Murphy', 'actor', 0)"
+                )
+                conn.execute(
+                    "INSERT INTO movie_credits (tmdb_id, tmdb_person_id, name, credit_type, position) VALUES (888, 3, 'Robert De Niro', 'actor', 1)"
+                )
+
+            service = GreyService(db_path=str(temp_db))
+            service.api_key = "test_key"
+
+            with patch.object(service.http_session, "post") as mock_session_post:
+                mock_resp = MagicMock()
+                mock_resp.status_code = 200
+                mock_resp.json.return_value = {
+                    "candidates": [
+                        {
+                            "content": {
+                                "parts": [
+                                    {"text": json.dumps({"text": "**Red Lights (2012)**\nCillian Murphy and De Niro carry the first two acts.", "action": None, "pills": []})}
+                                ]
+                            }
+                        }
+                    ]
+                }
+                mock_session_post.return_value = mock_resp
+
+                service.chat("What about this movie?", inspected_movie_id=888, related_movies=[])
+                sent_payload = mock_session_post.call_args.kwargs.get("json")
+                sys_text = sent_payload["systemInstruction"]["parts"][0]["text"]
+
+                # Zero plot synopsis sent, while Director and Cast ARE sent
+                assert "SECRET_PLOT_BLURB_DO_NOT_SEND" not in sys_text
+                assert "Overview:" not in sys_text
+                assert "Director: Rodrigo Cortés" in sys_text
+                assert "Cillian Murphy, Robert De Niro" in sys_text
+                assert sent_payload.get("generationConfig", {}).get("responseMimeType") == "application/json"
+
+
+
 
 
 

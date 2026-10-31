@@ -3,6 +3,7 @@ import logging
 import os
 import re
 import sqlite3
+import time
 from pathlib import Path
 from typing import Any
 
@@ -95,6 +96,7 @@ class GreyService:
     """AI Cinema Companion orchestrator with Two-Tier Progressive Context & RAM caching."""
 
     _file_cache: dict[str, tuple[float, str]] = {}
+    _model_cooldowns: dict[str, float] = {}
 
     def __init__(self, db_path: str = "data/movie_excluder.db"):
         self.db_path = db_path
@@ -708,7 +710,7 @@ class GreyService:
                 with self._get_connection() as conn:
                     row = conn.execute(
                         """
-                        SELECT m.title, m.release_date, m.overview, m.vote_average, u.status, u.verdict, u.notes
+                        SELECT m.title, m.release_date, m.vote_average, u.status, u.verdict, u.notes
                         FROM movies m
                         LEFT JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
                         WHERE m.tmdb_id = ?
@@ -718,16 +720,50 @@ class GreyService:
                     if row:
                         inspected_title = row["title"]
                         year_str = f" ({(row['release_date'] or '')[:4]})" if row["release_date"] else ""
+                        dir_rows = conn.execute(
+                            "SELECT name FROM movie_credits WHERE tmdb_id = ? AND credit_type = 'director' ORDER BY position ASC LIMIT 2",
+                            (inspected_movie_id,),
+                        ).fetchall()
+                        cast_rows = conn.execute(
+                            "SELECT name FROM movie_credits WHERE tmdb_id = ? AND credit_type = 'actor' ORDER BY position ASC LIMIT 4",
+                            (inspected_movie_id,),
+                        ).fetchall()
+                        director_str = ", ".join(r["name"] for r in dir_rows) if dir_rows else "Unknown"
+                        cast_str = ", ".join(r["name"] for r in cast_rows) if cast_rows else "Unknown"
+                        wants_movie_notes = any(
+                            w in lower_msg
+                            for w in [
+                                "note",
+                                "notes",
+                                "wrote",
+                                "write",
+                                "from the library",
+                                "post",
+                                "journal",
+                                "entry",
+                                "draft",
+                                "toggle",
+                                "collapse",
+                                "format",
+                                "append",
+                            ]
+                        )
                         effective_notes = (
                             live_movie_notes.strip()
                             if ui_had_inspected_movie and live_movie_notes and live_movie_notes.strip()
                             else None
                         ) or row["notes"]
+                        notes_part = (
+                            f" | User Notes: {effective_notes or 'None'}"
+                            if wants_movie_notes
+                            else ""
+                        )
+                        # Zero plot synopsis (and zero user notes unless explicitly requested): Grey cannot parrot the screen
                         inspected_info = (
-                            f"{row['title']}{year_str} (TMDB ID: {inspected_movie_id}), "
+                            f"{row['title']}{year_str} (TMDB ID: {inspected_movie_id}) | "
+                            f"Director: {director_str} | Cast: {cast_str} | "
                             f"TMDB Rating {row['vote_average']} | Status: {row['status'] or 'unseen'} | "
-                            f"User Verdict: {row['verdict'] or 'None'} | User Notes: {effective_notes or 'None'} | "
-                            f"Overview: {(row['overview'] or '')[:200]}..."
+                            f"User Verdict: {row['verdict'] or 'None'}{notes_part}"
                         )
         except Exception as exc:
             logger.debug("Could not query movie context for Grey: %s", exc)
@@ -947,6 +983,16 @@ class GreyService:
         else:
             candidate_models = list(dict.fromkeys([target_model, *GEMINI_FLASH_CANDIDATE_MODELS]))
 
+        # Prioritize models that haven't hit a 429/404 in the last 5 minutes (saves 3 failed network roundtrips per turn)
+        now = time.time()
+        healthy_models = [
+            m for m in candidate_models if self._model_cooldowns.get(m, 0.0) <= now
+        ]
+        cooling_models = [
+            m for m in candidate_models if self._model_cooldowns.get(m, 0.0) > now
+        ]
+        ordered_candidates = healthy_models + cooling_models
+
         resp = None
         model_label = default_label
         # Use persistent TCP/TLS session in production while remaining compatible with monkeypatched requests.post in tests
@@ -955,22 +1001,26 @@ class GreyService:
             if getattr(requests.post, "__module__", "") == "requests.api"
             else requests.post
         )
-        for model_candidate in candidate_models:
+        for model_candidate in ordered_candidates:
             try:
                 endpoint = f"{GEMINI_API_BASE_URL}/models/{model_candidate}:generateContent?key={self.api_key}"
                 resp = post_fn(
                     endpoint,
                     json=payload,
                     headers={"Content-Type": "application/json"},
-                    timeout=35,
+                    timeout=14,
                 )
                 if resp.status_code == 200:
+                    self._model_cooldowns.pop(model_candidate, None)
                     model_label = f"Gemini {model_candidate.replace('gemini-', '').capitalize()}"
                     break
+                if resp.status_code in (429, 404, 500, 503):
+                    self._model_cooldowns[model_candidate] = time.time() + 300.0
                 logger.info(
                     f"Model {model_candidate} returned {resp.status_code}, trying next in cascade..."
                 )
             except requests.exceptions.Timeout:
+                self._model_cooldowns[model_candidate] = time.time() + 300.0
                 logger.warning(f"Model {model_candidate} timed out, trying next in cascade...")
                 continue
             except requests.exceptions.RequestException as req_err:
@@ -988,10 +1038,12 @@ class GreyService:
         raw_text = ""
         if candidates:
             parts = candidates[0].get("content", {}).get("parts", [])
-            for part in parts:
-                if isinstance(part, dict) and "text" in part and part["text"]:
-                    raw_text = part["text"]
-                    break
+            text_chunks = [
+                part["text"]
+                for part in parts
+                if isinstance(part, dict) and "text" in part and part["text"]
+            ]
+            raw_text = "\n".join(text_chunks)
 
         clean_str = raw_text.strip()
         if clean_str.startswith("```"):
@@ -1719,7 +1771,7 @@ class GreyService:
         user_content = f"{prefix}{user_query}"
         contents.append({"role": "user", "parts": [{"text": user_content}]})
 
-        payload = {
+        payload: dict[str, Any] = {
             "systemInstruction": {"parts": [{"text": system_instruction}]},
             "contents": contents,
             "generationConfig": {

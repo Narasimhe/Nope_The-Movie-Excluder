@@ -2992,45 +2992,30 @@ function renderPagination(
   }
   container.append(prevBtn);
 
-  // Center Counter: 1 / 23
+  // Center Numbered Page Links & Jump Control
   const counterWrap = document.createElement("div");
   counterWrap.className = "pagination-folio-counter";
 
-  const currentSpan = document.createElement("span");
-  currentSpan.className = "pagination-folio-current";
-  currentSpan.textContent = String(page);
-  currentSpan.setAttribute("role", "button");
-  currentSpan.setAttribute("tabindex", "0");
-  currentSpan.setAttribute("title", "Click to jump to page");
-  currentSpan.setAttribute("aria-label", `Current page ${page}. Click to jump to page`);
+  // Compute pagination range with ellipsis (e.g. 1 2 3 4 5 ... 149)
+  const getPageItems = (current, total) => {
+    if (total <= 7) {
+      const items = [];
+      for (let i = 1; i <= total; i++) items.push(i);
+      return items;
+    }
+    if (current <= 4) {
+      return [1, 2, 3, 4, 5, "...", total];
+    }
+    if (current >= total - 3) {
+      return [1, "...", total - 4, total - 3, total - 2, total - 1, total];
+    }
+    return [1, "...", current - 1, current, current + 1, "...", total];
+  };
 
-  const sepSpan = document.createElement("span");
-  sepSpan.className = "pagination-folio-sep";
-  sepSpan.textContent = " / ";
+  const pageItems = getPageItems(page, safeTotalPages);
 
-  const totalSpan = document.createElement("span");
-  totalSpan.className = "pagination-folio-total";
-  totalSpan.textContent = String(safeTotalPages);
-
-  counterWrap.append(currentSpan, sepSpan, totalSpan);
-  container.append(counterWrap);
-
-  // Right Control: Next ›
-  const nextBtn = document.createElement("button");
-  nextBtn.type = "button";
-  nextBtn.className = "pagination-folio-btn pagination-folio-next";
-  nextBtn.innerHTML = '<span class="folio-text">Next</span><span class="folio-chevron" aria-hidden="true">›</span>';
-  const isNextDisabled = page >= safeTotalPages && !hasNext;
-  nextBtn.disabled = isNextDisabled;
-  if (isNextDisabled) {
-    nextBtn.setAttribute("aria-disabled", "true");
-  } else {
-    nextBtn.addEventListener("click", () => onPage(page + 1));
-  }
-  container.append(nextBtn);
-
-  // Click-to-Type Interaction
-  const openJumpInput = () => {
+  // Click-to-Type Jump Interaction
+  const openJumpInput = (anchorElem) => {
     let committed = false;
     const input = document.createElement("input");
     input.type = "text";
@@ -3042,7 +3027,7 @@ function renderPagination(
 
     const restore = () => {
       if (input.parentNode) {
-        input.replaceWith(currentSpan);
+        input.replaceWith(anchorElem);
       }
     };
 
@@ -3078,20 +3063,72 @@ function renderPagination(
       }
     });
 
-    currentSpan.replaceWith(input);
+    anchorElem.replaceWith(input);
     requestAnimationFrame(() => {
       input.focus();
       input.select();
     });
   };
 
-  currentSpan.addEventListener("click", openJumpInput);
-  currentSpan.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      openJumpInput();
+  pageItems.forEach((item) => {
+    if (item === "...") {
+      const ellipsisSpan = document.createElement("span");
+      ellipsisSpan.className = "pagination-folio-ellipsis";
+      ellipsisSpan.textContent = "…";
+      ellipsisSpan.setAttribute("role", "button");
+      ellipsisSpan.setAttribute("tabindex", "0");
+      ellipsisSpan.setAttribute("title", "Click to jump to page");
+      ellipsisSpan.setAttribute("aria-label", "Jump to page");
+      ellipsisSpan.addEventListener("click", () => openJumpInput(ellipsisSpan));
+      ellipsisSpan.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openJumpInput(ellipsisSpan);
+        }
+      });
+      counterWrap.append(ellipsisSpan);
+    } else if (item === page) {
+      const currentSpan = document.createElement("button");
+      currentSpan.type = "button";
+      currentSpan.className = "pagination-folio-page is-active pagination-folio-current";
+      currentSpan.textContent = String(item);
+      currentSpan.setAttribute("aria-current", "page");
+      currentSpan.setAttribute("title", `Current page ${item}. Click to jump to page`);
+      currentSpan.addEventListener("click", () => openJumpInput(currentSpan));
+      currentSpan.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openJumpInput(currentSpan);
+        }
+      });
+      counterWrap.append(currentSpan);
+    } else {
+      const pageBtn = document.createElement("button");
+      pageBtn.type = "button";
+      pageBtn.className = "pagination-folio-page";
+      pageBtn.textContent = String(item);
+      pageBtn.setAttribute("aria-label", `Page ${item}`);
+      pageBtn.setAttribute("title", `Go to page ${item}`);
+      pageBtn.addEventListener("click", () => onPage(item));
+      counterWrap.append(pageBtn);
     }
   });
+
+  container.append(counterWrap);
+
+  // Right Control: Next ›
+  const nextBtn = document.createElement("button");
+  nextBtn.type = "button";
+  nextBtn.className = "pagination-folio-btn pagination-folio-next";
+  nextBtn.innerHTML = '<span class="folio-text">Next</span><span class="folio-chevron" aria-hidden="true">›</span>';
+  const isNextDisabled = page >= safeTotalPages && !hasNext;
+  nextBtn.disabled = isNextDisabled;
+  if (isNextDisabled) {
+    nextBtn.setAttribute("aria-disabled", "true");
+  } else {
+    nextBtn.addEventListener("click", () => onPage(page + 1));
+  }
+  container.append(nextBtn);
 }
 
 function scrollToResults() {

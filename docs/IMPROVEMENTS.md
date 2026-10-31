@@ -4,13 +4,66 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
-- [ ] **Native Gemini `google_search` Grounding & Zero-Plot-Synopsis Context for Movie Reviews (`app/grey/service.py` & `app/grey/prompts/grey_core.md`)**
-  * **Goal**: Stop Grey from bluffing reviews out of baked pre-training data or paraphrasing the 200-character TMDB plot summary. Instead, use Gemini's native `"tools": [{"google_search": {}}]` grounding alongside **Director + Top 4 Cast** (with **zero** plot synopsis) so Gemini searches real-world reception across Letterboxd, Rotten Tomatoes, IMDb, and Reddit live and synthesizes grounded takes on performances (*"De Niro nailed this"*), pacing, atmosphere, and act-by-act execution.
-  * **Discarded Approach (Do NOT Implement)**: *Custom Python scraping of Letterboxd / TMDB `/reviews` into prompt strings* — discarded as impractical, brittle, and the wrong way to use AI when Gemini's native `google_search` grounding tool can search the live web directly.
-  * **Key Components**:
-    * **Zero Plot Synopsis + Director & Cast in `{{INSPECTED_INFO}}` (`_resolve_screen_and_mentioned_context()` in `app/grey/service.py`)**: Remove `Overview: ...` completely from `{{INSPECTED_INFO}}` and replace it with **Director + Top 4 Cast** queried from local SQLite (`movie_credits`), preventing Grey from ever regurgitating the plot premise on screen.
-    * **Native `google_search` Tool Grounding on Review Turns (`chat()` & `_call_gemini_cascade()` in `app/grey/service.py`)**: Attach `"tools": [{"google_search": {}}]` when the user asks about a movie or related movies (omitting `responseMimeType: "application/json"` when `google_search` is active so the REST API accepts the tool call, with automatic fallback if a candidate model rejects the tool).
-    * **Observant Film-Lover Review Framing (`grey_core.md` & `related_curator.md`)**: Shift Grey from binary verdict posturing to grounded synthesis of what actually works or fails on screen—highlighting standout performances, pacing, atmosphere, and act-by-act strengths/flaws while reserving the "CGI/AI slop" hammer for genuine slop.
+- [ ] **Eliminate Initial View Flash on Page Refresh Across All Screens (Library, Movie Details, Notes, Discover)**
+  * **CSS — Hide All View Containers by Default**: In `app/static/styles.css`, set all top-level view sections/containers (`#app-shell`, `#movie-detail-page`, `#discover-workspace`, `#entries-page`, `#entry-reader`, `#storage-page`, etc.) to `display: none;` by default until an explicit active/ready state or class is attached.
+  * **HTML — Remove Hardcoded Active State**: Ensure `app/web/index.html` does not hardcode any default view container or `data-active-view="discover"` as visibly rendered on initial page load before route resolution.
+  * **JavaScript — Resolve Route Before Showing Container**: In `initializeApp()` in `app/static/app.js` (or an inline head script before first paint), inspect `window.location` (hash/storage) first and reveal *only* the container matching the resolved route (`#movie:<id>`, `#entry-reader:<id>`, `#entries`, `#storage`, `#discover`, or Library shelves) immediately—loading any background origin shelf silently without flashing the Library or Discover screen first.
+
+- [ ] **Grey Docked Mode — Responsive Layout & Overflow Fixes**
+  * **Prevent Library Movie Grid Bleeding into Notes Workspace**: Fix `body.grey-docked-open .movie-grid` and `.movie-grid-viewport` CSS overrides so the Library/Discovery poster grid respects `.is-hidden` and never renders inside the Notes tab when the Grey drawer is open.
+  * **Fix Simultaneous Read & Edit Toolbars in Notes Reader**: Fix `body.grey-docked-open .entry-reader .entry-reader-toolbar` overriding `.is-hidden` so the Read toolbar (`← Notes | Edit | Delete`) and Edit toolbar (`← Notes | Move to Drafts | Done`) never display simultaneously in Grey mode.
+  * **Constrain Left Filter Sidebar & Sort Grid**: Ensure the Filters sidebar container and its 2-column "Sort Results" button grid (`Recently updated`, `Newest first`, `Oldest first`, `Title A–Z`) enforce `box-sizing: border-box`, `width: 100%`, and `min-width: 0` on flex/grid children so buttons shrink or wrap cleanly without overflowing past the right border of the sidebar card when the viewport narrows.
+  * **Prevent Center Column Header & Shelf Ribbon Clipping**: Give the center main content container `min-width: 0` and clean right-side breathing room next to the scrollbar when Grey is docked open. Allow the top search bar row (including the total movie count on the right) and the shelf filter pill row (`New discovery`, `Watch later`, `Watched`, `Rewatch`, `Nope`) to flex and wrap gracefully so the movie count and the `× Nope` button are never clipped at the right edge.
+  * **Single Movie Page Responsiveness in Grey Mode**: Fix the action bar / status controls on the Single Movie Detail page when the Grey drawer is open so the `Nope` button never overflows or escapes outside its container box.
+
+- [ ] **Search Presets & Pagination / View Mode Toggle (Discovery & Library)**
+  * **Active Search Preset Highlighting**: Actively highlight the currently selected search preset in both the top preset ribbon and the sidebar preset list so it is always obvious which preset is driving the current results, and visually indicate when filters diverge from the active preset.
+  * **Update Existing Search Preset Control**: Restore a clear UI control in the Filters sidebar when a preset is active and its filters are tweaked (e.g., an *"Update preset"* action alongside Rename/Delete) so users can overwrite and save changes directly to the active preset.Let the update icon come on the preset buttons themselves -- they appear only in hover mode just like the delete "x" button -- make sure the icon is righta and in similar style / aesthetic / weight as the delete preset 'x' button.
+  * **Numbered Pagination & Continuous/Paged Mode Toggle**: Replace basic prev/next stepping with numbered page navigation (`1 2 3 4 5 …`) and add a single compact toggle button (switching between an **Infinity icon** for continuous scroll and an **Open-Page icon** for numbered pagination) across both Discovery and Library modes.
+
+- [ ] **Single Movie Detail Page & Poster Badges Polish**
+  * **Move Main Poster Status Badge to Top-Right**: Reposition the status icon badge on the main movie poster from `top: 10px; left: 10px;` to `top: 10px; right: 10px;` so it sits immediately adjacent to the film title column.
+  * **Thicken Related Movie Poster Badges**: Increase the icon stroke/weight (`font-weight: 800` for glyphs) on related movie poster status badges, and give the circular badge backplate a crisp, solid semi-opaque dark fill (`background: rgba(15, 15, 18, 0.85); border: 1px solid rgba(255, 255, 255, 0.2);`) so the icon punches through any poster artwork. This should be the same for the discover posters. 
+  * **Direct Single-Movie TMDB Sync**: Add a dedicated 1-click *"Sync from TMDB"* button on the Single Movie Detail page that force-fetches and caches fresh details, cast, and crew from TMDB exclusively for that movie when cast/crew data is missing or stale.
+  * **Escape Personal Movie Notes Field via Keyboard**: Allow pressing `Escape` inside the personal movie notes textarea to blur the input and return focus to the page so users are never trapped in the text field when trying to use arrow keys to navigate to the next or previous movie.Discuss this first one how to implement this intelligently - dont rush it.
+  * **Fix the brief flash of the Library screen** when refreshing the Single Movie page:Resolve Route Before Revealing Views:
+- Hide all main view containers (Library, Movie Detail, Notes) by default on initial page load instead of showing the Library view first.
+- Read the active URL / saved session state on startup and reveal only the matching target screen so refreshing a single movie page stays directly on that movie without flashing the Library.
+
+Implement the Continuous/Page mode icon toggle and a smart floating Scroll-to-Top button:
+
+1. Compact View Mode Icon Toggle (Filter Bar):
+- Position: Place on the far-right of the second row (filter pills row), horizontally aligned with the genre/theme filter pills and directly beneath the total movie count label.
+- Visuals: Use a quiet, compact icon-only toggle (e.g., `∞` for continuous scroll and `☷` / page glyph for paged mode). 
+- Style: Keep it minimalist and borderless with a subtle semi-opaque dark backplate (`border-radius: 6px` to `8px`). Use the active soft gold accent for the selected mode icon and a muted opacity (`0.5`) for the inactive icon.
+- Functionality: Clicking toggles between infinite scrolling and paginated navigation.
+
+2. Smart Floating Scroll-to-Top Button:
+- Position: Dock in the bottom-right corner, immediately to the left of the floating Grey trigger pill (e.g., `bottom: 18px; right: calc(grey_pill_width + 28px);` or in a shared fixed flex container with `gap: 10px; align-items: center;`).
+- Style: Compact rounded-square badge (34×34px, `border-radius: 8px`), semi-transparent dark background (`rgba(20, 20, 24, 0.85)` with a 1px faint border), containing a crisp upward arrow/chevron (`↑`).
+- Smart Visibility:
+  * Keep hidden by default: `opacity: 0; pointer-events: none; transform: translateY(6px); transition: opacity 0.25s ease, transform 0.25s ease;`.
+  * Add a scroll listener (or IntersectionObserver): attach a `.visible` class (`opacity: 1; pointer-events: auto; transform: translateY(0);`) only after scrolling down past 450px (~2 rows of movie posters).
+  * Smoothly fade back out when scrolling back near the top (< 450px).
+- Click Behavior: On click, trigger `window.scrollTo({ top: 0, behavior: 'smooth' })`.
+
+- [ ] **Notes UI Restyle, Editor Status & Movie Hover Card Polish**
+  * **Notes Main UI & Sidebar Thematic Redo**: Tone down overly bright/thick note titles in List mode for a calmer editorial hierarchy. In the Notes sidebar, soften the overly yellow *"All notes"* active state to match our warm champagne-gold Zen palette, and replace the Drafts icon with a clean stroke icon matching the Library/Discover sidebar style.
+  * **Notes List Tag Positioning**: Keep category/tag pills in List mode positioned at a comfortable, consistent gap right after the note title rather than floating too far out to the right when the list widens.
+  * **Theme-Consistent "Saved" Indicator**: Replace the bright green *"Saved"* badge in the notes editor with a subtle, theme-consistent status indicator (warm muted stone/champagne typography) that blends naturally with the dark Zen UI.
+  * **Movie Hover Card Layout & Typography**: On the `@Movie Title (Year)` hover preview card:
+    * Render the release year in the same font weight as the movie title.
+    * Prevent wide note cards from pushing the rating/vote metadata all the way to the far right edge; use a generous, consistent spacing gap after `Movie Title (Year)`.
+    * Format the metadata block as `[Star Icon] Rating  [Vote Icon] Vote Count`, using the same vote icon as the Single Movie Detail page, coloring both the star and vote icons in theme yellow, and styling the rating and vote numbers in bold white.
+
+- [ ] **Storage Telemetry Labels & Filmography Zen Alignment**
+  * **Storage Page "Personal Library" Label Cutoff**: Fix card width, padding, or label sizing on the Footer > Storage page so the *"Personal Library"* metric labels and sublabels never clip or truncate.
+  * **Actor & Director Filmography Zen Restyle**: Align the Actor/Director filmography view with the app's dark Zen editorial aesthetic—refining header hierarchy, badge contrast, card spacing, and muted warm-stone typography.
+
+- [ ] **Grey Intelligence, Contextual Help & Google Sheets Export**
+  * **Strip Redundant Movie Header Metadata from Grey's Movie Notes**: When Grey writes or updates a personal movie note (`set_movie_status` / movie note field), ensure it never prepends redundant Movie Title, Release Year, or Genre headers inside the note body—keep only the actual note/reflection.
+  * **Screen-Relevant Help Docs in Grey**: Give Grey access to a concise internal UI/formatting help guide (especially when on the Notes editor screen) so questions like *"Hey Grey, how do I use formatted titles in notes?"* return the exact syntax and examples from the app docs.
+  * **Export Library / NOPE Database to Google Sheets**: Add an export workflow from the SQLite database (Personal Library / NOPE shelves) into a structured Google Sheet.
 
 - [ ] **Dedicated API & Network Telemetry Space (Footer / System View)**
   * **Goal**: Provide a clean, dedicated space (similar to the Storage page, accessible via footer or system navigation) that visualizes outbound TMDB API consumption, cache efficiency, and network health without cluttering the main footer or UI.
@@ -32,6 +85,17 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Direct Numbered Page Links & Jump-to-Page in Zen Pagination (`app/static/app.js`, `app/static/styles.css`, `app/web/index.html`)**
+  * **Interactive Numbered Folio Sequence**: Replaced the static center `1 / 149` counter with a responsive, clickable numbered sequence (e.g. `1  2  3  4  5 … 149` or `1 … 14  15  16 … 149`) that jumps directly to any clicked page.
+  * **Zen Minimalist Typography**: Maintained seamless alignment between `< Prev` and `Next >`. Styled the active page in soft champagne gold (`#DEC68B`, font-weight 600) without heavy box borders or buttons, with muted gray links for inactive pages and subtle hover transitions.
+  * **Smart Jump-to-Page Input Preserved**: Kept inline jump input on clicking the active page number or ellipsis (`…`), allowing direct keyboard entry and Enter-to-jump.
+- [x] **Zero-Plot-Synopsis Movie Context, `gemini-3-flash-preview` Promotion & 429 Cooldown Cache (`app/grey/service.py`, `app/config.py`, `app/grey/prompts/grey_core.md`)**
+  * **Zero Plot Synopsis + Director & Cast in `{{INSPECTED_INFO}}` (`_resolve_screen_and_mentioned_context()` in `app/grey/service.py`)**: Removed `Overview: ...` completely from `{{INSPECTED_INFO}}` and replaced it with **Director + Top 4 Cast** queried from local SQLite (`movie_credits`), preventing Grey from ever regurgitating the plot premise on screen.
+  * **Promoted Full `gemini-3-flash-preview` & Added 5-Minute `429` Cooldown Cache (`app/config.py` & `_call_gemini_cascade()`)**: Promoted `gemini-3-flash-preview` (full Flash model with active Free Tier quota) to #1 in `GEMINI_FLASH_CANDIDATE_MODELS` and added `_model_cooldowns` in `GreyService` so models returning `429`/`404` are skipped for 5 minutes—eliminating 3 wasted `429` roundtrips per turn and upgrading Grey from `flash-lite` to full `gemini-3-flash-preview`.
+  * **Observant Film-Lover Review Framing (`grey_core.md` & `related_curator.md`)**: Shifted Grey from binary verdict posturing to grounded synthesis of what actually works or fails on screen—highlighting standout performances (*"De Niro nailed this"*), pacing, atmosphere, and act-by-act strengths/flaws while reserving the "CGI/AI slop" hammer for genuine slop.
+  * **Discarded Approaches (Do NOT Implement)**:
+    * *Custom Python scraping of Letterboxd / TMDB `/reviews` into prompt strings* — discarded as impractical, brittle, and the wrong way to use AI.
+    * *`tools: [{"google_search": {}}]` on Free Tier API Key* — verified that Google's Free Tier locks `google_search` grounding quota to `0` (`429 RESOURCE_EXHAUSTED` across all models unless a paid billing plan is attached).
 - [x] **Soul vs. Soulless Cinema Rubric, CGI/AI Slop Diagnosis & Blunt Human Vocabulary (`app/grey/prompts/grey_core.md`, `app/grey/prompts/skills/related_curator.md`, `app/grey/service.py`)**
   * **Synthesized 7-Axis "Soul vs. Soulless" Rubric (The Ten-Minute Rule)**: Replaced the generic rubric in `grey_core.md` with the user's 7-axis framework (*Observed Humans vs. Director Ego-Extensions*, *Lived History in Behaviour vs. Expositional Slop*, *Genuine Exploration vs. Predetermined Thesis*, *Trusting the Audience vs. Reaction Engineering*, *Long-Term Conviction vs. Cash Grabs*, *Singular Voice vs. Committee AI Slop*, and *Tactile Craft vs. Weightless CGI Slop*).
   * **Explicit CGI Slop & AI Slop Diagnosis in `YES / NOPE` Verdicts**: Updated `related_curator.md` and `grey_core.md` so every `YES` or `NOPE` verdict diagnoses whether a film has real life and conviction or is weightless CGI spectacle/synthetic slop.
