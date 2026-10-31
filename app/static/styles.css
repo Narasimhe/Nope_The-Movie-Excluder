@@ -4938,122 +4938,135 @@ footer {
 .return-to-origin {
   display: inline-flex;
   align-items: center;
-  min-height: 40px;
-  margin: 0 0 1.5rem;
-  padding: 0 .9rem;
-  border: 1px solid rgba(242, 201, 76, .4);
-  border-radius: 9px;
-  background: rgba(242, 201, 76, .06);
-  color: var(--accent-bright);
+  gap: 6px;
+  height: 30px;
+  min-height: 30px;
+  margin: 0 0 1.2rem;
+  padding: 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  color: #c8c4bc;
   cursor: pointer;
-  font-weight: 750;
+  font-size: 0.80rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  transition: all 140ms ease;
 }
 .return-to-origin:hover {
-  background: rgba(242, 201, 76, .12);
+  background: rgba(222, 198, 139, 0.08);
+  border-color: rgba(222, 198, 139, 0.28);
+  color: #f7f6f2;
 }
 
-/* Complete Career Filmography Toolbar & Tabs (Stacked Layout) */
+/* Complete Career Filmography Toolbar & Tabs (Refined Zen Layout) */
 .filmography-toolbar {
   display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 14px;
-  margin-bottom: 24px;
-  padding: 18px 22px;
-  background: #14151a;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding: 4px 0 16px 0;
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .filmography-person-badge {
   display: flex;
   align-items: center;
-  gap: 16px;
-  width: 100%;
+  gap: 14px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 .filmography-avatar {
-  width: 58px;
-  height: 58px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   object-fit: cover;
-  border: 2px solid rgba(242, 201, 76, 0.45);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
-  background: #1e1e26;
+  border: 1px solid rgba(222, 198, 139, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  background: #18191f;
   flex-shrink: 0;
 }
 .filmography-person-meta {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 .filmography-kicker {
-  color: var(--accent);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.09em;
+  color: #DEC68B;
+  font-size: 0.70rem;
+  font-weight: 550;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
+  opacity: 0.9;
 }
 .filmography-name {
   margin: 0;
-  color: #f7f6f4;
-  font-size: clamp(1.4rem, 2.5vw, 2.1rem);
-  font-weight: 850;
-  letter-spacing: -0.02em;
-  line-height: 1.15;
+  color: #f7f6f2;
+  font-size: clamp(1.3rem, 2vw, 1.7rem);
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .filmography-tabs {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  background: #0d0e12;
-  padding: 5px 6px;
-  border-radius: 9px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  width: 100%;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.025);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  width: fit-content;
+  max-width: 100%;
   box-sizing: border-box;
   overflow-x: auto;
+  flex-shrink: 0;
 }
 .film-tab {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 8px 18px;
+  gap: 5px;
+  height: 28px;
+  padding: 0 13px;
   border: 1px solid transparent;
-  border-radius: 7px;
+  border-radius: 6px;
   background: transparent;
-  color: #8e8b97;
-  font-size: 0.82rem;
-  font-weight: 700;
+  color: #9ca3af;
+  font-size: 0.78rem;
+  font-weight: 500;
   cursor: pointer;
   transition: all 140ms ease;
   user-select: none;
   white-space: nowrap;
 }
 .film-tab:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.06);
+  color: #f7f6f2;
+  background: rgba(255, 255, 255, 0.04);
 }
 .film-tab.is-active {
-  background: rgba(242, 201, 76, 0.16);
-  border-color: rgba(242, 201, 76, 0.45);
-  color: var(--accent-bright);
+  background: rgba(222, 198, 139, 0.12);
+  border-color: rgba(222, 198, 139, 0.28);
+  color: #DEC68B;
+  font-weight: 550;
 }
 .is-filmography-link {
   text-decoration: underline;
-  text-decoration-color: rgba(242, 201, 76, 0.4);
+  text-decoration-color: rgba(222, 198, 139, 0.35);
   text-underline-offset: 3px;
   cursor: pointer;
   transition: all 140ms ease;
 }
 .is-filmography-link:hover {
-  color: var(--accent) !important;
-  text-decoration-color: var(--accent);
+  color: #DEC68B !important;
+  text-decoration-color: #DEC68B;
 }
 .movie-detail-page .detail-page-header {
   position: sticky;
@@ -6835,7 +6848,7 @@ body.grey-docked-open .entries-page {
   display: none !important;
 }
 body.grey-docked-open .back-to-top-pill {
-  right: calc(420px + 24px) !important;
+  right: calc(420px + 40px) !important;
   bottom: 26px !important;
   z-index: 1060 !important;
 }

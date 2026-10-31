@@ -4,9 +4,8 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
-- [ ] **Storage Telemetry Labels & Filmography Zen Alignment**
+- [ ] **Storage Telemetry Labels**
   * **Storage Page "Personal Library" Label Cutoff**: Fix card width, padding, or label sizing on the Footer > Storage page so the *"Personal Library"* metric labels and sublabels never clip or truncate.
-  * **Actor & Director Filmography Zen Restyle**: Align the Actor/Director filmography view with the app's dark Zen editorial aesthetic—refining header hierarchy, badge contrast, card spacing, and muted warm-stone typography.
 
 - [ ] **Grey Intelligence, Contextual Help & Google Sheets Export**
   * **Strip Redundant Movie Header Metadata from Grey's Movie Notes**: When Grey writes or updates a personal movie note (`set_movie_status` / movie note field), ensure it never prepends redundant Movie Title, Release Year, or Genre headers inside the note body—keep only the actual note/reflection.
@@ -33,6 +32,15 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Restored All Blog / Journal Banners & Storage Test Sandbox Isolation (`app/storage_repository.py`)**
+  * **Root Cause & Prevention**: Fixed a bug where `StorageRepository.purge_deleted_entries()` hardcoded `banners_dir` to production `data/banners`. When running unit tests with a temporary in-memory/isolated SQLite database containing no banner entries, orphaned cleanup was deleting production banner image files. Fixed `banners_dir` to derive dynamically from `Path(database.DATABASE_PATH).parent / "banners"`, fully isolating test databases.
+  * **Full Banner Recovery**: Recovered all 20 historical user banner images (`f0e73afcd2434919.png`, `05cc6b66e77d4396.png`, `af8bb366267b4305.png`, `fa28b3d3dfed407a.jpg`, `c94489fd02d5466d.png`, etc.) directly from Git commit history into `data/banners/`.
+- [x] **Back-to-Top Floating Scroll Button Spacing in Grey Mode (`app/static/styles.css`, `app/web/index.html`)**
+  * **Breathing Space from Grey Chat Drawer**: Shifted `.back-to-top-pill` position when Grey is docked open from `calc(420px + 24px)` to `calc(420px + 40px)`, shifting the button 16px to the left to give comfortable breathing room away from the Grey chat box border.
+- [x] **Actor & Director Filmography Zen Restyle (`app/static/styles.css`, `app/web/index.html`)**
+  * **Stripped Excessive Weight & Chunky Styling**: Replaced heavy font weights (`850` name, `800` kicker, `750` return button, `700` tabs) with refined, calm Zen weights (`650` title, `550` kicker, `500` return button and tabs).
+  * **Streamlined Header & Palette**: Eliminated the bulky, opaque dark box container and loud canary yellow borders. Replaced with an open, airy horizontal layout featuring subtle hairline borders (`rgba(255, 255, 255, 0.06)`), a compact 48px avatar with refined champagne border, warm champagne kicker (`#DEC68B`), and a compact segmented pill tab group (`height: 28px; width: fit-content`).
+  * **Zen Pill Return Button**: Converted `.return-to-origin` into a compact, 30px hairline pill button with subtle warm hover interaction.
 - [x] **Poster Hover Preview Card Year & Metadata Alignment (`app/static/app.js`, `app/static/styles.css`, `app/web/index.html`)**
   * **Bare Release Year**: Stripped parentheses from the release year in `.poster-note-popover` so it sits bare right after the title with a clean single space gap (e.g. `Inception 2010`).
   * **Unified Metadata Placement & Proximity**: Switched `.poster-note-popover-header` alignment from `space-between` to `flex-start` with a consistent `16px` gap, ensuring rating and vote count metadata sit directly next to the title/year across both title-only previews and previews with personal notes.

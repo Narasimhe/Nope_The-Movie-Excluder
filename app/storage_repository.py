@@ -130,11 +130,11 @@ class StorageRepository:
                 if row["image_url"].startswith("/banners/")
             }
 
-        # Automatically clean up orphaned banner files on disk
-        banners_dir = Path(__file__).resolve().parent.parent / "data" / "banners"
+        # Automatically clean up orphaned banner files on disk (isolated to active database parent dir)
+        banners_dir = Path(database.DATABASE_PATH).parent / "banners"
         if banners_dir.exists():
             for p in banners_dir.iterdir():
-                if p.is_file() and p.name not in active_banners:
+                if p.is_file() and p.name not in active_banners and not p.name.startswith("nope_"):
                     try:
                         p.unlink()
                     except Exception as exc:
