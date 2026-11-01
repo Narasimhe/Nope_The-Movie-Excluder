@@ -368,6 +368,7 @@ class GreyService:
         active_person: dict[str, Any] | None,
         active_skill_key: str | None,
         history: list[dict[str, str]] | None,
+        inspected_movie_id: int | None = None,
     ) -> tuple[str | None, dict[str, Any] | None, str, str]:
         """Resolve slash commands and Tier 1/Tier 2 progressive skill instructions."""
         active_skill_key = active_skill_key or None
@@ -440,11 +441,14 @@ class GreyService:
                 "similar to this",
                 "worth my attention",
                 "worth my time",
-                "worth watching",
                 "recommend from these",
             ]
         ):
             skill_filename = "related_curator.md"
+        elif re.search(r"\b(rt|rotten\s*tomatoes|tomatometer|popcornmeter|imdb|letterboxd|metacritic|ratings?|scores?|voter?\s*count)\b", lq):
+            skill_filename = "ratings_intel.md"
+        elif inspected_movie_id or re.search(r"\b(think|thoughts|opinion|critique|review|verdict|worth|good|how is it|is it any good|like this|about this movie|recommend|rubbish|pulse|rate)\b", lq):
+            skill_filename = "film_critique.md"
 
         skill_directive_text = "None"
         if skill_filename:
@@ -897,6 +901,7 @@ class GreyService:
             active_person=active_person,
             active_skill_key=active_skill_key,
             history=history,
+            inspected_movie_id=ctx.get("inspected_movie_id"),
         )
 
         # Targeted dossier loading from RAM cache
@@ -1061,7 +1066,7 @@ class GreyService:
                 if reaction_path.exists() and reaction_path.is_file():
                     valid_reaction = reaction_filename
 
-            # Filter out unsolicited shelf categorization pills
+            # Filter out unsolicited shelf categorization pills and unsolicited other-movie recommendations
             sanitized_pills = []
             for p in pills or []:
                 if not isinstance(p, dict):
@@ -1077,7 +1082,11 @@ class GreyService:
                         s in lbl for s in ["watchlist", "new discovery", "add to shelf", "mark as"]
                     )
                 )
-                if not is_status_pill:
+                is_unsolicited_rec = (
+                    act == "open_movie"
+                    and not any(w in lower_msg for w in ["recommend", "instead", "similar", "more like", "alternative", "suggest", "better", "what should i watch"])
+                )
+                if not is_status_pill and not is_unsolicited_rec:
                     sanitized_pills.append(p)
             pills = sanitized_pills
 

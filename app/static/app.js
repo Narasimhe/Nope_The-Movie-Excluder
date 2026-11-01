@@ -6422,7 +6422,8 @@ async function openMovieDetails(
       id: movie.tmdb_id,
       title: movie.title || movie.original_title || "Untitled movie",
     };
-    if (trailMode === "push") {
+    const isChainingFromDetail = !enteringDetails && Array.isArray(state.detailTrail) && state.detailTrail.length > 0;
+    if (trailMode === "push" || (trailMode === "root" && isChainingFromDetail)) {
       const lastItem = state.detailTrail[state.detailTrail.length - 1];
       if (!lastItem || lastItem.id !== trailItem.id) {
         state.detailTrail.push(trailItem);
@@ -10403,7 +10404,7 @@ function appendGreyMessage(role, text, subtext, pills, { skipSave = false, skill
         if (pill.action === "prompt" && pill.payload?.prompt) {
           sendGreyMessage(pill.payload.prompt);
         } else if (pill.action === "open_movie" && pill.payload?.tmdb_id) {
-          openMovieDetails(pill.payload.tmdb_id);
+          openMovieDetails(pill.payload.tmdb_id, { trailMode: "push" });
         } else if (pill.action === "save_shelf" && pill.payload?.name) {
           handleGreySaveShelf(pill.payload.name);
         } else if (pill.action === "save_movie_notes") {
@@ -10747,7 +10748,26 @@ async function sendGreyMessage(query) {
     }
 
     let pills = Array.isArray(res.pills) ? [...res.pills] : [];
-    if (state.selectedMovie && res.text && !res.action && !pills.some((p) => p.action === "save_movie_notes")) {
+
+    // Only show "Save to Movie Notes" for Grey's cinema critiques of the movie, never for ratings/trivia/general chat
+    const isRatingsQuery = /\b(rt|rotten\s*tomatoes|imdb|letterboxd|metacritic|ratings?|scores?|votes?|voter?\s*count)\b/i.test(query);
+    const hasRatingsContent = /(?:Rotten\s*Tomatoes|Tomatometer|Popcornmeter|Letterboxd|IMDb|Metacritic|\b\d{1,2}%\b|\b\d(?:\.\d)?\s*\/\s*10\b|\b\d(?:\.\d)?\s*\/\s*5(?:\.0)?\b)/i.test(res.text || "");
+    const isEbertOrTriviaQuery = /\b(roger ebert|ebert|runtime|box office|budget|trivia|release date)\b/i.test(query);
+    const isAnchoredCritique = /^\s*\*\*[^*]+(?:\(\d{4}\))?\*\*/i.test(res.text || "");
+    const isCritiqueIntent = /\b(think|about this movie|opinion|critique|review|verdict|thoughts|worth|good|how is it|is it any good|like this)\b/i.test(query);
+
+    const isGreyMovieCritique = Boolean(
+      state.selectedMovie &&
+      res.text &&
+      !res.action &&
+      !isRatingsQuery &&
+      !hasRatingsContent &&
+      !isEbertOrTriviaQuery &&
+      (isCritiqueIntent || isAnchoredCritique) &&
+      !pills.some((p) => p.action === "save_movie_notes")
+    );
+
+    if (isGreyMovieCritique) {
       pills.push({
         label: "📝 Save to Movie Notes",
         action: "save_movie_notes",
@@ -10814,7 +10834,7 @@ async function sendGreyMessage(query) {
     } else if (res.action && res.action.type === "apply_filter") {
       handleGreyFilterAction(res.action.params);
     } else if (res.action && res.action.type === "open_movie" && res.action.params?.tmdb_id) {
-      openMovieDetails(res.action.params.tmdb_id);
+      openMovieDetails(res.action.params.tmdb_id, { trailMode: "push" });
     } else if (res.action && res.action.type === "create_draft") {
       renderNotesTags().catch(() => {});
     } else if (res.action && res.action.type === "update_entry") {

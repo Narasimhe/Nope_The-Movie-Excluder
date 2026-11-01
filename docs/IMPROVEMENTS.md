@@ -30,6 +30,20 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Modular Smart Local Router, Ratings Chips with IMDb Vote Counts & Compulsory Review Header (`app/grey/service.py`, `app/grey/prompts/`)**
+  * **Lean Core Foundation (`grey_core.md`)**: Stripped monolithic rules down to identity, screen context, and JSON output formatting.
+  * **Modular Dedicated Skills**: Created `skills/film_critique.md` (Soul vs. Soulless Ten-Minute Test) and `skills/ratings_intel.md` (consensus ratings).
+  * **Compulsory Review Header**: Made `**Movie Title (Year)**` strictly mandatory as the very first line of any film evaluation.
+  * **Ratings Chips with IMDb Vote Counts**: Instructed Grey to output quick rating chips for the active movie (`RT: XX% / YY%`, `IMDb: X.X/10 (NNk votes)`, `Letterboxd: X.X/5.0`), explicitly requiring the vote count / sample size for IMDb.
+  * **Suppressed Unsolicited Recommendation Chips**: Blocked unrequested other-movie pills (`open_movie`) from being attached to critiques or ratings unless the user explicitly requests recommendations.
+- [x] **Preserved Movie Details History Trail for Pill & Cross-Movie Navigation (`app/static/app.js`)**
+  * **Chained Navigation Stack**: Fixed an issue where clicking a movie pill in Grey chat (e.g. `Inside Man` from `Dead Man's Wire`) wiped out the navigation trail.
+  * **Automatic Trail Push**: `openMovieDetails()` now preserves the breadcrumb trail (`Dead Man's Wire → Inside Man`) whenever another film is opened from within movie details.
+  * **Restored Return Link**: The back button now accurately shows `Back to Dead Man's Wire` and returns you to the originating film instead of dumping you back to Discover.
+- [x] **Scoped "Save to Movie Notes" Pill Exclusively to Film Critiques (`app/static/app.js`)**
+  * **Eliminated False Note Pills**: Replaced unconditional injection of `"📝 Save to Movie Notes"` with strict critique-detection logic.
+  * **Suppressed on Ratings & Trivia**: The pill is now cleanly suppressed when the user asks for scores or ratings (`rt`, `imdb`, `letterboxd`, `metacritic`), quotes from critics (e.g. Roger Ebert), or general trivia/runtime.
+  * **Triggered Only for Genuine Critiques**: The pill appears only when Grey evaluates the movie's craft, writing, and soul ("what do you think?", "what about this movie?").
 - [x] **Removed Distracting Quick Skills `/related` Chip & Purged Obsolete `/batch` Slash Item (`app/web/index.html`)**
   * **Distraction-Free Chat Input**: Removed the floating `.grey-skills-bar` containing the `⚡ /related` chip above the chat textarea so the input area stays clean and uncluttered.
   * **Direct Slash Access**: Users can still access `/related` at any time by directly typing `/related` or using the slash autocomplete menu.
@@ -37,8 +51,8 @@
 - [x] **Grey Cinema Critique Independence & Soul vs. Soulless Product Standard (`app/grey/prompts/grey_core.md`)**
   * **Independent Film Critiques**: Explicitly decoupled Grey's movie evaluations from the user's past nopes and favorites. Grey never panders or alters its critique based on personal shelves (no "Since you loved X..." or tailoring verdicts to library history).
   * **Soul vs. Soulless Benchmark**: Enforced the 7-point Ten-Minute Test (Real People vs Ego Masks, Lived History vs Spoon-fed Exposition, Curious Exploration vs Pre-Rigged Conclusions, Trusting Audience vs Cheap Reaction-Bait, Years of Reflection vs Cash Grabs, Real Voice vs Committee/AI Slop, Real Weight vs CGI Slop) as the objective standard for all film evaluations.
-  * **Multi-Turn Movie Discussions & Consensus Ratings (RT, Letterboxd, IMDb, Metacritic)**: Added explicit rules for conversational follow-ups (Rule 11), providing breakdowns of Tomatometer, Popcornmeter, Letterboxd, IMDb, and Metascores plus consensus explanations.
-  * **"Would I Like This Movie?" Calibration (Rule 12)**: Defined the explicit distinction between independent craft critiques ("What do you think of this film?") and personalized taste calibrations ("Would I like this film?"), where Grey tests the movie against the user's specific dealbreakers (exposition dumping, Marvel bathos, CGI slop) and craft values.
+  * **Ratings Shorthand Directive (Rule 12)**: Added clean 3-line shorthand instructions so queries like "rt" or "imdb" automatically return the complete data package (RT Tomatometer + Popcornmeter + consensus, IMDb rating + vote count, Letterboxd average) without requiring tedious follow-up turns.
+  * **"Would I Like This Movie?" Calibration (Rule 11)**: Defined the explicit distinction between independent craft critiques ("What do you think of this film?") and personalized taste calibrations ("Would I like this film?"), where Grey tests the movie against the user's specific dealbreakers (exposition dumping, Marvel bathos, CGI slop) and craft values.
   * **Test Suite Verification**: Verified 209 passing backend tests.
 - [x] **Pruned Grey Assistant: Purged Status Actions & Note-Writing Bloat into Standalone Prompt (`app/grey/service.py`, `app/grey/prompts/`, `docs/NOTE_FORMATTING_PROMPT.md`)**
   * **Purged Status & Shelf Actions**: Removed `set_movie_status`, `batch_set_movie_status`, `/batch` command, and `library_ops.md` from Grey's runtime cascade and backend handlers.
