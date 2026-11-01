@@ -19,32 +19,9 @@ from app.config import (
     GEMINI_FLASH_CANDIDATE_MODELS,
     GEMINI_PRO_CANDIDATE_MODELS,
 )
-from app.general_entry_repository import GeneralEntryRepository
-from app.grey.note_formatter import deduplicate_and_format_note_body
 from app.movie_service import MovieService
-from app.user_movie_repository import UserMovieRepository
 
 logger = logging.getLogger(__name__)
-
-# Lightweight metadata registry only — 100% of prompt instructions live in app/grey/prompts/skills/*.md
-SKILLS_REGISTRY: dict[str, dict[str, Any]] = {
-    "related": {
-        "command": "/related",
-        "name": "Related Movies Reality Check",
-        "description": "Evaluates related movies on screen with craft takes and YES/NOPE verdicts.",
-        "requires_dossier": False,
-        "skill_file": "related_curator.md",
-        "default_query": "Are any of the related movies on screen worth my attention?",
-    },
-    "batch": {
-        "command": "/batch",
-        "name": "Batch Move / Queue",
-        "description": "Applies library status changes to multiple movies simultaneously.",
-        "requires_dossier": False,
-        "skill_file": "library_ops.md",
-        "default_query": "Add the approved YES movies to my New Discovery shelf.",
-    },
-}
 
 STATUS_NORMALIZATION_MAP: dict[str, str] = {
     "new_discovery": "new_discovery",
@@ -62,26 +39,17 @@ STATUS_NORMALIZATION_MAP: dict[str, str] = {
     "reject": "excluded",
 }
 
-NOTE_WRITE_VERBS = (
-    "add",
-    "append",
-    "put",
-    "insert",
-    "update",
-    "edit",
-    "modify",
-    "rewrite",
-    "replace",
-    "format",
-    "toggle",
-    "collapse",
-    "collapsible",
-    "draft",
-    "create",
-    "save",
-    "summarize",
-    "table",
-)
+# Lightweight metadata registry only — 100% of prompt instructions live in app/grey/prompts/skills/*.md
+SKILLS_REGISTRY: dict[str, dict[str, Any]] = {
+    "related": {
+        "command": "/related",
+        "name": "Related Movies Reality Check",
+        "description": "Evaluates related movies on screen with craft takes and YES/NOPE verdicts.",
+        "requires_dossier": False,
+        "skill_file": "related_curator.md",
+        "default_query": "Are any of the related movies on screen worth my attention?",
+    },
+}
 
 
 class GreyService:
@@ -367,26 +335,6 @@ class GreyService:
             "tracked_movies_index": tracked_movies_index,
         }
 
-    def _deduplicate_and_format_note_body(
-        self,
-        existing_body: str,
-        new_body: str,
-        mode: str,
-        user_message: str,
-        inspected_movie_id: int | None = None,
-        inspected_movie_title: str | None = None,
-    ) -> str:
-        """Delegate note deduplication and formatting to app.grey.note_formatter."""
-        return deduplicate_and_format_note_body(
-            existing_body=existing_body,
-            new_body=new_body,
-            mode=mode,
-            user_message=user_message,
-            inspected_movie_id=inspected_movie_id,
-            inspected_movie_title=inspected_movie_title,
-            get_connection=self._get_connection,
-        )
-
     def _select_target_model(self, lower_msg: str, model_mode: str) -> tuple[str, str]:
         """Select Gemini model without false-positive slowdowns on common words like 'rating' or 'review'."""
         research_triggers = [
@@ -450,19 +398,11 @@ class GreyService:
                 ]
             ):
                 active_skill_key = "related"
-            elif any(
-                p in lq for p in ["add the yes movies", "add all yes", "batch add", "batch move"]
-            ):
-                active_skill_key = "batch"
 
         active_skill = SKILLS_REGISTRY.get(active_skill_key) if active_skill_key else None
         if active_skill and not user_query:
             user_query = active_skill.get("default_query", user_query)
 
-        has_note_write_intent = any(
-            re.search(rf"\b{re.escape(v)}\b", lq)
-            for v in (*NOTE_WRITE_VERBS, "help", "improve", "fix", "clean")
-        )
         mentions_note_topic = (
             current_view in ("movie-notes", "notes")
             or bool(inspected_note_id)
@@ -477,21 +417,18 @@ class GreyService:
         if active_skill and active_skill.get("skill_file"):
             skill_filename = active_skill["skill_file"]
         elif mentions_note_topic:
-            if has_note_write_intent:
-                skill_filename = "notes_editor.md"
-            else:
-                skill_directive_text = (
-                    "### ACTIVE SKILL: READ-ONLY NOTE DISCUSSION\n"
-                    "- The user is reading or asking a question about a note.\n"
-                    "- Use the note content in {{INSPECTED_NOTE_INFO}} (or call `get_note` via `tool_call` if not loaded on screen) to answer their question.\n"
-                    "- STRICT READ-ONLY RULE: Do NOT modify the note and NEVER emit `update_entry` or `create_draft`."
-                )
-                return (
-                    active_skill_key,
-                    active_skill,
-                    user_query,
-                    skill_directive_text,
-                )
+            skill_directive_text = (
+                "### ACTIVE SKILL: READ-ONLY NOTE DISCUSSION\n"
+                "- The user is reading, discussing, or asking a question about a personal note/draft.\n"
+                "- Use the note content in {{INSPECTED_NOTE_INFO}} (or call `get_note` via `tool_call` if not loaded on screen) to answer conversationally.\n"
+                "- STRICT READ-ONLY RULE: You are strictly a conversational partner and critic. Never attempt to edit, create, or overwrite notes."
+            )
+            return (
+                active_skill_key,
+                active_skill,
+                user_query,
+                skill_directive_text,
+            )
         elif current_view == "filmography" or (
             active_person and isinstance(active_person, dict) and active_person.get("name")
         ):
@@ -505,35 +442,14 @@ class GreyService:
                 "worth my time",
                 "worth watching",
                 "recommend from these",
-                "what about this",
-                "what do you think",
-                "thoughts on",
-                "is this good",
-                "is it good",
-                "how is this",
-            ]
-        ) and not any(
-            op in lq
-            for op in [
-                "mark as",
-                "add to",
-                "add this to",
-                "move to",
-                "nope this",
-                "exclude this",
-                "new discovery",
-                "watchlist",
-                "watch later",
-                "filter",
-                "shelf",
             ]
         ):
             skill_filename = "related_curator.md"
-        else:
-            skill_filename = "library_ops.md"
 
-        skill_path = self.prompts_dir / "skills" / skill_filename
-        skill_directive_text = self._read_cached_file(skill_path).strip() or "None"
+        skill_directive_text = "None"
+        if skill_filename:
+            skill_path = self.prompts_dir / "skills" / skill_filename
+            skill_directive_text = self._read_cached_file(skill_path).strip() or "None"
 
         return active_skill_key, active_skill, user_query, skill_directive_text
 
@@ -640,7 +556,6 @@ class GreyService:
         inspected_note_info = "None"
         inspected_note_title = None
         inspected_note_id = None
-        has_write_intent = any(re.search(rf"\b{re.escape(v)}\b", lower_msg) for v in NOTE_WRITE_VERBS)
 
         if inspected_note and isinstance(inspected_note, dict):
             inspected_note_id = inspected_note.get("id")
@@ -650,13 +565,8 @@ class GreyService:
             ntags = inspected_note.get("tags", [])
             tag_str = f" | Tags: {', '.join(ntags)}" if ntags else ""
             id_str = f" (ID: {inspected_note_id})" if inspected_note_id else ""
-            mode_hint = (
-                " [WRITE/EDIT MODE ENABLED]"
-                if has_write_intent
-                else " [READ-ONLY DISCUSSION MODE — DO NOT MODIFY UNLESS ASKED]"
-            )
             inspected_note_info = (
-                f"Title: {inspected_note_title}{id_str} (Status: {nstatus}{tag_str}){mode_hint}\n"
+                f"Title: {inspected_note_title}{id_str} (Status: {nstatus}{tag_str}) [READ-ONLY DISCUSSION MODE]\n"
                 f"Content:\n{nbody[:25000]}"
             )
         else:
@@ -684,14 +594,9 @@ class GreyService:
                             inspected_note_title = nr["title"]
                             nbody = nr["body"] or ""
                             nstatus = nr["status"] or "published"
-                            mode_hint = (
-                                " [WRITE/EDIT MODE ENABLED]"
-                                if has_write_intent
-                                else " [READ-ONLY DISCUSSION MODE — DO NOT MODIFY UNLESS ASKED]"
-                            )
                             inspected_note_info = (
                                 f"Title: {inspected_note_title} (ID: {inspected_note_id}) "
-                                f"(Status: {nstatus}){mode_hint}\nContent:\n{nbody[:25000]}"
+                                f"(Status: {nstatus}) [READ-ONLY DISCUSSION MODE]\nContent:\n{nbody[:25000]}"
                             )
             except Exception as exc:
                 logger.debug("Could not match note rows for Grey: %s", exc)
@@ -936,473 +841,6 @@ class GreyService:
             }
         return data
 
-    def _handle_create_draft(self, action: dict[str, Any], pills: list[dict[str, Any]]) -> None:
-        try:
-            repo = GeneralEntryRepository()
-            params = action.get("params") or {}
-            draft_title = params.get("title", "Untitled Draft").strip() or "Untitled Draft"
-            draft_body = params.get("body", "")
-            raw_tags = params.get("tags", [])
-            if isinstance(raw_tags, str):
-                draft_tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
-            elif isinstance(raw_tags, list):
-                draft_tags = [str(t).strip() for t in raw_tags if str(t).strip()]
-            else:
-                draft_tags = []
-
-            created = repo.create_entry(
-                entry_type="note",
-                title=draft_title,
-                body=draft_body,
-                tags=draft_tags,
-                status="draft",
-            )
-            self.invalidate_dossier_cache()
-            draft_id = created["entry_id"]
-            if not isinstance(action.get("params"), dict):
-                action["params"] = {}
-            action["params"]["entry_id"] = draft_id
-
-            open_pill_found = False
-            for p in pills:
-                if p.get("action") == "open_entry":
-                    p["payload"] = {"entry_id": draft_id}
-                    open_pill_found = True
-                    break
-            if not open_pill_found:
-                pills.insert(
-                    0,
-                    {
-                        "label": f"📖 Open Draft: {draft_title[:24]}",
-                        "action": "open_entry",
-                        "payload": {"entry_id": draft_id},
-                    },
-                )
-        except Exception as draft_err:
-            logger.error(f"Failed to auto-create draft entry: {draft_err}")
-
-    def _handle_batch_set_movie_status(
-        self,
-        action: dict[str, Any],
-        data: dict[str, Any],
-        related_movies: list[dict[str, Any]] | None,
-    ) -> None:
-        try:
-            movie_svc = MovieService()
-            user_repo = UserMovieRepository()
-            params = action.get("params") or {}
-            raw_st = params.get("status")
-            target_status = (
-                STATUS_NORMALIZATION_MAP.get(str(raw_st).lower().strip(), raw_st)
-                if raw_st
-                else None
-            )
-
-            raw_movies = params.get("movies") or params.get("tmdb_ids") or []
-            if not isinstance(raw_movies, list):
-                raw_movies = [raw_movies]
-
-            related_title_map: dict[str, int] = {}
-            if related_movies and isinstance(related_movies, list):
-                for rm in related_movies:
-                    rtitle = (rm.get("title") or rm.get("original_title") or "").strip().lower()
-                    rid = rm.get("id") or rm.get("tmdb_id")
-                    if rtitle and rid:
-                        related_title_map[rtitle] = int(rid)
-
-            updated_movies = []
-            preserved_movies = []
-            for item in raw_movies:
-                m_id = None
-                m_title = ""
-                m_verdict = None
-                m_notes = None
-
-                if isinstance(item, (int, str)) and str(item).isdigit():
-                    m_id = int(item)
-                elif isinstance(item, dict):
-                    raw_id = item.get("tmdb_id") or item.get("id")
-                    if raw_id and str(raw_id).isdigit():
-                        m_id = int(raw_id)
-                    m_title = item.get("title") or item.get("name") or ""
-                    m_verdict = item.get("verdict")
-                    m_notes = item.get("notes")
-                elif isinstance(item, str):
-                    m_title = item
-
-                if not m_id and m_title:
-                    clean_t = m_title.strip().lower()
-                    clean_t_noyear = re.sub(r"\s*\(\d{4}\)$", "", clean_t).strip()
-                    if clean_t in related_title_map:
-                        m_id = related_title_map[clean_t]
-                    elif clean_t_noyear in related_title_map:
-                        m_id = related_title_map[clean_t_noyear]
-                    else:
-                        for rt, rid in related_title_map.items():
-                            if clean_t_noyear in rt or rt in clean_t_noyear:
-                                m_id = rid
-                                break
-
-                    if not m_id:
-                        with self._get_connection() as conn:
-                            row = conn.execute(
-                                "SELECT tmdb_id, title FROM movies WHERE lower(title) = lower(?) OR lower(title) = lower(?) LIMIT 1",
-                                (clean_t, clean_t_noyear),
-                            ).fetchone()
-                            if row:
-                                m_id = row["tmdb_id"]
-                                m_title = row["title"]
-
-                if m_id and target_status:
-                    user_data = user_repo.get_user_movie_data(m_id)
-                    current_status = user_data.get("status") if user_data else None
-
-                    if target_status == "new_discovery" and current_status is not None:
-                        preserved_movies.append(
-                            {
-                                "tmdb_id": m_id,
-                                "title": m_title or f"Movie #{m_id}",
-                                "status": current_status,
-                            }
-                        )
-                        continue
-
-                    movie_svc.set_movie_status(m_id, target_status)
-                    if m_verdict is not None:
-                        try:
-                            v_int = int(m_verdict)
-                            if 1 <= v_int <= 10:
-                                movie_svc.set_movie_verdict(m_id, v_int)
-                        except Exception:
-                            pass
-                    if m_notes and isinstance(m_notes, str):
-                        movie_svc.set_movie_notes(m_id, m_notes)
-                    updated_movies.append({"tmdb_id": m_id, "title": m_title})
-
-            self.invalidate_dossier_cache()
-            if not isinstance(action.get("params"), dict):
-                action["params"] = {}
-            action["params"]["movies"] = updated_movies
-            action["params"]["status"] = target_status
-
-            if preserved_movies:
-                preserved_notes = [
-                    f"**{pm['title']}** (kept as {pm['status'].replace('_', ' ').upper()})"
-                    for pm in preserved_movies
-                ]
-                preserved_msg = f"Preserved prior judgments: {', '.join(preserved_notes)}."
-                if data.get("text"):
-                    data["text"] = f"{data['text']}\n\n{preserved_msg}"
-                else:
-                    data["text"] = preserved_msg
-        except Exception as batch_err:
-            logger.error(f"Failed to batch set movie status via Grey: {batch_err}")
-
-    def _convert_status_action_to_note_append(
-        self,
-        action: dict[str, Any],
-        inspected_movie_id: int | None,
-        inspected_title: str | None,
-        inspected_note_id: Any,
-        inspected_note: dict[str, Any] | None,
-    ) -> dict[str, Any]:
-        """Convert a misrouted set_movie_status action into an update_entry append when user targeted a note/post."""
-        t_id = action.get("params", {}).get("tmdb_id") or inspected_movie_id
-        t_title = action.get("params", {}).get("title") or inspected_title or "Movie"
-        m_year = ""
-        m_overview = ""
-        cast_names = "Unknown"
-        if t_id:
-            with self._get_connection() as conn:
-                m_row = conn.execute(
-                    "SELECT title, release_date, overview FROM movies WHERE tmdb_id = ?",
-                    (t_id,),
-                ).fetchone()
-                if m_row:
-                    t_title = m_row["title"]
-                    m_year = f" ({(m_row['release_date'] or '')[:4]})" if m_row["release_date"] else ""
-                    m_overview = (m_row["overview"] or "").strip()
-                c_rows = conn.execute(
-                    "SELECT name FROM movie_credits WHERE tmdb_id = ? AND credit_type = 'actor' ORDER BY position ASC LIMIT 3",
-                    (t_id,),
-                ).fetchall()
-                if c_rows:
-                    cast_names = ", ".join(c["name"] for c in c_rows)
-
-        target_body_format = "toggle"
-        existing_body_sample = ""
-        if inspected_note_id:
-            with self._get_connection() as conn:
-                erow = conn.execute(
-                    "SELECT body FROM general_entries WHERE entry_id = ?",
-                    (inspected_note_id,),
-                ).fetchone()
-                if erow and erow["body"]:
-                    existing_body_sample = erow["body"].strip()
-        elif inspected_note and isinstance(inspected_note, dict):
-            existing_body_sample = (inspected_note.get("body") or "").strip()
-
-        bullet_char = "•"
-        has_imdb = "imdb" in existing_body_sample.lower()
-        if existing_body_sample:
-            lines = [l.strip() for l in existing_body_sample.splitlines() if l.strip()]
-            bullet_lines = [
-                l for l in lines if l.startswith("•") or l.startswith("- ") or l.startswith("* ")
-            ]
-            if bullet_lines and ">>" not in existing_body_sample:
-                target_body_format = "bullet"
-                if bullet_lines[0].startswith("- "):
-                    bullet_char = "-"
-                elif bullet_lines[0].startswith("* "):
-                    bullet_char = "*"
-
-        if target_body_format == "bullet":
-            cast_part = f" ({cast_names})" if cast_names and cast_names != "Unknown" else ""
-            link_part = " - [IMDb](https://www.imdb.com/)" if has_imdb else ""
-            appended_body = f"{bullet_char} {t_title}{m_year}{cast_part}{link_part}"
-        else:
-            appended_body = (
-                f">> {t_title}{m_year}\n"
-                f"- **Cast:** {cast_names}\n"
-                f"- **Synopsis:** {m_overview[:180]}..."
-            )
-
-        return {
-            "type": "update_entry",
-            "params": {
-                "title": None,
-                "body": appended_body,
-                "mode": "append",
-            },
-        }
-
-    def _handle_set_movie_status(
-        self,
-        action: dict[str, Any],
-        data: dict[str, Any],
-        inspected_movie_id: int | None,
-    ) -> dict[str, Any] | None:
-        try:
-            movie_svc = MovieService()
-            params = action.get("params") or {}
-            param_tmdb_id = params.get("tmdb_id")
-            param_title = (params.get("title") or "").strip()
-            target_tmdb_id = None
-
-            if param_tmdb_id and str(param_tmdb_id).isdigit():
-                target_tmdb_id = int(param_tmdb_id)
-                if inspected_movie_id and not param_title and target_tmdb_id != inspected_movie_id:
-                    target_tmdb_id = inspected_movie_id
-            elif inspected_movie_id and not param_title:
-                target_tmdb_id = inspected_movie_id
-            elif param_title:
-                clean_t = param_title.strip().lower()
-                clean_t_noyear = re.sub(r"\s*\(\d{4}\)$", "", clean_t).strip()
-                with self._get_connection() as conn:
-                    row = conn.execute(
-                        "SELECT tmdb_id, title FROM movies WHERE lower(title) = lower(?) OR lower(title) = lower(?) LIMIT 1",
-                        (clean_t, clean_t_noyear),
-                    ).fetchone()
-                    if row:
-                        target_tmdb_id = row["tmdb_id"]
-            elif inspected_movie_id:
-                target_tmdb_id = inspected_movie_id
-
-            target_status = params.get("status")
-            target_verdict = params.get("verdict")
-            target_notes = params.get("notes")
-
-            if target_status:
-                raw_st = str(target_status).lower().strip()
-                target_status = STATUS_NORMALIZATION_MAP.get(raw_st, raw_st)
-
-            if target_tmdb_id and str(target_tmdb_id).isdigit():
-                target_tmdb_id = int(target_tmdb_id)
-                if target_status:
-                    movie_svc.set_movie_status(target_tmdb_id, target_status)
-                if target_verdict is not None:
-                    try:
-                        v_int = int(target_verdict)
-                        if 1 <= v_int <= 10:
-                            movie_svc.set_movie_verdict(target_tmdb_id, v_int)
-                    except Exception:
-                        pass
-                if target_notes and isinstance(target_notes, str):
-                    movie_svc.set_movie_notes(target_tmdb_id, target_notes)
-
-                self.invalidate_dossier_cache()
-                if not isinstance(action.get("params"), dict):
-                    action["params"] = {}
-                action["params"]["tmdb_id"] = target_tmdb_id
-                action["params"]["status"] = target_status
-            return action
-        except Exception as status_err:
-            logger.error(f"Failed to set movie status via Grey: {status_err}")
-            data["text"] = f"I couldn't update the status for this movie due to an error: {status_err}"
-            return None
-
-    def _handle_update_entry(
-        self,
-        action: dict[str, Any],
-        data: dict[str, Any],
-        pills: list[dict[str, Any]],
-        message: str,
-        lower_msg: str,
-        inspected_note_id: Any,
-        inspected_note_title: str | None,
-        inspected_movie_id: int | None,
-        inspected_title: str | None,
-        is_post_target_mention: bool,
-    ) -> dict[str, Any] | None:
-        try:
-            repo = GeneralEntryRepository()
-            params = action.get("params") or {}
-            target_id = params.get("entry_id") or inspected_note_id
-            target_title = params.get("title") or inspected_note_title
-            mode = params.get("mode", "append")
-            new_body = params.get("body", "")
-
-            existing = None
-            if target_id and str(target_id).isdigit():
-                try:
-                    existing = repo.get_entry(int(target_id))
-                except Exception:
-                    existing = None
-
-            if not existing and target_title:
-                with self._get_connection() as conn:
-                    row = conn.execute(
-                        "SELECT entry_id FROM general_entries WHERE is_deleted = 0 AND lower(title) = lower(?) ORDER BY updated_at DESC LIMIT 1",
-                        (str(target_title).strip(),),
-                    ).fetchone()
-                    if not row:
-                        row = conn.execute(
-                            "SELECT entry_id FROM general_entries WHERE is_deleted = 0 AND lower(title) LIKE lower(?) ORDER BY updated_at DESC LIMIT 1",
-                            (f"%{str(target_title).strip()}%",),
-                        ).fetchone()
-                    if row:
-                        existing = repo.get_entry(row["entry_id"])
-
-            if not existing:
-                with self._get_connection() as conn:
-                    all_titles = conn.execute(
-                        "SELECT entry_id, title FROM general_entries WHERE is_deleted = 0"
-                    ).fetchall()
-                    sorted_titles = sorted(
-                        all_titles, key=lambda x: len(x["title"] or ""), reverse=True
-                    )
-                    for at in sorted_titles:
-                        if at["title"] and at["title"].strip().lower() in lower_msg:
-                            existing = repo.get_entry(at["entry_id"])
-                            break
-
-            if not existing:
-                cand_match = re.search(
-                    r"(?:add|save|append|put)\s+(?:this\s+)?(?:to\s+|into\s+)?(?:my\s+)?['\"]?([^'\"\n]+?)['\"]?\s+(?:post|note|journal|entry|blog|draft|list)",
-                    message,
-                    re.IGNORECASE,
-                )
-                if cand_match:
-                    cand_title = cand_match.group(1).strip()
-                    with self._get_connection() as conn:
-                        row = conn.execute(
-                            "SELECT entry_id FROM general_entries WHERE is_deleted = 0 AND lower(title) = lower(?) ORDER BY updated_at DESC LIMIT 1",
-                            (cand_title,),
-                        ).fetchone()
-                        if not row:
-                            row = conn.execute(
-                                "SELECT entry_id FROM general_entries WHERE is_deleted = 0 AND lower(title) LIKE lower(?) ORDER BY updated_at DESC LIMIT 1",
-                                (f"%{cand_title}%",),
-                            ).fetchone()
-                        if row:
-                            existing = repo.get_entry(row["entry_id"])
-
-            explicit_note_request = (
-                any(
-                    w in lower_msg
-                    for w in ["note", "draft", "journal", "essay", "blog", "write-up", "entry", "list", "post"]
-                )
-                or (bool(target_title) and str(target_title).strip().lower() in lower_msg)
-                or (bool(existing) and existing["title"].strip().lower() in lower_msg)
-            )
-
-            if not inspected_note_id and not explicit_note_request:
-                logger.warning(
-                    "Rejected unprompted update_entry action: user did not request note modification."
-                )
-                return None
-            if not existing:
-                data["text"] = (
-                    f"I couldn't locate the note '{target_title or 'requested'}' in your notebook to update."
-                )
-                return None
-
-            final_body = self._deduplicate_and_format_note_body(
-                existing_body=existing.get("body") or "",
-                new_body=new_body,
-                mode=mode,
-                user_message=message,
-                inspected_movie_id=inspected_movie_id,
-                inspected_movie_title=inspected_title,
-            )
-
-            raw_tags = params.get("tags")
-            if raw_tags is None:
-                tags_to_save = [t["name"] for t in existing.get("tags", [])]
-            elif isinstance(raw_tags, str):
-                tags_to_save = [t.strip() for t in raw_tags.split(",") if t.strip()]
-            elif isinstance(raw_tags, list):
-                tags_to_save = [str(t).strip() for t in raw_tags if str(t).strip()]
-            else:
-                tags_to_save = []
-
-            updated = repo.update_entry(
-                entry_id=existing["entry_id"],
-                entry_type=existing["entry_type"],
-                title=params.get("title") or existing["title"],
-                body=final_body,
-                url=existing.get("url"),
-                tags=tags_to_save,
-                status=existing["status"],
-            )
-            self.invalidate_dossier_cache()
-            if updated:
-                if not isinstance(action.get("params"), dict):
-                    action["params"] = {}
-                action["params"]["entry_id"] = updated["entry_id"]
-                action["params"]["title"] = updated["title"]
-                if is_post_target_mention and (
-                    not data.get("text")
-                    or "movie" in data.get("text", "").lower()
-                    or "status" in data.get("text", "").lower()
-                ):
-                    data["text"] = f"Added to your '{updated['title']}' post."
-
-                open_pill_found = False
-                for p in pills:
-                    if (
-                        p.get("action") in ("open_entry", "open_note")
-                        or "open" in (p.get("label") or "").lower()
-                    ):
-                        p["action"] = "open_entry"
-                        p["payload"] = {"entry_id": updated["entry_id"], "title": updated["title"]}
-                        p["label"] = f"📖 Open {updated['title'][:24]}"
-                        open_pill_found = True
-                        break
-                if not open_pill_found:
-                    pills.insert(
-                        0,
-                        {
-                            "label": f"📖 Open {updated['title'][:24]}",
-                            "action": "open_entry",
-                            "payload": {"entry_id": updated["entry_id"], "title": updated["title"]},
-                        },
-                    )
-            return action
-        except Exception as update_err:
-            logger.error(f"Failed to update entry: {update_err}")
-            return action
-
     def chat(
         self,
         message: str,
@@ -1503,8 +941,6 @@ class GreyService:
 
         # Load core prompt from in-memory cache
         system_template = self._read_cached_file(self.prompts_dir / "grey_core.md")
-        if not system_template:
-            system_template = self._read_cached_file(self.prompts_dir / "grey_system_prompt.md")
 
         reactions_index_str = self.get_reactions_index()
 
@@ -1611,69 +1047,11 @@ class GreyService:
                     data = self._parse_gemini_json(resp2)
                     action = data.get("action")
 
+            # Only allow recognized read-only actions (open_movie, apply_filter, tool_call)
+            if isinstance(action, dict) and action.get("type") not in ("open_movie", "apply_filter", "tool_call"):
+                action = None
+
             pills = data.get("pills", [])
-
-            # Synthesize batch_set_movie_status if model returned multiple set_movie_status actions
-            if isinstance(data.get("actions"), list) and data["actions"]:
-                status_actions = [
-                    a
-                    for a in data["actions"]
-                    if isinstance(a, dict) and a.get("type") == "set_movie_status"
-                ]
-                if len(status_actions) > 1 and not (
-                    action and action.get("type") == "batch_set_movie_status"
-                ):
-                    first_status = status_actions[0].get("params", {}).get("status")
-                    action = {
-                        "type": "batch_set_movie_status",
-                        "params": {
-                            "status": first_status,
-                            "movies": [a.get("params", {}) for a in status_actions],
-                        },
-                    }
-                elif len(status_actions) == 1 and not action:
-                    action = status_actions[0]
-
-            # Only treat as a journal post target when user explicitly targets a post/note/entry (not movie personal notes)
-            is_post_target_mention = bool(
-                re.search(
-                    r"\b(?:to|in|into)\s+(?:my\s+)?.*?\b(?:post|note|journal|entry|draft|blog|write-up)\b",
-                    lower_msg,
-                )
-            )
-
-            if action and action.get("type") == "create_draft":
-                self._handle_create_draft(action, pills)
-            elif action and action.get("type") == "batch_set_movie_status":
-                self._handle_batch_set_movie_status(action, data, related_movies)
-            elif action and action.get("type") == "set_movie_status":
-                if is_post_target_mention:
-                    logger.info(
-                        "Intercepted set_movie_status with explicit post/note target; converting to update_entry."
-                    )
-                    action = self._convert_status_action_to_note_append(
-                        action=action,
-                        inspected_movie_id=inspected_movie_id,
-                        inspected_title=inspected_title,
-                        inspected_note_id=inspected_note_id,
-                        inspected_note=inspected_note,
-                    )
-                else:
-                    action = self._handle_set_movie_status(action, data, inspected_movie_id)
-
-            if action and action.get("type") == "update_entry":
-                action = self._handle_update_entry(
-                    action=action,
-                    data=data,
-                    pills=pills,
-                    message=message,
-                    lower_msg=lower_msg,
-                    inspected_note_id=inspected_note_id,
-                    inspected_note_title=inspected_note_title,
-                    inspected_movie_id=inspected_movie_id,
-                    inspected_title=inspected_title,
-                    is_post_target_mention=is_post_target_mention,
-                )
 
             reaction = data.get("reaction")
             valid_reaction = None
@@ -1692,7 +1070,7 @@ class GreyService:
                 act = p.get("action")
                 payload_st = str((p.get("payload") or {}).get("status", "")).lower()
                 is_status_pill = (
-                    act == "set_movie_status"
+                    act in ("set_movie_status", "batch_set_movie_status")
                     or payload_st
                     in ("watch_later", "new_discovery", "watched", "rewatch", "excluded")
                     or any(

@@ -3517,46 +3517,39 @@ async function fetchDiscoveryBatch(spec, page) {
     body: JSON.stringify({ ...body, page: p }),
   });
 
-  const fetchSpeculative = (p) => {
-    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve({ results: [] }), 1500));
-    return Promise.race([
-      fetchOne(p).catch(() => ({ results: [] })),
-      timeoutPromise,
-    ]);
-  };
-
   const [p1, p2, p3] = await Promise.all([
     fetchOne(basePage + 1),
-    fetchSpeculative(basePage + 2),
-    fetchSpeculative(basePage + 3),
+    fetchOne(basePage + 2).catch(() => ({ results: [] })),
+    fetchOne(basePage + 3).catch(() => ({ results: [] })),
   ]);
 
-  const rawCombined = [
-    ...(Array.isArray(p1.results) ? p1.results : []),
-    ...(Array.isArray(p2.results) ? p2.results : []),
-    ...(Array.isArray(p3.results) ? p3.results : []),
-  ];
-
-  let limit = 24;
-  if (rawCombined.length < 24 && rawCombined.length >= 18) {
-    limit = 18;
-  } else if (rawCombined.length < 18 && rawCombined.length >= 12) {
-    limit = 12;
-  } else if (rawCombined.length >= 24) {
-    limit = 24;
-  } else {
-    limit = rawCombined.length;
-  }
-  const combined = rawCombined.slice(0, limit);
+  const seenIds = new Set();
+  const combined = [];
+  [p1, p2, p3].forEach((resp) => {
+    (resp?.results || []).forEach((movie) => {
+      const id = movie?.id || movie?.tmdb_id;
+      if (id && !seenIds.has(id)) {
+        seenIds.add(id);
+        combined.push(movie);
+      } else if (!id && movie) {
+        combined.push(movie);
+      }
+    });
+  });
 
   const rawTmdbPages = Number(p1.tmdb_total_pages || p1.raw_tmdb_total_pages || 1);
-  const hasNextPage = Boolean(p3.has_next_page || (basePage + 3 < rawTmdbPages));
+  const hasNextPage = Boolean(
+    p3?.has_next_page ||
+    p2?.has_next_page ||
+    p1?.has_next_page ||
+    (basePage + 3 < rawTmdbPages)
+  );
   const estimatedTotalPages = Math.min(166, Math.max(1, Math.ceil(rawTmdbPages / 3)));
   const response = {
     results: combined,
     page: page,
     tmdb_total_pages: hasNextPage ? Math.max(page + 1, estimatedTotalPages) : page,
-    tmdb_total_results: Number(p1.tmdb_total_results || p1.raw_tmdb_total_results || rawCombined.length),
+    tmdb_total_results: Number(p1.tmdb_total_results || p1.raw_tmdb_total_results || combined.length),
     has_next_page: hasNextPage,
     pagination_exact: p1.pagination_exact !== false,
   };

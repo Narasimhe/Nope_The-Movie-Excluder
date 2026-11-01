@@ -4965,19 +4965,22 @@ footer {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 16px;
+  width: 670px !important;
+  max-width: 100% !important;
   margin-bottom: 22px;
   padding: 4px 0 16px 0;
   background: transparent;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  box-sizing: border-box;
 }
 .filmography-person-badge {
   display: flex;
   align-items: center;
   gap: 14px;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
 }
 .filmography-avatar {
   width: 48px;
@@ -5028,6 +5031,7 @@ footer {
   box-sizing: border-box;
   overflow-x: auto;
   flex-shrink: 0;
+  margin-left: auto;
 }
 .film-tab {
   display: inline-flex;
@@ -8951,7 +8955,7 @@ input[type="number"] {
   width: 100% !important;
 }
 
-/* 9. 22px Icon-Only Corner Poster Badges */
+/* 9. 22px Icon-Only Corner Poster Badges (High-Contrast Opaque Obsidian Backplate) */
 .status-badge {
   position: absolute !important;
   z-index: 3 !important;
@@ -8965,19 +8969,19 @@ input[type="number"] {
   align-items: center !important;
   justify-content: center !important;
   padding: 0 !important;
-  background: rgba(15, 15, 18, 0.85) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  backdrop-filter: blur(4px) !important;
+  background: rgba(8, 8, 10, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  backdrop-filter: blur(6px) !important;
   border-radius: 6px !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75) !important;
 }
 .status-badge[data-status="untracked"],
 .status-badge:empty {
   display: none !important;
 }
 .status-badge .status-badge-glyph {
-  font-weight: 800 !important;
-  font-variation-settings: 'FILL' 1, 'wght' 800, 'GRAD' 0, 'opsz' 20 !important;
+  font-weight: 400 !important;
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20 !important;
   font-size: 13px !important;
   width: 13px !important;
   height: 13px !important;
@@ -8987,27 +8991,32 @@ input[type="number"] {
   justify-content: center !important;
 }
 .status-badge[data-status="new_discovery"] {
-  color: #DEC68B !important;
-  border-color: rgba(212, 175, 55, 0.35) !important;
+  color: #F2C94C !important;
+  border-color: rgba(242, 201, 76, 0.45) !important;
 }
 .status-badge[data-status="watched"] {
   color: #4ADE80 !important;
-  border-color: rgba(74, 222, 128, 0.35) !important;
+  border-color: rgba(74, 222, 128, 0.45) !important;
 }
 .status-badge[data-status="watch_later"] {
   color: #38BDF8 !important;
-  border-color: rgba(56, 189, 248, 0.35) !important;
+  border-color: rgba(56, 189, 248, 0.45) !important;
 }
 .status-badge[data-status="rewatch"] {
   color: #FB923C !important;
-  border-color: rgba(251, 146, 60, 0.35) !important;
+  border-color: rgba(251, 146, 60, 0.45) !important;
 }
 .status-badge[data-status="excluded"] {
-  color: #CE8484 !important;
-  border-color: rgba(190, 80, 80, 0.35) !important;
+  color: #EF4444 !important;
+  border-color: rgba(239, 68, 68, 0.45) !important;
 }
-/* In personal library shelves, status badges on movie cards remain strictly hidden */
-body:not([data-active-view="discover"]) .movie-card .status-badge {
+/* In personal library shelves, status badges on movie cards remain strictly hidden (all cards belong to that shelf) */
+body[data-active-view="watched"] .movie-card .status-badge,
+body[data-active-view="watch_later"] .movie-card .status-badge,
+body[data-active-view="new_discovery"] .movie-card .status-badge,
+body[data-active-view="rewatch"] .movie-card .status-badge,
+body[data-active-view="excluded"] .movie-card .status-badge,
+body[data-active-view="favorites"] .movie-card .status-badge {
   display: none !important;
 }
 
@@ -9019,16 +9028,22 @@ body:not([data-active-view="discover"]) .movie-card .status-badge {
   width: 20px !important;
   height: 20px !important;
   min-width: 20px !important;
-  background: rgba(15, 15, 18, 0.85) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  background: rgba(8, 8, 10, 0.95) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
   border-radius: 5px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.75) !important;
 }
 .related-card .status-badge .status-badge-glyph {
-  font-weight: 800 !important;
-  font-variation-settings: 'FILL' 1, 'wght' 800, 'GRAD' 0, 'opsz' 20 !important;
+  font-weight: 700 !important;
+  font-variation-settings: 'FILL' 1, 'wght' 700, 'GRAD' 200, 'opsz' 20 !important;
   font-size: 12px !important;
   width: 12px !important;
   height: 12px !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.6)) !important;
 }
 
 /* 10. Workspace & Header Alignment (Search Bar, Movie Count, Footer) */

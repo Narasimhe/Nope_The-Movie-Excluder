@@ -4,11 +4,18 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
+- [ ] **Studio Catalog & Filmography Mode (Direct 1-Click Catalog)**
+  * **Goal**: Enable direct 1-click exploration of a studio / production company's complete release catalog (e.g. A24, Pixar, Studio Ghibli, Blumhouse, Warner Bros.), matching the behavior of Actor and Director filmography mode.
+  * **Key Components**:
+    * **Direct Click Trigger**: Make studio tags/chips (in Discovery sidebar "Studios" picker, active filter tags, and Movie Details production company credits) clickable links (`.is-filmography-link` / studio catalog mode).
+    * **Zero-Preset Bypass**: Bypass all active discovery presets, language exclusions, vote minimums, and genre exclusions to retrieve the studio's full release credits directly via TMDB (`with_companies={company_id}`).
+    * **Catalog Surface & Shelf Badging**: Display films chronologically with personal library shelf status badges (*Watched*, *Nope*, *Watch Later*, *New Discovery*) and a clean return button back to origin.
+
+
 - [ ] **Storage Telemetry Labels**
   * **Storage Page "Personal Library" Label Cutoff**: Fix card width, padding, or label sizing on the Footer > Storage page so the *"Personal Library"* metric labels and sublabels never clip or truncate.
 
-- [ ] **Grey Intelligence, Contextual Help & Google Sheets Export**
-  * **Strip Redundant Movie Header Metadata from Grey's Movie Notes**: When Grey writes or updates a personal movie note (`set_movie_status` / movie note field), ensure it never prepends redundant Movie Title, Release Year, or Genre headers inside the note body—keep only the actual note/reflection.
+- [ ] **Grey Contextual Help & Google Sheets Export**
   * **Screen-Relevant Help Docs in Grey**: Give Grey access to a concise internal UI/formatting help guide (especially when on the Notes editor screen) so questions like *"Hey Grey, how do I use formatted titles in notes?"* return the exact syntax and examples from the app docs.
   * **Export Library / NOPE Database to Google Sheets**: Add an export workflow from the SQLite database (Personal Library / NOPE shelves) into a structured Google Sheet.
 
@@ -32,6 +39,22 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Pruned Grey Assistant: Purged Status Actions & Note-Writing Bloat into Standalone Prompt (`app/grey/service.py`, `app/grey/prompts/`, `docs/NOTE_FORMATTING_PROMPT.md`)**
+  * **Purged Status & Shelf Actions**: Removed `set_movie_status`, `batch_set_movie_status`, `/batch` command, and `library_ops.md` from Grey's runtime cascade and backend handlers.
+  * **Purged Note-Writing & Formatting Engine**: Deleted `app/grey/note_formatter.py` and `app/grey/prompts/skills/notes_editor.md`. Removed `create_draft` and `update_entry` action execution from `service.py`, making Grey 100% read-only and eliminating all database write mutations from Grey.
+  * **Dedicated Formatting Reference**: Created `docs/NOTE_FORMATTING_PROMPT.md` with complete app syntax rules (`>>` Notion toggles, double-blank-line exit, interactive `@Title (YYYY)` pills, bullets, tables) ready to copy-paste into Gemini or ChatGPT for formatting raw notes externally.
+  * **Read-Only Note Discussion**: Preserved conversational context reading so Grey can discuss open notes conversationally without editing SQLite.
+  * **Test Suite Verification**: Cleaned up obsolete status/note-writing tests; verified 209 passing tests across the entire test suite in 17.7s.
+- [x] **Poster Status Badge Dark Obsidian Backplate & Weighted Icon Contrast (`app/static/styles.css`)**
+  * **Opaque Obsidian Backplate**: Darkened the status badge background on Discover, Filmography, and Related movie posters from translucent `0.85` to rich `rgba(8, 8, 10, 0.95)` with deeper drop shadows (`0 2px 8px rgba(0,0,0,0.75)`), completely blocking bright poster artwork from washing out the badge.
+  * **Weighted High-Contrast Glyphs**: Applied font grade boost (`'wght' 700, 'GRAD' 200`) and subtle glyph drop shadows with saturated status border accents (`#F2C94C` gold, `#4ADE80` green, `#38BDF8` blue, `#FB923C` orange, `#EF4444` red).
+  * **Scoped Shelf Hiding**: Replaced the fragile `body:not([data-active-view="discover"])` rule with explicit shelf hiding so status badges reliably appear on Discover, Filmography, and Related movies alike.
+- [x] **Filmography Tabs 6-Column Grid Edge Alignment (`app/static/styles.css`)**
+  * **Locked to 6th Poster Right Boundary**: Locked `.filmography-toolbar` to `width: 670px !important; max-width: 100% !important;` matching the exact 6-column movie grid width (`6 * 105px + 5 * 8px = 670px`). Positioned the talent badge at the left edge and right-aligned the `All / Directed / Acted` segmented pill tabs with `margin-left: auto`, so they align cleanly with the right edge of the last movie poster in the row.
+- [x] **Discovery Search Batching & Pagination Truncation Bug Fix (`app/static/app.js`)**
+  * **Root Cause & Fix**: Fixed a critical pagination truncation bug in `fetchDiscoveryBatch()` where the frontend fetched 3 backend pages (60 movies) via `(page - 1) * 3` but hard-sliced the results to `limit = 24`, inadvertently discarding 36 movies per page and causing searches with ~700 items (e.g. Sci-Fi preset) to stop at 288 movies.
+  * **Zero-Drop Batching**: Removed the arbitrary 24-movie slice limit and the fragile 1500ms race timeout, safely consolidating and deduplicating all fetched candidates so 100% of matching movies are displayed across pages and continuous scroll.
+
 - [x] **Purged Research Mode from Grey Assistant (`app/grey/service.py`, `app/grey/prompts/`, `app/web/index.html`, `app/static/app.js`)**
   * **Complete Code & Prompt Purge**: Removed `/research` skill, `research_partner.md` prompt, `read_research_file` tool call, `save_research_file`/`append_research_file`/`delete_research_file` file actions, and progressive research markdown context injection (`{{RESEARCH_FILES_INDEX}}`) from Grey's core prompt cascade.
   * **UI & Slash Command Cleanup**: Removed the `/research` button from the slash commands menu in `app/web/index.html`, purged the `/research` handler from `app/static/app.js`, and updated model tooltips to reference deep queries instead of research files.
