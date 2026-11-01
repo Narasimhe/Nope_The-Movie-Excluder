@@ -27,18 +27,19 @@
     * **Rate Limit & Health Telemetry**: Display circuit-breaker status, response latencies, and TMDB throttle/health state.
     * **Dedicated Zen Surface**: Kept cleanly out of the primary footer surface into its own harmonious memory page/modal.
 
-- [ ] **Pluggable Critic Personalities & Roger Ebert Lens for Grey**
-  * **Goal**: Replace rigid, repetitive buzzword lexicons with deep, authentic critical perspectives. Allow Grey to channel legendary film critics—starting with Roger Ebert—to provide nuanced, humane, and varied critiques.
-  * **Key Components**:
-    * **Personality Profile Architecture (`app/grey/personalities/`)**: Dedicated markdown/config profiles defining voice, critical philosophy, and review guidelines (starting with `ebert.md`).
-    * **Dual-Era Ebert Intelligence**:
-      * *Pre-2013 films*: Gemini surfaces his actual historical reviews, four-star ratings, and memorable quotes or pans.
-      * *Post-2013 films*: Gemini channels his distinctive humanistic philosophy (*"A movie is not about what it is about, but how it is about it"*) to evaluate modern films through his eyes.
-    * **Activation & Interaction**: Support natural conversational triggers (e.g. *"What would Ebert say?"*, `/ebert`), contextual suggestion pills on the movie detail page, or a discreet critic lens selector in the Grey drawer.
-
 ---
 
 ## ✅ Completed Tasks
+- [x] **Removed Distracting Quick Skills `/related` Chip & Purged Obsolete `/batch` Slash Item (`app/web/index.html`)**
+  * **Distraction-Free Chat Input**: Removed the floating `.grey-skills-bar` containing the `⚡ /related` chip above the chat textarea so the input area stays clean and uncluttered.
+  * **Direct Slash Access**: Users can still access `/related` at any time by directly typing `/related` or using the slash autocomplete menu.
+  * **Purged Obsolete `/batch`**: Removed the leftover `/batch` item from the slash autocomplete menu.
+- [x] **Grey Cinema Critique Independence & Soul vs. Soulless Product Standard (`app/grey/prompts/grey_core.md`)**
+  * **Independent Film Critiques**: Explicitly decoupled Grey's movie evaluations from the user's past nopes and favorites. Grey never panders or alters its critique based on personal shelves (no "Since you loved X..." or tailoring verdicts to library history).
+  * **Soul vs. Soulless Benchmark**: Enforced the 7-point Ten-Minute Test (Real People vs Ego Masks, Lived History vs Spoon-fed Exposition, Curious Exploration vs Pre-Rigged Conclusions, Trusting Audience vs Cheap Reaction-Bait, Years of Reflection vs Cash Grabs, Real Voice vs Committee/AI Slop, Real Weight vs CGI Slop) as the objective standard for all film evaluations.
+  * **Multi-Turn Movie Discussions & Consensus Ratings (RT, Letterboxd, IMDb, Metacritic)**: Added explicit rules for conversational follow-ups (Rule 11), providing breakdowns of Tomatometer, Popcornmeter, Letterboxd, IMDb, and Metascores plus consensus explanations.
+  * **"Would I Like This Movie?" Calibration (Rule 12)**: Defined the explicit distinction between independent craft critiques ("What do you think of this film?") and personalized taste calibrations ("Would I like this film?"), where Grey tests the movie against the user's specific dealbreakers (exposition dumping, Marvel bathos, CGI slop) and craft values.
+  * **Test Suite Verification**: Verified 209 passing backend tests.
 - [x] **Pruned Grey Assistant: Purged Status Actions & Note-Writing Bloat into Standalone Prompt (`app/grey/service.py`, `app/grey/prompts/`, `docs/NOTE_FORMATTING_PROMPT.md`)**
   * **Purged Status & Shelf Actions**: Removed `set_movie_status`, `batch_set_movie_status`, `/batch` command, and `library_ops.md` from Grey's runtime cascade and backend handlers.
   * **Purged Note-Writing & Formatting Engine**: Deleted `app/grey/note_formatter.py` and `app/grey/prompts/skills/notes_editor.md`. Removed `create_draft` and `update_entry` action execution from `service.py`, making Grey 100% read-only and eliminating all database write mutations from Grey.
