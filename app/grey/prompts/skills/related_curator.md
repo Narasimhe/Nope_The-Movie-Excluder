@@ -10,4 +10,5 @@ ANALYSIS & FORMAT RULES:
   [1-2 natural sentences on performances, pacing, atmosphere, or why it works/fails]
   Verdict: **YES** or **NOPE**
 - Leave an empty line between each movie entry so it is effortless to scan.
+- MANDATORY TITLE BOLDING: ALWAYS format every mentioned movie title in bold markdown (`**Movie Title**` or `**Movie Title (Year)**`). Never leave film titles in plain unbolded text.
 - When recommending a specific title from the shelf, provide an "open_movie" pill with that movie's TMDB ID so the user can inspect it in 1 click.

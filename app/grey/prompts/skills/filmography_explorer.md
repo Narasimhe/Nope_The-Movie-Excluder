@@ -8,4 +8,5 @@ CAREER CURATION DIRECTIVES:
   * Check against the user's watched, rewatch, and excluded titles.
   * Never recommend an excluded/noped film unless asked why they noped it.
   * Highlight the essential peaks in the artist's filmography that match high craft, pacing, and tension standards.
+  * MANDATORY TITLE BOLDING: ALWAYS format every mentioned movie title in bold markdown (e.g. `**Three Days of the Condor**`, `**Jeremiah Johnson**`, `**The Sting**`, `**Butch Cassidy and the Sundance Kid**`). Never leave film titles in plain unbolded text.
   * When recommending an unseen title from the career grid, provide an "open_movie" pill with its TMDB ID.

@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 import os
@@ -69,9 +70,94 @@ class GreyService:
         self.http_session = requests.Session()
         self._reactions_cache: tuple[float, float, str] | None = None
         self._dossier_cache: tuple[str, dict[str, Any]] | None = None
+        self._reception_cache: dict[str, dict[str, Any]] = {}
 
         # Preload static prompt templates into memory at initialization
         self._preload_prompts()
+
+    def _fetch_live_film_reception(self, title: str, year: str = "") -> dict[str, Any]:
+        """Fetch live critical reception, Rotten Tomatoes score & consensus, and Metacritic data via Wikipedia REST API in ~200ms."""
+        if not title:
+            return {}
+        cache_key = f"{title.lower()}::{year}"
+        if cache_key in self._reception_cache:
+            return self._reception_cache[cache_key]
+
+        headers = {"User-Agent": "MovieExcluderApp/1.0 (contact@movieexcluder.local)"}
+        query = f"{title} {year} film" if year else f"{title} film"
+        try:
+            s_url = f"https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch={requests.utils.quote(query)}&format=json"
+            r = self.http_session.get(s_url, headers=headers, timeout=3.5)
+            if r.status_code != 200:
+                self._reception_cache[cache_key] = {}
+                return {}
+            results = r.json().get("query", {}).get("search", [])
+            if not results:
+                self._reception_cache[cache_key] = {}
+                return {}
+            page_title = results[0]["title"]
+
+            sec_url = f"https://en.wikipedia.org/w/api.php?action=parse&page={requests.utils.quote(page_title)}&prop=sections&format=json"
+            r2 = self.http_session.get(sec_url, headers=headers, timeout=3.5)
+            if r2.status_code != 200:
+                self._reception_cache[cache_key] = {}
+                return {}
+            sections = r2.json().get("parse", {}).get("sections", [])
+            target_idx = None
+            for s in sections:
+                line = s.get("line", "").lower()
+                if "critical response" in line or "critical reception" in line:
+                    target_idx = s["index"]
+                    break
+                elif "reception" in line and not target_idx:
+                    target_idx = s["index"]
+            if not target_idx:
+                self._reception_cache[cache_key] = {}
+                return {}
+
+            p_url = f"https://en.wikipedia.org/w/api.php?action=parse&page={requests.utils.quote(page_title)}&prop=wikitext&section={target_idx}&format=json"
+            r3 = self.http_session.get(p_url, headers=headers, timeout=3.5)
+            if r3.status_code != 200:
+                self._reception_cache[cache_key] = {}
+                return {}
+            wikitext = r3.json().get("parse", {}).get("wikitext", {}).get("*", "")
+
+            out: dict[str, Any] = {}
+            # Rotten Tomatoes template extraction
+            rt_m = re.search(
+                r'\{\{(?:Rotten Tomatoes prose|RT prose)\|(\d+)\|([\d.]+)\|(\d+)\|(.*?)(?:\|ref=|\}\})',
+                wikitext,
+                re.DOTALL,
+            )
+            if rt_m:
+                pct, avg, count, consensus = rt_m.groups()
+                out["rt_score"] = f"{pct}%"
+                out["rt_avg"] = avg
+                out["rt_count"] = count
+                clean_cons = re.sub(r"<[^>]+>", "", consensus.replace("''", "").strip())
+                out["rt_consensus"] = clean_cons
+
+            # Metacritic extraction
+            mc_m = re.search(
+                r"score of (\d+) out of 100.*?based on (\d+) critics", wikitext, re.DOTALL
+            )
+            if mc_m:
+                out["metacritic"] = f"{mc_m.group(1)}/100 ({mc_m.group(2)} critics)"
+
+            # Clean prose overview
+            clean = re.sub(r"<ref[^>]*>.*?</ref>", "", wikitext, flags=re.DOTALL)
+            clean = re.sub(r"<ref[^>]*/>", "", clean)
+            clean = re.sub(r"\[\[(?:[^|\]]*\|)?([^\]]+)\]\]", r"\1", clean)
+            clean = re.sub(r"\{\{[^}]+\}\}", "", clean)
+            clean = re.sub(r"[\r\n]+", " ", clean).strip()
+            out["summary"] = clean[:500]
+
+            self._reception_cache[cache_key] = out
+            return out
+        except Exception as e:
+            logger.debug(f"Live reception fetch failed for {title}: {e}")
+            self._reception_cache[cache_key] = {}
+            return {}
 
     def _read_cached_file(self, path: Path) -> str:
         """Read a prompt/config file with mtime-aware in-memory caching (0ms disk read when unchanged)."""
@@ -124,18 +210,31 @@ class GreyService:
         if not files:
             return "No reaction media available."
 
-        metadata: dict[str, str] = {}
+        metadata: dict[str, Any] = {}
         raw_meta = self._read_cached_file(self.reactions_file)
         if raw_meta:
             try:
-                metadata = json.loads(raw_meta)
+                parsed = json.loads(raw_meta)
+                if isinstance(parsed, list):
+                    metadata = {
+                        item["filename"]: item
+                        for item in parsed
+                        if isinstance(item, dict) and "filename" in item
+                    }
+                elif isinstance(parsed, dict):
+                    metadata = parsed
             except Exception:
                 metadata = {}
 
         items = []
         for f in sorted(files):
-            if f in metadata and metadata[f]:
-                items.append(f"- `{f}`: {metadata[f]}")
+            entry = metadata.get(f)
+            if isinstance(entry, dict):
+                tier = entry.get("verdict_tier", "general")
+                ctx = entry.get("trigger_context", "")
+                items.append(f"- Tier `[{tier}]` -> `{f}`: {ctx}")
+            elif isinstance(entry, str) and entry:
+                items.append(f"- `{f}`: {entry}")
             else:
                 inferred = re.sub(r"[_\-]+", " ", Path(f).stem).strip()
                 items.append(f"- `{f}`: {inferred}")
@@ -445,9 +544,7 @@ class GreyService:
             ]
         ):
             skill_filename = "related_curator.md"
-        elif re.search(r"\b(rt|rotten\s*tomatoes|tomatometer|popcornmeter|imdb|letterboxd|metacritic|ratings?|scores?|voter?\s*count)\b", lq):
-            skill_filename = "ratings_intel.md"
-        elif inspected_movie_id or re.search(r"\b(think|thoughts|opinion|critique|review|verdict|worth|good|how is it|is it any good|like this|about this movie|recommend|rubbish|pulse|rate)\b", lq):
+        elif inspected_movie_id or re.search(r"\b(think|thoughts|opinion|critique|review|verdict|worth|good|how is it|is it any good|like this|about this movie|recommend|rubbish|pulse|rate|rt|rotten\s*tomatoes|tomatometer|letterboxd|metacritic|imdb|scores?|ratings?)\b", lq):
             skill_filename = "film_critique.md"
 
         skill_directive_text = "None"
@@ -469,6 +566,7 @@ class GreyService:
         """Resolve open screen movie/note and boundary-matched mentions using RAM dossier cache (0 SQL when unmentioned)."""
         inspected_info = "None"
         inspected_title = None
+        live_reception: dict[str, Any] = {}
         ui_had_inspected_movie = bool(inspected_movie_id)
         if dossier is None:
             dossier = self.get_taste_dossier()
@@ -498,7 +596,7 @@ class GreyService:
                 with self._get_connection() as conn:
                     row = conn.execute(
                         """
-                        SELECT m.title, m.release_date, m.vote_average, u.status, u.verdict, u.notes
+                        SELECT m.title, m.release_date, m.vote_average, m.vote_count, u.status, u.verdict, u.notes
                         FROM movies m
                         LEFT JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
                         WHERE m.tmdb_id = ?
@@ -508,6 +606,23 @@ class GreyService:
                     if row:
                         inspected_title = row["title"]
                         year_str = f" ({(row['release_date'] or '')[:4]})" if row["release_date"] else ""
+                        rel_date = row["release_date"] or ""
+                        today_str = datetime.date.today().isoformat()
+                        live_reception = self._fetch_live_film_reception(
+                            row["title"], (row["release_date"] or "")[:4]
+                        )
+                        has_live_reviews = bool(live_reception.get("rt_score") or live_reception.get("metacritic"))
+                        is_unreleased = False
+                        if not has_live_reviews:
+                            if rel_date and rel_date > today_str:
+                                is_unreleased = True
+                            elif not rel_date and (row["vote_count"] or 0) == 0:
+                                is_unreleased = True
+
+                        release_tag = f" | Release Date: {rel_date}" if rel_date else ""
+                        if is_unreleased:
+                            release_tag += " [UPCOMING / UNRELEASED FILM — NOT YET RELEASED]"
+
                         dir_rows = conn.execute(
                             "SELECT name FROM movie_credits WHERE tmdb_id = ? AND credit_type = 'director' ORDER BY position ASC LIMIT 2",
                             (inspected_movie_id,),
@@ -546,12 +661,29 @@ class GreyService:
                             if wants_movie_notes
                             else ""
                         )
+                        reception_items = []
+                        if live_reception.get("rt_score"):
+                            reception_items.append(
+                                f"Rotten Tomatoes: {live_reception['rt_score']} (Avg {live_reception.get('rt_avg', '')}, {live_reception.get('rt_count', '')} reviews)"
+                            )
+                        if live_reception.get("rt_consensus"):
+                            reception_items.append(f'RT Critics Consensus: "{live_reception["rt_consensus"]}"')
+                        if live_reception.get("metacritic"):
+                            reception_items.append(f"Metacritic: {live_reception['metacritic']}")
+                        if live_reception.get("summary"):
+                            reception_items.append(f"Critical Reception Summary: {live_reception['summary'][:350]}")
+
+                        reception_str = ""
+                        if reception_items:
+                            reception_str = "\n[VERIFIED LIVE CRITICAL RECEPTION (LIVE SEARCH)]:\n" + " | ".join(reception_items)
+
                         # Zero plot synopsis (and zero user notes unless explicitly requested): Grey cannot parrot the screen
                         inspected_info = (
-                            f"{row['title']}{year_str} (TMDB ID: {inspected_movie_id}) | "
+                            f"{row['title']}{year_str} (TMDB ID: {inspected_movie_id}){release_tag} | "
                             f"Director: {director_str} | Cast: {cast_str} | "
-                            f"TMDB Rating {row['vote_average']} | Status: {row['status'] or 'unseen'} | "
-                            f"User Verdict: {row['verdict'] or 'None'}{notes_part}"
+                            f"TMDB Rating {row['vote_average']} (TMDB Votes: {row['vote_count'] or 0}) | "
+                            f"Status: {row['status'] or 'unseen'} | "
+                            f"User Verdict: {row['verdict'] or 'None'}{notes_part}{reception_str}"
                         )
         except Exception as exc:
             logger.debug("Could not query movie context for Grey: %s", exc)
@@ -654,6 +786,7 @@ class GreyService:
             "inspected_note_title": inspected_note_title,
             "inspected_note_info": inspected_note_info,
             "related_movies_str": related_movies_str,
+            "live_reception": live_reception,
         }
 
     def _execute_tool_call(self, params: dict[str, Any]) -> str:
@@ -1088,10 +1221,40 @@ class GreyService:
                 )
                 if not is_status_pill and not is_unsolicited_rec:
                     sanitized_pills.append(p)
+
+            # Strip all third-party rating pills from LLM response (scoreboards belong in Movie Details)
+            sanitized_pills = [
+                p
+                for p in sanitized_pills
+                if not any(
+                    tag in (p.get("label") or "")
+                    for tag in ["RT:", "IMDb:", "Letterboxd:", "Metacritic:"]
+                )
+            ]
+
             pills = sanitized_pills
 
+            text = (data.get("text") or "Here are the matching titles from your library.").strip()
+            # Defensive clean: strip accidental score-reciting clauses from prose (e.g. ", holding an 87% on Rotten Tomatoes...")
+            text = re.sub(
+                r',?\s*(?:holding|with|boasting|carrying)\s+(?:an?\s+)?\d+%\s+on\s+Rotten\s+Tomatoes(?:\s+and\s+(?:an?\s+)?\d+(?:/100)?\s+on\s+Metacritic)?\.?',
+                '.',
+                text,
+                flags=re.IGNORECASE,
+            ).strip()
+            # Defensive clean: if Gemini leaked raw JSON arrays into text, extract them to pills and strip from text
+            leaked_json_match = re.search(r'\[\s*\{.*?"label"\s*:.*?\}\s*\]', text, re.DOTALL)
+            if leaked_json_match:
+                try:
+                    leaked_data = json.loads(leaked_json_match.group(0))
+                    if isinstance(leaked_data, list) and not pills:
+                        pills = leaked_data
+                except Exception:
+                    pass
+                text = text[:leaked_json_match.start()].strip()
+
             return {
-                "text": data.get("text", "Here are the matching titles from your library."),
+                "text": text,
                 "action": action,
                 "reaction": valid_reaction,
                 "pills": pills,

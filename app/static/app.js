@@ -595,10 +595,16 @@ function setActiveView(view) {
   const discoverHeader = document.querySelector("#discover-canvas-header");
   if (discoverHeader) {
     discoverHeader.classList.toggle("is-hidden", !isDiscover || state.mode === "filmography");
+    if (isDiscover && state.mode !== "filmography") {
+      discoverHeader.classList.remove("force-hidden");
+    }
   }
   const libraryHeader = document.querySelector("#library-canvas-header");
   if (libraryHeader) {
     libraryHeader.classList.toggle("is-hidden", !isLibrary || state.mode === "filmography");
+    if (isLibrary && state.mode !== "filmography") {
+      libraryHeader.classList.remove("force-hidden");
+    }
   }
   const sectionHeadingBlock = document.querySelector("#section-heading-block");
   if (sectionHeadingBlock) {
@@ -2926,7 +2932,36 @@ function renderMovies(movies, emptyContext = "library", total = null) {
     elements.grid.classList.add("is-hidden");
     elements.empty.classList.remove("is-hidden");
 
-    if (emptyContext === "search") {
+    if (state.currentView === "discover" || emptyContext === "discover") {
+      const spec = state.currentSearchSpec || {};
+      const hasFilters = Boolean(
+        (spec.filters?.include_genre_ids && spec.filters.include_genre_ids.length) ||
+        (spec.filters?.exclude_genre_ids && spec.filters.exclude_genre_ids.length) ||
+        spec.filters?.minimum_rating ||
+        spec.filters?.release_year_from ||
+        spec.filters?.release_year_to ||
+        (spec.filters?.include_director_ids && spec.filters.include_director_ids.length) ||
+        (spec.filters?.include_cast_ids && spec.filters.include_cast_ids.length) ||
+        (spec.filters?.include_keyword_ids && spec.filters.include_keyword_ids.length)
+      );
+
+      elements.emptyTitle.textContent = hasFilters ? "No matching movies" : "No discoveries available";
+      elements.emptyCopy.textContent = hasFilters
+        ? "No movies match your discovery filters. Try adjusting or clearing your active filters."
+        : "Unable to load discovery recommendations right now. Please try again.";
+      if (elements.emptySearchButton) {
+        elements.emptySearchButton.textContent = hasFilters ? "Reset filters" : "Retry discovery";
+        elements.emptySearchButton.classList.remove("is-hidden");
+        elements.emptySearchButton.onclick = () => {
+          if (hasFilters) {
+            resetAdvancedFilters();
+            runDiscoverySearch();
+          } else {
+            runDiscoverySearch({ forceRefresh: true });
+          }
+        };
+      }
+    } else if (emptyContext === "search") {
       elements.emptyTitle.textContent = "No matching movies";
       elements.emptyCopy.textContent =
         "Try another title or use fewer words in your search.";
@@ -2978,6 +3013,7 @@ function renderMovies(movies, emptyContext = "library", total = null) {
       }
     } else {
       const shelfEmptyInfo = {
+        discover: { title: "No movies found", copy: "Try adjusting or clearing your filters to see recommendations." },
         watched: { title: "No watched movies yet", copy: "Movies you mark as watched will appear here." },
         watch_later: { title: "Watch Later is empty", copy: "Add movies you plan to watch to keep track of them here." },
         rewatch: { title: "Rewatch list is empty", copy: "Mark movies for a rewatch to see them here." },
@@ -3221,13 +3257,13 @@ function setAuxiliaryView(view = null) {
   const discoverHeader = document.querySelector("#discover-canvas-header");
   if (discoverHeader) {
     discoverHeader.classList.toggle("is-hidden", visible || state.currentView !== "discover");
-    discoverHeader.classList.toggle("force-hidden", visible || state.currentView !== "discover");
+    discoverHeader.classList.toggle("force-hidden", visible);
   }
   const libraryHeader = document.querySelector("#library-canvas-header");
   const isLibraryView = ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes"].includes(state.currentView);
   if (libraryHeader) {
     libraryHeader.classList.toggle("is-hidden", visible || !isLibraryView);
-    libraryHeader.classList.toggle("force-hidden", visible || !isLibraryView);
+    libraryHeader.classList.toggle("force-hidden", visible);
   }
   if (elements.pagination) {
     elements.pagination.classList.toggle("force-hidden", visible);
@@ -3258,6 +3294,11 @@ function setEntriesVisible(visible) {
 
 async function activateDiscoverView() {
   setSearchOriginMovie();
+  state.mode = "discover";
+  state.currentView = "discover";
+  if (document.body) {
+    document.body.dataset.activeView = "discover";
+  }
   setEntriesVisible(false);
   if (elements.discoverWorkspace) {
     elements.discoverWorkspace.classList.remove("is-hidden");
@@ -3762,6 +3803,9 @@ async function loadNextContinuousBatch() {
 }
 
 function applyLibraryFilters(targetPage = 1) {
+  if (state.currentView === "discover" || state.mode === "discovery") {
+    return;
+  }
   if (!state.unfilteredShelfMovies) {
     state.unfilteredShelfMovies = [...(state.movies || [])];
   }
@@ -4140,6 +4184,9 @@ function onLibraryFilterChange() {
 }
 
 async function searchPersonalLibrary() {
+  if (state.currentView === "discover" || state.mode === "discovery") {
+    return;
+  }
   const query = (elements.libraryFilterQuery?.value || "").trim();
   const hasFilters = hasActiveLibraryFilters();
   const scope = state.librarySearchScope || "shelf";
@@ -4690,6 +4737,11 @@ async function loadShelf(view, page = 1) {
   }
 
   setSearchOriginMovie();
+  state.mode = "shelf";
+  state.currentView = view;
+  if (view) {
+    document.body.dataset.activeView = view;
+  }
   setEntriesVisible(false);
   if (elements.discoverWorkspace) {
     elements.discoverWorkspace.classList.add("is-hidden");
@@ -4698,11 +4750,6 @@ async function loadShelf(view, page = 1) {
     elements.notesSearchContainer.classList.add("is-hidden");
   }
   const requestNumber = ++state.requestNumber;
-  state.mode = "shelf";
-  state.currentView = view;
-  if (view) {
-    document.body.dataset.activeView = view;
-  }
   updateShelfViewToggleUI();
   setActiveView(view);
   setModeButton(null);
@@ -4752,6 +4799,12 @@ async function loadShelf(view, page = 1) {
 async function loadMovieNotes(page = 1) {
   const requestNumber = ++state.requestNumber;
   setSearchOriginMovie();
+  hideFilmographyToolbar();
+  state.mode = "shelf";
+  state.currentView = "movie-notes";
+  if (document.body) {
+    document.body.dataset.activeView = "movie-notes";
+  }
   setEntriesVisible(false);
   if (elements.discoverWorkspace) {
     elements.discoverWorkspace.classList.add("is-hidden");
@@ -4759,9 +4812,6 @@ async function loadMovieNotes(page = 1) {
   if (elements.notesSearchContainer) {
     elements.notesSearchContainer.classList.add("is-hidden");
   }
-  hideFilmographyToolbar();
-  state.mode = "shelf";
-  state.currentView = "movie-notes";
   setActiveView("movie-notes");
   setModeButton(null);
   elements.simpleControls.classList.add("is-hidden");
@@ -4918,7 +4968,7 @@ async function searchMovies(query, page = 1) {
     }
 
     state.movies = [];
-    renderMovies([], "search");
+    renderMovies([], "discover");
     showNotice(error.message);
   }
 }
@@ -5031,7 +5081,7 @@ async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } =
       ? Number(response.tmdb_total_results || state.movies.length)
       : state.movies.length;
     state.pageLoader = (target) => executeDiscoverySearch(spec, target);
-    renderMovies(state.movies, "search", state.totalResults);
+    renderMovies(state.movies, "discover", state.totalResults);
     // Always display total movie count instead of useless batch/page counts
     const totalCount = Number(response.tmdb_total_results ?? response.total_results ?? response.raw_tmdb_total_results ?? state.totalResults ?? state.movies.length);
     state.totalResults = totalCount;
@@ -5093,7 +5143,7 @@ async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } =
     }
 
     state.movies = [];
-    renderMovies([], "search");
+    renderMovies([], "discover");
     showNotice(error.message);
   }
 }
@@ -5767,7 +5817,7 @@ function saveCurrentSearchSnapshot(originInfo = null) {
     personalFilters: collectPersonalFilters(),
     selectedEntities: JSON.parse(JSON.stringify(state.selectedEntities)),
     profileSelectValue: elements.profileSelect?.value || "",
-    activeRibbonProfile: document.querySelector(".ribbon-chip.is-active")?.dataset.profile || null,
+    activeRibbonProfile: document.querySelector("#profile-ribbon .ribbon-chip.is-active")?.dataset.profile || null,
     movies: [...(state.movies || [])],
     searchPage: state.searchPage,
     searchTotalPages: state.searchTotalPages,
@@ -5800,7 +5850,7 @@ async function restoreSearchSnapshot() {
   updateProfileButtons();
 
   if (snap.activeRibbonProfile) {
-    document.querySelectorAll(".ribbon-chip").forEach((chip) => {
+    document.querySelectorAll("#profile-ribbon .ribbon-chip").forEach((chip) => {
       chip.classList.toggle("is-active", chip.dataset.profile === snap.activeRibbonProfile);
     });
   }
@@ -5809,14 +5859,22 @@ async function restoreSearchSnapshot() {
   const discoverHeader = document.querySelector("#discover-canvas-header");
   if (snap.currentView === "discover" || (!snap.currentView && snap.mode === "discovery")) {
     if (elements.discoverWorkspace) elements.discoverWorkspace.classList.remove("is-hidden");
-    if (discoverHeader) discoverHeader.classList.remove("is-hidden");
+    if (discoverHeader) {
+      discoverHeader.classList.remove("is-hidden");
+      discoverHeader.classList.remove("force-hidden");
+    }
     elements.sectionHeadingBlock?.classList.add("is-hidden");
   } else if (snap.currentView) {
     if (elements.discoverWorkspace) elements.discoverWorkspace.classList.add("is-hidden");
     if (discoverHeader) discoverHeader.classList.add("is-hidden");
     const isLibSnap = ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes"].includes(snap.currentView);
     const libHeader = document.querySelector("#library-canvas-header");
-    if (libHeader) libHeader.classList.toggle("is-hidden", !isLibSnap);
+    if (libHeader) {
+      libHeader.classList.toggle("is-hidden", !isLibSnap);
+      if (isLibSnap) {
+        libHeader.classList.remove("force-hidden");
+      }
+    }
     elements.sectionHeadingBlock?.classList.toggle("is-hidden", isLibSnap);
     if (elements.libraryTitle) elements.libraryTitle.textContent = snap.title;
   }
@@ -5826,7 +5884,7 @@ async function restoreSearchSnapshot() {
   state.searchTotalPages = snap.searchTotalPages;
   state.totalResults = snap.totalResults;
 
-  renderMovies(state.movies, snap.currentView === "discover" ? "search" : "library", state.totalResults);
+  renderMovies(state.movies, snap.currentView === "discover" ? "discover" : "library", state.totalResults);
   if (snap.searchTotalPages > 1) {
     elements.pagination?.classList.remove("is-hidden");
   } else {
@@ -6137,7 +6195,7 @@ function renderMovieDetails(movie) {
     if (movie.vote_count) {
       const votesSpan = document.createElement("span");
       votesSpan.className = "title-meta-item title-meta-votes";
-      votesSpan.innerHTML = `<svg class="title-meta-vote-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#F2C94C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="title-meta-vote-count">${Number(movie.vote_count).toLocaleString()} votes</span>`;
+      votesSpan.innerHTML = `<svg class="title-meta-vote-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#DEC68B" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="title-meta-vote-count">${Number(movie.vote_count).toLocaleString()} votes</span>`;
       titleMetaEl.append(votesSpan);
     }
   }
@@ -10453,6 +10511,30 @@ function appendGreyMessage(role, text, subtext, pills, { skipSave = false, skill
 
 function handleGreyFilterAction(params) {
   if (!params) return;
+
+  if (state.currentView === "discover" || state.mode === "discovery") {
+    if (Array.isArray(params.genres) && params.genres.length > 0) {
+      const matchedGenreIds = GENRE_OPTIONS
+        .filter(([id, name]) => params.genres.some((g) => g.toLowerCase() === name.toLowerCase()))
+        .map(([id]) => Number(id));
+      if (matchedGenreIds.length > 0) {
+        setPickerValues("include-genres", matchedGenreIds);
+      }
+    }
+    if (Array.isArray(params.languages) && params.languages.length > 0) {
+      setPickerValues("include-languages", params.languages.map((l) => l.toLowerCase()));
+    }
+    if (params.min_year && elements.releaseYearFrom) {
+      elements.releaseYearFrom.value = String(params.min_year);
+    }
+    if (params.max_year && elements.releaseYearTo) {
+      elements.releaseYearTo.value = String(params.max_year);
+    }
+    updateFilterPillBadges();
+    renderActiveFilterTags();
+    runDiscoverySearch();
+    return;
+  }
 
   // 1. Genres
   if (Array.isArray(params.genres) && params.genres.length > 0) {

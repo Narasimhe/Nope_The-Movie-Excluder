@@ -1,13 +1,97 @@
-{
-  "absolute-cinema-cinema.gif": "Absolute cinema masterpieces, transcendent directing, Scorsese/Tarantino/Fincher/Coen level craft, 10/10 verdicts",
-  "deniro_clap_n_approving.gif": "Robert De Niro clapping and nodding in genuine approval, high praise for acting, great ensemble cast, solid respect for film execution",
-  "cillian_murphy_pretending_to_laugh.gif": "Cillian Murphy forced/pretend laughing, awkward or try-hard comedies, unconvincing humor, dry or deadpan sarcasm",
-  "jenniferlawrence_alright_but_not_entirely_ok_approval.gif": "Jennifer Lawrence thumbs-up / OK-okay approval, decent watch with caveats, lukewarm endorsement, watchable but not great",
-  "gangster_cat.gif": "Mob, mafia, crime cinema (Goodfellas, Godfather, Casino, The Departed, Sopranos), tough cinema attitude, keeping watch over the collection",
-  "suspectful_cute_cat_weird_reaction.gif": "Suspicious, skeptical side-eye, dubious movie premises, questionable twists, sniffing out lazy writing or cliches",
-  "sleepy-tired.gif": "Slow, sluggish, boring films, pretentious pacing, movies that put the viewer to sleep, snoozefests",
-  "houston_we_have_a_problem.gif": "Sci-fi disasters, severe plot holes, catastrophic third act failures, major production trainwrecks, Apollo 13 vibes",
-  "couple_watching_cinema_theater.gif": "Date night movie recommendations, cozy theater watching, engaging crowd-pleasers, couples watching films",
-  "cat_animated_declaring_100_cent_ai.gif": "Meta humor, AI commentary, synthetic/uncanny CGI, robot tropes, 100% artificial scripts",
-  "you-suck-shorty-meeks.gif": "Criticizing extremely retarded movies, bad acting, poor performances, weak character portrayals, actors who fail to deliver, subpar talent",
-}
+[
+  {
+    "filename": "absolute-cinema-cinema.gif",
+    "verdict_tier": "transcendent",
+    "trigger_context": "Absolute cinema masterpieces, transcendent directing, craft on the level of Scorsese (Taxi Driver), Tarantino (Pulp Fiction), or the Coens (No Country for Old Men)"
+  },
+  {
+    "filename": "best-movie-ever.gif",
+    "verdict_tier": "transcendent",
+    "trigger_context": "Unabashed praise for all-time landmark cinematic triumphs, like 2001: A Space Odyssey or Apocalypse Now"
+  },
+  {
+    "filename": "best_acting_i_have_ever_seen.jpg",
+    "verdict_tier": "masterclass_acting",
+    "trigger_context": "Tour-de-force powerhouse acting performances, raw emotional gut-punches, like Daniel Day-Lewis in There Will Be Blood or Mickey Rourke in The Wrestler"
+  },
+  {
+    "filename": "deniro_clap_n_approving.gif",
+    "verdict_tier": "transcendent",
+    "trigger_context": "Robert De Niro nodding in genuine respect and applause for phenomenal ensemble acting and commanding screen presence"
+  },
+  {
+    "filename": "jenniferlawrence_alright_but_not_entirely_ok_approval.gif",
+    "verdict_tier": "solid",
+    "trigger_context": "Thumbs-up / OK-okay approval, decent watch with caveats, lukewarm endorsement, watchable and entertaining but not an all-time great"
+  },
+  {
+    "filename": "mj_eating_popcorn_fun_light_movie.gif",
+    "verdict_tier": "popcorn_entertainment",
+    "trigger_context": "Enjoyable popcorn crowd-pleasers, fun movies that don't take themselves too seriously, like Raiders of the Lost Ark or Speed"
+  },
+  {
+    "filename": "cillian_murphy_pretending_to_laugh.gif",
+    "verdict_tier": "mixed",
+    "trigger_context": "Forced or pretend laughing at try-hard comedies, awkward humor that falls flat, dry deadpan sarcasm"
+  },
+  {
+    "filename": "sleepy-tired.gif",
+    "verdict_tier": "boredom",
+    "trigger_context": "Sluggish snoozefests, pretentious pacing that puts you to sleep, slow-motion art-house pacing with zero narrative momentum"
+  },
+  {
+    "filename": "homelander_giving_a_look_of_pure_disgust.gif",
+    "verdict_tier": "repulsed",
+    "trigger_context": "Look of pure disgust and disbelief at awful writing, cringe dialogue, terrible character decisions, or insulting plot beats"
+  },
+  {
+    "filename": "homelander_watching_absolute_garbage_movie_in_theater.gif",
+    "verdict_tier": "repulsed",
+    "trigger_context": "Suffering in a cinema theater forced to watch an unwatchable studio trainwreck, total regret for buying a ticket"
+  },
+  {
+    "filename": "you-suck-shorty-meeks.gif",
+    "verdict_tier": "repulsed",
+    "trigger_context": "Calling out disastrously bad acting, amateurish direction, and completely botched filmmaking execution"
+  },
+  {
+    "filename": "cat_animated_declaring_100_cent_ai.gif",
+    "verdict_tier": "artificial",
+    "trigger_context": "Visual CGI slop movies where special effects and tech demos are prioritized over narrative substance, like sterile studio green-screen spectacles with dead scripts. Never trigger simply because a film has robots or sci-fi themes"
+  },
+  {
+    "filename": "houston_we_have_a_problem.gif",
+    "verdict_tier": "disaster",
+    "trigger_context": "Production catastrophes, severe plot holes, catastrophic third act collapses, movies that derail midway through"
+  },
+  {
+    "filename": "suspectful_cute_cat_weird_reaction.gif",
+    "verdict_tier": "suspicious",
+    "trigger_context": "Suspicious, skeptical side-eye, dubious plot twists, sniffing out lazy writing, contrivances, or cheap studio formulas"
+  },
+  {
+    "filename": "joker-dont-say-i-didnt-warn-you.gif",
+    "verdict_tier": "ominous_warning",
+    "trigger_context": "Ominous warnings for deeply disturbing, psychologically intense, or bleak gut-punch films (like Requiem for a Dream, Come and See, or Hereditary) saying don't say I didn't warn you"
+  },
+  {
+    "filename": "jennifer-lawrence-eek_oops_my_bad.gif",
+    "verdict_tier": "cringe_embarrassment",
+    "trigger_context": "Embarrassing secondhand cringe, awkward creative missteps, or cringe moments where you look away in disbelief"
+  },
+  {
+    "filename": "gangster_cat.gif",
+    "verdict_tier": "genre_mob",
+    "trigger_context": "Mob, mafia, crime cinema (Goodfellas, Godfather, Casino, The Departed, Sopranos), tough cinema attitude, keeping watch over the collection"
+  },
+  {
+    "filename": "couple_watching_cinema_theater.gif",
+    "verdict_tier": "cozy",
+    "trigger_context": "Date night movie recommendations, cozy theater watching, engaging crowd-pleasers, couples watching films"
+  }
+  {
+    "filename": "sad_in_rain.gif",
+    "verdict_tier": "tear jerker",
+    "trigger_context": "Heartbreaking, like Mickey Rourke's performance in The Wrestler"
+  }
+]

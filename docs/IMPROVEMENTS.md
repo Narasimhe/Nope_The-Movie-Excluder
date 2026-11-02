@@ -4,6 +4,18 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
+- [ ] **Live Multi-Platform Reception Bar on Movie Detail Page (MDBList API)**
+  * **Goal**: Display live verified critical scores directly inside the single movie detail cockpit, positioned below the genre tags and above the overview synopsis with clean vertical spacing.
+  * **Locked Layout Specification**:
+    * `🍅 87% • 🍿 84%   |   IMDb 8.7 ★ (1.9M)   |   [Letterboxd 3-Lens Icon] 4.4 ★   |   MC 73`
+    * **Icons & Accents**: Tomato (`🍅`), Popcorn (`🍿`), `IMDb` wordmark, Letterboxd 3-circle lens emblem SVG, and Metacritic `MC` badge in brand yellow `#DEC68B`.
+    * **Sub-Metric Styling**: Scores in primary typography matching TMDB rating size; secondary vote counts (e.g. `1.9M`) in muted typography matching TMDB vote count.
+    * **Separators**: Clean vertical pipe delimiters (`|`) between platforms and dot delimiters (`•`) between RT critic and audience scores.
+  * **Data Engine & Caching (MDBList API)**:
+    * Query MDBList API (`/movie/{tmdb_id}`) for Letterboxd, IMDb, Rotten Tomatoes (critics + audience), and Metacritic in a single request.
+    * Cache payloads locally in SQLite table `movie_ratings` so repeat page opens consume 0 API calls.
+    * Gracefully hide absent platforms when older or foreign titles lack scores on specific services.
+
 - [ ] **Studio Catalog & Filmography Mode (Direct 1-Click Catalog)**
   * **Goal**: Enable direct 1-click exploration of a studio / production company's complete release catalog (e.g. A24, Pixar, Studio Ghibli, Blumhouse, Warner Bros.), matching the behavior of Actor and Director filmography mode.
   * **Key Components**:
@@ -30,9 +42,59 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Emotional Verdict Tiers for Contextual Reaction GIFs (`app/grey/reactions.json`, `app/grey/service.py`, `app/grey/prompts/grey_core.md`)**
+  * **Structured Schema Architecture**: Converted `reactions.json` into an explicit list of structured objects pairing `filename`, `verdict_tier`, and `trigger_context` (`transcendent`, `masterclass_acting`, `solid`, `popcorn_entertainment`, `mixed`, `boredom`, `repulsed`, `artificial`, `suspicious`, `disaster`, `ominous_warning`, `cringe_embarrassment`, `cozy`, `genre_mob`). Enriched trigger contexts with cultural cinema benchmarks (e.g. Mickey Rourke in *The Wrestler*, Daniel Day-Lewis, Scorsese, Kubrick).
+  * **Two-Stage Decision Firewall**: Mandated a two-stage decision loop in `grey_core.md`. The model must first determine its emotional craft verdict before accessing any reaction media, strictly locking it out of incompatible buckets (e.g. high-praise critiques can never trigger `[repulsed]` or `[artificial]`). Made tier selection open-ended and dynamic so users can invent arbitrary new sentiment tiers (`visual_treat`, `mind_bending`, `tearjerker`, etc.) directly in `reactions.json`.
+  * **Service Parsing & Formatting**: Updated `GreyService.get_reactions_index()` to parse both structured JSON lists and fallback dictionaries, compiling clean `- Tier [verdict_tier] -> filename: trigger_context` indices for the model's system prompt.
+- [x] **Refined CGI Slop Reaction Trigger & Indexed Homelander Reaction GIFs (`app/grey/reactions.json`, `app/grey/prompts/grey_core.md`)**
+  * **CGI Slop Context Restriction**: Re-anchored `cat_animated_declaring_100_cent_ai.gif` strictly to visual CGI slop movies where spectacle is prioritized over narrative substance with a dead script. Explicitly forbade triggering merely because a movie's plot involves androids, robots, or sci-fi themes (*Her*, *Ex Machina*).
+  * **Critique-Verdict Alignment Rule**: Enforced a rule in `grey_core.md` requiring reaction media to reflect Grey's actual craft critique/verdict rather than matching literal plot nouns from the synopsis.
+  * **Indexed New Homelander Media**: Added semantic trigger entries in `reactions.json` for `homelander_giving_a_look_of_pure_disgust.gif` (disgust at cringe dialogue/writing) and `homelander_watching_absolute_garbage_movie_in_theater.gif` (unwatchable theater releases / studio trainwrecks).
+- [x] **Harmonized Movie Details Title-Metadata Vote Count Icon Color (`app/static/styles.css`, `app/static/app.js`)**
+  * **Color Parity**: Fixed color mismatch between `.title-meta-star` (`#DEC68B` champagne yellow) and `.title-meta-vote-icon` (`#F2C94C` canary yellow), aligning the people SVG stroke to `#DEC68B` for unified metadata styling alongside the title and star rating.
+- [x] **Resolved Discover Mode "0 Movies / Nothing Here Yet" Empty-State Anomaly (`app/static/app.js`)**
+  * **Prevented Cross-Mode Filter Contamination**: Fixed an issue where `applyLibraryFilters()` and `searchPersonalLibrary()` were called without checking active view mode, allowing debounced library searches or Grey filter actions to execute while the user was on the Discover page. This wiped out `state.movies` against `state.unfilteredShelfMovies` (`[]`), triggering a 0-result count.
+  * **Dedicated Discover Empty State**: Added explicit `"discover"` handling in `renderMovies()` with contextual messaging distinguishing filtered zero-results (*"No movies match your discovery filters. Try adjusting or clearing your active filters."*) from recommendation fetch failures (*"Unable to load discovery recommendations right now."*), wiring the empty state action button directly to `resetAdvancedFilters()` and search rerun instead of the library shelf fallback.
+  * **Intelligent Grey Filter Routing**: Updated `handleGreyFilterAction()` to inspect active view mode; when on Discover, it now sets the discovery form pickers and triggers `runDiscoverySearch()`, preventing library shelf filter functions from running in discovery mode.
+- [x] **Completely Banned Score-Dropping & Review Blurbs from Grey's Critique Prose (`app/grey/prompts/`, `app/grey/service.py`)**
+  * **Strict Score-Reciting Prohibition**: Explicitly forbade Grey from reciting Rotten Tomatoes percentages, Metacritic scores, or IMDb numbers in its written review text (e.g. no *"holding an 87% on Rotten Tomatoes and a 74/100 on Metacritic"*). Grey evaluates screenwriting, character dynamics, tone, and craft directly without acting as a scoreboard.
+  * **Banned Verbless Blurb Clichés**: Barred stacked adjective marketing tropes (e.g. *"Smart, innovative, and thrilling, Inception is..."*), enforcing natural human conversational cadence.
+  * **Defensive Prose Sanitization**: Added regex filtering in `service.py` to automatically strip accidental score-dropping clauses from model outputs before they reach the UI.
+- [x] **Live Critical Reception Search & Grounded Consensus Engine (`app/grey/service.py`, `app/grey/prompts/skills/film_critique.md`)**
+  * **Real-Time Critical Reception Grounding**: Implemented `_fetch_live_film_reception()` in `service.py` using live REST queries to retrieve verified Rotten Tomatoes scores, review counts, the actual official critics consensus quote, Metacritic scores, and audience survey metrics (CinemaScore/PostTrak) for released films in ~200ms.
+  * **Eliminated Fabricated Numbers**: Grounded movie critiques in real live data so Grey quotes the exact RT consensus and verified scores rather than hallucinating outdated numbers from static training weights.
+  * **In-Memory Caching & Timeout Isolation**: Wrapped live lookups in an in-memory session cache (`_reception_cache`) with 3.5s connection timeouts to prevent network latency on follow-up turns.
+- [x] **Purged Fabricated Third-Party Ratings Chips & Guarded Upcoming/Unreleased Films (`app/grey/service.py`, `app/grey/prompts/`)**
+  * **Purged Hallucinated Ratings**: Removed the prompt mandate that forced Gemini to guess/invent RT percentages, Letterboxd scores, and IMDb ratings/vote counts from static training weights. Added strict defensive backend filtering in `service.py` stripping any model-generated `RT:`, `IMDb:`, `Letterboxd:`, or `Metacritic:` chips from responses.
+  * **Upcoming & Unreleased Film Guard**: Augmented movie context in `service.py` to flag upcoming/unreleased titles (`[UPCOMING / UNRELEASED FILM — NOT YET RELEASED]`) based on future release dates and zero vote counts, and instructed Grey never to invent fake reviews or pretend critical consensus exists for films not yet released.
+- [x] **Mandatory Movie Title Bolding & High-Contrast Visual Demarcation (`app/grey/prompts/`, `app/static/styles.css`)**
+  * **Mandatory Bolding Across All Prompts**: Enforced strict rules in `grey_core.md`, `filmography_explorer.md`, `film_critique.md`, and `related_curator.md` requiring Grey to always bold every mentioned, suggested, or referenced film title (`**Title**` or `**Title (Year)**`). Titles like `**Three Days of the Condor**` or `**The Sting**` never blend invisibly into regular text.
+  * **High-Contrast Text Hierarchy**: Softened conversational bot bubble prose to calm `#dedbd2` and boosted `strong` elements to pure `#ffffff` with `font-weight: 700`, ensuring film titles visually pop and are immediately distinguishable when scanning chat responses.
+- [x] **Filmography Toolbar Responsive Wrapping & Overflow Prevention (`app/static/styles.css`)**
+  * **Eliminated Person Name Truncation**: Fixed an issue where opening complete filmographies while Grey was docked open (or on narrower viewports) caused the person's name to truncate into an ellipsis (e.g. `Robert Redf...`) due to `flex-wrap: nowrap` and competing tab space constraints.
+  * **Dynamic Responsive Stacking**: Enabled wrapping on `.filmography-toolbar` (`flex-wrap: wrap; row-gap: 12px; column-gap: 16px;`). When Grey is docked open or on mobile/tablet widths, `.filmography-person-badge` takes full width on row 1 (`flex: 1 1 100%`), giving long names full room without clipping or ellipses.
+  * **Clean Left-Aligned Tab Placement**: When wrapped, `.filmography-tabs` gracefully moves to row 2 right below the person badge with `margin-left: 0; width: fit-content;`, while continuing to align flush with the 6-poster column boundary on wide viewports.
+  * **Return Button Bounds**: Added overflow guards to `.return-to-origin` (`max-width: 100%; text-overflow: ellipsis; white-space: nowrap;`) to prevent long origin titles from breaking horizontal alignment.
+- [x] **Sanitized Leaked Raw JSON Arrays in Chat & Enforced Complete Sentence Grammar (`app/grey/service.py`, `app/grey/prompts/skills/film_critique.md`)**
+  * **Eliminated Raw JSON Leaks**: Added defensive cleaning in `service.py` to catch, extract, and strip any raw bracketed JSON (e.g. `[{"label": "RT:..."}]`) that the model erroneously appended into the `text` string, ensuring chat text is strictly human prose.
+  * **Clean Schema Separation**: Separated the prompt's prose instructions from JSON array definitions so the model never confuses `"text"` with `"pills"`.
+  * **Grammar Anchor**: Mandated full, complete sentences with clear grammatical subjects, preventing dangling sentence fragments.
+- [x] **Enforced Natural Human Language & Banned Pretentious Film-Essay Buzzwords (`app/grey/prompts/skills/film_critique.md`, `app/grey/prompts/grey_core.md`)**
+  * **Eliminated Essayist Slop**: Explicitly forbade Grey from stringing together robotic, film-school buzzwords (*"through a high-gloss, committee-approved lens"*, *"prioritizing aesthetic polish over messy humanity"*, *"retreating into safe, genre-compliant beats"*, *"product rollout"*).
+  * **Real Human Conversational Cadence**: Instructed Grey to speak plainly and directly like an actual moviegoer talking to a friend (*"It looks sleek, but it's completely hollow. The original had real grit; this remake sands down all the edges into a safe, forgettable studio product."*).
+- [x] **Resolved Intermittent Missing Library Status Chips Ribbon (`app/static/app.js`, `app/web/index.html`)**
+  * **Eliminated Lingering `force-hidden` Override**: Fixed an issue where switching views (from Discover or auxiliary pages to Library shelves) triggered `setAuxiliaryView(null)` while evaluating previous view state, leaving the high-specificity `.force-hidden` class stuck on `#library-canvas-header` and making the entire status chips ribbon invisible until a page refresh.
+  * **Strict Auxiliary Scope & View Switch Cleanup**: Restricted `.force-hidden` toggles exclusively to when auxiliary pages (Notes/Storage) are actively open, ensuring both `setActiveView()` and snapshot restoration cleanly remove `.force-hidden` from active canvas headers.
+  * **Order-of-Operations Guard**: Reordered `loadShelf()`, `loadMovieNotes()`, and `activateDiscoverView()` so active view state (`state.currentView`, `state.mode`, `body[data-active-view]`) is updated prior to closing auxiliary panels.
+  * **Profile Ribbon Selector Scoping**: Scoped `.ribbon-chip` active-state updates in search snapshots strictly to `#profile-ribbon .ribbon-chip` to prevent cross-talk with the Library shelf ribbon chips.
+  * **Asset Cache Buster**: Incremented cache buster to `v=20261101_zen_224` in `app/web/index.html`.
+- [x] **Suppressed Repetitive Rating Chips on Follow-Up Film Discussions (`app/grey/service.py`, `app/grey/prompts/`)**
+  * **Initial Review Only**: Rating chips (`[RT: ...]`, `[IMDb: ...]`, `[Letterboxd: ...]`) are now strictly scoped to the primary movie critique ("What do you think of this movie?").
+  * **Clean Follow-Up Conversations**: On conversational follow-ups (e.g. *"What does RT say?"*, *"What does Letterboxd say?"*, *"Why was the ending polarizing?"*), rating chips are completely suppressed (`"pills": []`).
+  * **Focus on Qualitative Synthesis**: Instructed Grey to focus 100% on synthesizing the actual critical praise and community debates rather than repeating numbers and chips.
 - [x] **Modular Smart Local Router, Ratings Chips with IMDb Vote Counts & Compulsory Review Header (`app/grey/service.py`, `app/grey/prompts/`)**
   * **Lean Core Foundation (`grey_core.md`)**: Stripped monolithic rules down to identity, screen context, and JSON output formatting.
-  * **Modular Dedicated Skills**: Created `skills/film_critique.md` (Soul vs. Soulless Ten-Minute Test) and `skills/ratings_intel.md` (consensus ratings).
+  * **Modular Dedicated Skills**: Created `skills/film_critique.md` (Soul vs. Soulless Ten-Minute Test + RT/Letterboxd critical consensus discourse analysis); retired obsolete `ratings_intel.md` to keep skills minimal and focused.
   * **Compulsory Review Header**: Made `**Movie Title (Year)**` strictly mandatory as the very first line of any film evaluation.
   * **Ratings Chips with IMDb Vote Counts**: Instructed Grey to output quick rating chips for the active movie (`RT: XX% / YY%`, `IMDb: X.X/10 (NNk votes)`, `Letterboxd: X.X/5.0`), explicitly requiring the vote count / sample size for IMDb.
   * **Suppressed Unsolicited Recommendation Chips**: Blocked unrequested other-movie pills (`open_movie`) from being attached to critiques or ratings unless the user explicitly requests recommendations.

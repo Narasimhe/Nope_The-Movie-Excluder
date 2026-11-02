@@ -4941,6 +4941,10 @@ footer {
   gap: 6px;
   height: 30px;
   min-height: 30px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   margin: 0 0 1.2rem;
   padding: 0 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -4952,6 +4956,7 @@ footer {
   font-weight: 500;
   letter-spacing: 0.01em;
   transition: all 140ms ease;
+  box-sizing: border-box;
 }
 .return-to-origin:hover {
   background: rgba(222, 198, 139, 0.08);
@@ -4965,8 +4970,9 @@ footer {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: nowrap;
-  gap: 16px;
+  flex-wrap: wrap;
+  row-gap: 12px;
+  column-gap: 16px;
   width: 670px !important;
   max-width: 100% !important;
   margin-bottom: 22px;
@@ -4980,7 +4986,7 @@ footer {
   align-items: center;
   gap: 14px;
   min-width: 0;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
 }
 .filmography-avatar {
   width: 48px;
@@ -5010,13 +5016,12 @@ footer {
 .filmography-name {
   margin: 0;
   color: #f7f6f2;
-  font-size: clamp(1.3rem, 2vw, 1.7rem);
+  font-size: clamp(1.25rem, 2vw, 1.7rem);
   font-weight: 650;
   letter-spacing: -0.015em;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
+  white-space: normal;
+  word-break: break-word;
 }
 .filmography-tabs {
   display: inline-flex;
@@ -5031,7 +5036,6 @@ footer {
   box-sizing: border-box;
   overflow-x: auto;
   flex-shrink: 0;
-  margin-left: auto;
 }
 .film-tab {
   display: inline-flex;
@@ -6044,7 +6048,7 @@ body.grey-docked-open .grey-pill {
 .grey-msg-bot .grey-bubble {
   background: #191b24;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #f5f3ee;
+  color: #dedbd2;
   border-bottom-left-radius: 4px;
 }
 .grey-bubble p {
@@ -6059,6 +6063,7 @@ body.grey-docked-open .grey-pill {
 .grey-bubble strong {
   color: #ffffff;
   font-weight: 700;
+  letter-spacing: -0.01em;
 }
 .grey-bubble em {
   color: #ebe7de;
@@ -7273,6 +7278,22 @@ body.grey-docked-open .entry-list.is-list-mode:not(.is-hidden) {
 }
 
 @media (max-width: 680px) {
+  .filmography-toolbar {
+    flex-wrap: wrap !important;
+    row-gap: 12px !important;
+  }
+  .filmography-person-badge {
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+  }
+  .filmography-name {
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+  .filmography-tabs {
+    margin-left: 0 !important;
+    width: fit-content !important;
+  }
   .entries-toolbar {
     flex-wrap: wrap;
   }
@@ -10389,6 +10410,28 @@ body.grey-docked-open .movie-grid.is-compact:not(.is-hidden):not(.force-hidden) 
   max-width: 670px !important;
 }
 
+body.grey-docked-open .filmography-toolbar {
+  flex-wrap: wrap !important;
+  row-gap: 12px !important;
+  width: 100% !important;
+  max-width: 670px !important;
+}
+
+body.grey-docked-open .filmography-person-badge {
+  flex: 1 1 100% !important;
+  max-width: 100% !important;
+}
+
+body.grey-docked-open .filmography-name {
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+body.grey-docked-open .filmography-tabs {
+  margin-left: 0 !important;
+  width: fit-content !important;
+}
+
 /* 2. Single Movie Detail Page when Grey is Docked Open */
 body.grey-docked-open .movie-detail-page {
   padding: 0 0 3.5rem !important;
@@ -11257,7 +11300,7 @@ body.grey-docked-open .movie-grid-viewport:not(.is-hidden) {
 .title-meta-vote-icon {
   width: 13px !important;
   height: 13px !important;
-  stroke: #F2C94C !important;
+  stroke: #DEC68B !important;
   fill: none !important;
   stroke-width: 2.2 !important;
   vertical-align: -1.5px !important;
