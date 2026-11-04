@@ -4,6 +4,18 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
+- [ ] **Multi-Platform Reception Sorting & Filters in Personal Library (Rotten Tomatoes & IMDb)**
+  * **Goal**: Enable sorting and quick filtering of personal library shelves (*Watched*, *Watch Later*, *Favorites*) by both critic and audience reception using locally cached MDBList scores (neither currently exists in the library).
+  * **Key Components**:
+    * **SQLite Score Extraction (`app/movie_repository.py`)**: Leverage cached ratings in the `movie_ratings` table (`json_extract(ratings_json, '$.tomatoes')`, `json_extract(ratings_json, '$.imdb')`) via `LEFT JOIN` on `tmdb_id` to sort and filter library movies with zero API overhead.
+    * **Library Sort Options (`app/static/app.js`, `app/web/index.html`)**:
+      * Add "🍅 Rotten Tomatoes (Highest First)" to the shelf sort chips/dropdown.
+      * Add "★ IMDb Rating (Highest First)" to the shelf sort chips/dropdown.
+    * **Quick Filter Chips**:
+      * "🍅 80%+ Certified Fresh" quick toggle chip.
+      * "★ 7.5+ High IMDb" quick toggle chip.
+    * **Card Badge / Indicator**: Optionally display the cached RT / IMDb score badge directly on library movie cards when rating data is present in SQLite.
+
 - [ ] **Native Browser Back & Forward Navigation System (`popstate` / `pushState`)**
   * **Goal**: Enable standard browser Back and Forward buttons, mouse thumb buttons, and keyboard shortcuts (`Alt + ←` / `Alt + →`) to navigate naturally across the application rather than exiting or doing nothing.
   * **Architectural Blueprint**:
@@ -44,6 +56,9 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Active Search Preset Restoration on Search Clear & Async Hydration Fix (`app/static/app.js`)**
+  * **Preset Memory across Search Queries**: Stashed active preset ID (`state.presetBeforeSearch`) before launching raw TMDB title searches (`searchMovies`). When the search input is cleared (via backspace `input` event, native clear button `search` event, or empty form submit), `activateDiscoverView()` automatically restores the active preset ID, re-applies its filters via `applySelectedProfile()`, and re-highlights the corresponding ribbon chip.
+  * **Async Hydration Fix**: Awaited `applySelectedProfile()` in ribbon preset chip clicks before running discovery search, preventing race conditions with keyword metadata hydration that previously caused false filter divergence and un-highlighting.
 - [x] **Live Multi-Platform Reception Bar on Movie Detail Page (MDBList API)**
   * **Layout & Typography**: Implemented the multi-platform reception strip with clean vertical cadence (14px below genre tags, 14px above synopsis) formatted as `🍅 93% • 🍿 94%  |  IMDb 8.5 ★ 1.3M  |  Meta 87` with gold star accents and compact vote counts (`1.3M`). Letterboxd was cleanly omitted to eliminate audience score redundancy.
   * **Client & Caching Engine (`app/mdblist_client.py`, `app/database.py`)**: Built `MDBListClient` to query MDBList API (`https://mdblist.com/api/?apikey={key}&tm={tmdb_id}`) and persist responses in SQLite `movie_ratings` table, ensuring repeat visits use 0 API quota.

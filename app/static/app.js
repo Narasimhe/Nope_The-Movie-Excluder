@@ -3352,6 +3352,31 @@ async function activateDiscoverView() {
     elements.notesSearchContainer.classList.add("is-hidden");
   }
   setActiveView("discover");
+
+  const targetPresetId = state.presetBeforeSearch || (function () {
+    try {
+      return localStorage.getItem("nope_active_preset_id");
+    } catch {
+      return null;
+    }
+  })();
+
+  if (targetPresetId && (state.preferences || []).some((p) => String(p.preference_id) === String(targetPresetId))) {
+    state.presetBeforeSearch = null;
+    if (elements.profileSelect) {
+      elements.profileSelect.value = String(targetPresetId);
+    }
+    try {
+      localStorage.setItem("nope_active_preset_id", String(targetPresetId));
+    } catch {}
+    updateProfileButtons();
+    await applySelectedProfile();
+    renderProfileRibbon();
+    renderProfileWorkshop();
+    await runDiscoverySearch();
+    return;
+  }
+
   await setDiscoveryMode(state.discoveryMode || "simple", true);
 }
 
@@ -4958,6 +4983,17 @@ async function searchMovies(query, page = 1) {
   if (elements.notesSearchContainer) {
     elements.notesSearchContainer.classList.add("is-hidden");
   }
+
+  // Preserve active preset so clearing search phrase restores preset mode cleanly
+  if (elements.profileSelect?.value) {
+    state.presetBeforeSearch = String(elements.profileSelect.value);
+  } else {
+    try {
+      const stored = localStorage.getItem("nope_active_preset_id");
+      if (stored) state.presetBeforeSearch = stored;
+    } catch {}
+  }
+
   state.mode = "search";
   state.currentView = "discover";
   setActiveView("discover");
@@ -5425,7 +5461,7 @@ function renderProfileRibbon() {
       chip.append(updateBtn);
     }
 
-    chip.addEventListener("click", (e) => {
+    chip.addEventListener("click", async (e) => {
       if (e.target.closest(".chip-update-btn")) return;
       if (elements.query) {
         elements.query.value = "";
@@ -5436,18 +5472,19 @@ function renderProfileRibbon() {
         try {
           localStorage.removeItem("nope_active_preset_id");
         } catch {}
+        state.presetBeforeSearch = null;
         updateProfileButtons();
         resetAdvancedFilters({ notify: false });
         clearDiscoveryCache();
-        runDiscoverySearch();
+        await runDiscoverySearch();
       } else {
         elements.profileSelect.value = String(prof.id);
         try {
           localStorage.setItem("nope_active_preset_id", String(prof.id));
         } catch {}
-        applySelectedProfile();
+        await applySelectedProfile();
         clearDiscoveryCache();
-        runDiscoverySearch();
+        await runDiscoverySearch();
       }
       renderProfileWorkshop();
       renderProfileRibbon();
@@ -5545,6 +5582,7 @@ function renderProfileWorkshop() {
           try {
             localStorage.removeItem("nope_active_preset_id");
           } catch {}
+          state.presetBeforeSearch = null;
           resetAdvancedFilters({ notify: false });
         } else {
           elements.profileSelect.value = String(prof.id);
@@ -5628,6 +5666,7 @@ function resetAdvancedFilters({ notify = true } = {}) {
   try {
     localStorage.removeItem("nope_active_preset_id");
   } catch {}
+  state.presetBeforeSearch = null;
   state.profilePassthroughFilters = {};
   Object.keys(state.selectedEntities).forEach((key) => {
     state.selectedEntities[key] = [];
@@ -9320,11 +9359,31 @@ elements.form.addEventListener("submit", (event) => {
   if (elements.notesSearchContainer) {
     elements.notesSearchContainer.classList.add("is-hidden");
   }
-  searchMovies(elements.query.value);
+  const q = (elements.query?.value || "").trim();
+  if (!q) {
+    if (state.mode === "search" || state.currentView === "discover") {
+      activateDiscoverView();
+    }
+    return;
+  }
+  searchMovies(q);
 });
 
 if (elements.query) {
+  let queryClearDebounce = null;
+  elements.query.addEventListener("input", () => {
+    if ((state.mode === "search" || state.currentView === "discover") && !elements.query.value.trim()) {
+      window.clearTimeout(queryClearDebounce);
+      queryClearDebounce = window.setTimeout(() => {
+        if ((state.mode === "search" || state.currentView === "discover") && !elements.query.value.trim()) {
+          activateDiscoverView();
+        }
+      }, 250);
+    }
+  });
+
   elements.query.addEventListener("search", () => {
+    window.clearTimeout(queryClearDebounce);
     if (!elements.query.value.trim() && (state.mode === "search" || state.currentView === "discover")) {
       activateDiscoverView();
     }
