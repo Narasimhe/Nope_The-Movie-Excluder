@@ -275,6 +275,7 @@ const elements = {
   dialogKicker: document.querySelector("#dialog-kicker"),
   dialogTitle: document.querySelector("#dialog-title"),
   dialogMeta: document.querySelector("#dialog-meta"),
+  movieReceptionBar: document.querySelector("#movie-reception-bar"),
   dialogOverview: document.querySelector("#dialog-overview"),
   dialogGenres: document.querySelector("#dialog-genres"),
   dialogKeywords: document.querySelector("#dialog-keywords"),
@@ -1894,6 +1895,13 @@ function setWorkspaceCollapsed(collapsed, persist = true) {
 
 async function saveSearchState() {
   const selectedPreferenceId = Number(elements.profileSelect.value) || null;
+  try {
+    if (selectedPreferenceId) {
+      localStorage.setItem("nope_active_preset_id", String(selectedPreferenceId));
+    } else {
+      localStorage.removeItem("nope_active_preset_id");
+    }
+  } catch {}
   await fetchJSON("/search-state", {
     method: "PUT",
     body: JSON.stringify({
@@ -1923,10 +1931,32 @@ async function restoreSearchState() {
       : DEFAULT_SYSTEM_FILTERS;
     await setAdvancedFilters(filters);
     setPersonalFilters(saved.personal_filters || {});
-    if (saved.selected_preference_id) {
-      elements.profileSelect.value = String(saved.selected_preference_id);
+
+    let activeId = saved.selected_preference_id ? String(saved.selected_preference_id) : "";
+    if (!activeId) {
+      try {
+        const stored = localStorage.getItem("nope_active_preset_id");
+        if (stored && (state.preferences || []).some((p) => String(p.preference_id) === stored)) {
+          activeId = stored;
+        }
+      } catch {}
     }
+
+    if (activeId && (state.preferences || []).some((p) => String(p.preference_id) === activeId)) {
+      elements.profileSelect.value = activeId;
+      try {
+        localStorage.setItem("nope_active_preset_id", activeId);
+      } catch {}
+    } else if (!saved.selected_preference_id) {
+      elements.profileSelect.value = "";
+      try {
+        localStorage.removeItem("nope_active_preset_id");
+      } catch {}
+    }
+
     updateProfileButtons();
+    renderProfileRibbon();
+    renderProfileWorkshop();
     state.discoveryMode = "super";
     setWorkspaceCollapsed(Boolean(saved.filters_collapsed), false);
     return "super";
@@ -2850,16 +2880,31 @@ function createMovieCard(movie) {
     openMovieDetails(movieId);
   });
 
+  let hoverRatingsTimer = null;
   posterButton.addEventListener("mouseenter", () => {
     if (state.nopeMode && state.currentView === "discover") return;
     schedulePosterNotePreview(posterButton, movie);
+    clearTimeout(hoverRatingsTimer);
+    hoverRatingsTimer = setTimeout(() => {
+      prefetchMovieRatings(movieId);
+    }, 280);
   });
-  posterButton.addEventListener("mouseleave", hidePosterNotePreview);
+  posterButton.addEventListener("mouseleave", () => {
+    clearTimeout(hoverRatingsTimer);
+    hidePosterNotePreview();
+  });
   posterButton.addEventListener("focus", () => {
     if (state.nopeMode && state.currentView === "discover") return;
     schedulePosterNotePreview(posterButton, movie);
+    clearTimeout(hoverRatingsTimer);
+    hoverRatingsTimer = setTimeout(() => {
+      prefetchMovieRatings(movieId);
+    }, 280);
   });
-  posterButton.addEventListener("blur", hidePosterNotePreview);
+  posterButton.addEventListener("blur", () => {
+    clearTimeout(hoverRatingsTimer);
+    hidePosterNotePreview();
+  });
 
 
 
@@ -3497,6 +3542,7 @@ const CONTINUOUS_ELIGIBLE_SHELVES = [
 ];
 
 function isContinuousEligibleView() {
+  if (state.mode === "filmography" || state.currentView === "filmography") return false;
   return CONTINUOUS_ELIGIBLE_SHELVES.includes(state.currentView);
 }
 
@@ -3627,6 +3673,7 @@ function updateBackToTopVisibility() {
 }
 
 function handleContinuousScrollCheck() {
+  if (state.mode === "filmography" || state.currentView === "filmography") return;
   if (state.browseMode !== "continuous" || state.continuousLoading) return;
   const isGreyOpen = document.body.classList.contains("grey-docked-open");
   if (isGreyOpen && elements.shell) {
@@ -3704,6 +3751,7 @@ function attachContinuousSentinel() {
 }
 
 async function loadNextContinuousBatch() {
+  if (state.mode === "filmography" || state.currentView === "filmography") return;
   if (state.browseMode !== "continuous" || !isContinuousEligibleView()) return;
   if (state.continuousLoading) return;
 
@@ -3803,6 +3851,9 @@ async function loadNextContinuousBatch() {
 }
 
 function applyLibraryFilters(targetPage = 1) {
+  if (state.mode === "filmography" || state.currentView === "filmography") {
+    return;
+  }
   if (state.currentView === "discover" || state.mode === "discovery") {
     return;
   }
@@ -4105,6 +4156,9 @@ function hasActiveLibraryFilters() {
 }
 
 function reloadCurrentLibraryView() {
+  if (state.mode === "filmography" || state.currentView === "filmography") {
+    return null;
+  }
   if (state.currentView === "movie-notes") {
     return loadMovieNotes(1);
   }
@@ -4184,6 +4238,9 @@ function onLibraryFilterChange() {
 }
 
 async function searchPersonalLibrary() {
+  if (state.mode === "filmography" || state.currentView === "filmography") {
+    return;
+  }
   if (state.currentView === "discover" || state.mode === "discovery") {
     return;
   }
@@ -5059,12 +5116,28 @@ async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } =
     (spec.filters?.include_keyword_ids && spec.filters.include_keyword_ids.length)
   );
 
+  const activeProfileId = elements.profileSelect?.value ? Number(elements.profileSelect.value) : null;
+  const activePref = (state.preferences || []).find((p) => Number(p.preference_id) === activeProfileId);
+  const isDiverged = isProfileFiltersDiverged(activePref);
+
+  let kickerText = "Discover";
+  let titleText = hasActiveFilters ? "Filtered discovery" : "Movie discovery";
+  let descText = hasActiveFilters
+    ? "Movies matching your chosen filters and library settings."
+    : "Popular TMDB discoveries with your personal library rules applied.";
+
+  if (activePref) {
+    kickerText = "Active Preset";
+    titleText = isDiverged ? `${activePref.name} • Modified` : activePref.name;
+    descText = isDiverged
+      ? `Filters customized from preset “${activePref.name}”. Click Update to save changes.`
+      : `Movies matching preset “${activePref.name}” with your personal library rules applied.`;
+  }
+
   setSectionCopy({
-    kicker: "Discover",
-    title: hasActiveFilters ? "Filtered discovery" : "Movie discovery",
-    description: hasActiveFilters
-      ? "Movies matching your chosen filters and library settings."
-      : "Popular TMDB discoveries with your personal library rules applied.",
+    kicker: kickerText,
+    title: titleText,
+    description: descText,
   });
   clearNotice();
 
@@ -5126,7 +5199,13 @@ async function executeDiscoverySearch(spec, page = 1, { forceRefresh = false } =
 
   elements.pagination.classList.add("is-hidden");
   showLoadingCards();
-  elements.count.textContent = forceRefresh ? "Refreshing from TMDB…" : "Searching…";
+  if (forceRefresh) {
+    elements.count.textContent = "Refreshing from TMDB…";
+  } else if (activePref) {
+    elements.count.textContent = `Loading “${activePref.name}”…`;
+  } else {
+    elements.count.textContent = "Searching…";
+  }
 
   try {
     const response = await fetchDiscoveryBatch(spec, page);
@@ -5298,13 +5377,21 @@ function renderProfileRibbon() {
 
   const ribbonKeys = getRibbonProfiles();
   const allProfiles = getAllProfilesList();
-  const activeProfiles = ribbonKeys
+  let activeProfiles = ribbonKeys
     .map((k) => allProfiles.find((p) => Number(p.id) === Number(k)))
     .filter(Boolean);
 
   const activeProfileId = elements.profileSelect?.value ? Number(elements.profileSelect.value) : null;
   const activePreference = (state.preferences || []).find((p) => Number(p.preference_id) === activeProfileId);
   const isDiverged = isProfileFiltersDiverged(activePreference);
+
+  // Guarantee that if there is an active preset, it always appears in the ribbon even if unpinned
+  if (activePreference && !activeProfiles.some((p) => Number(p.id) === activeProfileId)) {
+    const activeProfObj = allProfiles.find((p) => Number(p.id) === activeProfileId);
+    if (activeProfObj) {
+      activeProfiles = [activeProfObj, ...activeProfiles];
+    }
+  }
 
   ribbon.replaceChildren();
   activeProfiles.forEach((prof) => {
@@ -5346,12 +5433,18 @@ function renderProfileRibbon() {
       const isAlreadyActive = Number(elements.profileSelect.value) === Number(prof.id);
       if (isAlreadyActive) {
         elements.profileSelect.value = "";
+        try {
+          localStorage.removeItem("nope_active_preset_id");
+        } catch {}
         updateProfileButtons();
         resetAdvancedFilters({ notify: false });
         clearDiscoveryCache();
         runDiscoverySearch();
       } else {
         elements.profileSelect.value = String(prof.id);
+        try {
+          localStorage.setItem("nope_active_preset_id", String(prof.id));
+        } catch {}
         applySelectedProfile();
         clearDiscoveryCache();
         runDiscoverySearch();
@@ -5447,10 +5540,24 @@ function renderProfileWorkshop() {
       if (e.target.closest(".chip-pin-btn") || e.target.closest(".chip-del-btn")) return;
       const isCurrent = Number(elements.profileSelect?.value) === Number(prof.id);
       if (elements.profileSelect) {
-        elements.profileSelect.value = isCurrent ? "" : String(prof.id);
-        await applySelectedProfile();
+        if (isCurrent) {
+          elements.profileSelect.value = "";
+          try {
+            localStorage.removeItem("nope_active_preset_id");
+          } catch {}
+          resetAdvancedFilters({ notify: false });
+        } else {
+          elements.profileSelect.value = String(prof.id);
+          try {
+            localStorage.setItem("nope_active_preset_id", String(prof.id));
+          } catch {}
+          await applySelectedProfile();
+        }
         renderProfileWorkshop();
+        renderProfileRibbon();
         syncRibbonActiveState();
+        clearDiscoveryCache();
+        runDiscoverySearch();
       }
     });
 
@@ -5462,6 +5569,15 @@ function renderProfileWorkshop() {
 async function loadProfiles(selectedId = null) {
   try {
     state.preferences = await fetchJSON("/search-preferences");
+    let targetId = selectedId !== null ? String(selectedId) : (elements.profileSelect?.value || "");
+    if (!targetId) {
+      try {
+        const stored = localStorage.getItem("nope_active_preset_id");
+        if (stored && (state.preferences || []).some((p) => String(p.preference_id) === stored)) {
+          targetId = stored;
+        }
+      } catch {}
+    }
     elements.profileSelect.replaceChildren();
     const emptyOption = document.createElement("option");
     emptyOption.value = "";
@@ -5475,8 +5591,10 @@ async function loadProfiles(selectedId = null) {
       elements.profileSelect.append(option);
     });
 
-    if (selectedId !== null) {
-      elements.profileSelect.value = String(selectedId);
+    if (targetId && state.preferences.some((p) => String(p.preference_id) === targetId)) {
+      elements.profileSelect.value = targetId;
+    } else {
+      elements.profileSelect.value = "";
     }
     updateProfileButtons();
     renderProfileRibbon();
@@ -5507,6 +5625,9 @@ function resetAdvancedFilters({ notify = true } = {}) {
   document.querySelector("#run-advanced-search")?.classList.remove("is-dirty");
   elements.advancedForm.reset();
   elements.profileSelect.value = "";
+  try {
+    localStorage.removeItem("nope_active_preset_id");
+  } catch {}
   state.profilePassthroughFilters = {};
   Object.keys(state.selectedEntities).forEach((key) => {
     state.selectedEntities[key] = [];
@@ -5905,6 +6026,7 @@ function hideFilmographyToolbar() {
   if (elements.returnToOrigin) {
     elements.returnToOrigin.classList.add("is-hidden");
   }
+  removeContinuousSentinel();
   state.activeFilmographyPerson = null;
   state.activeFilmographyData = null;
   updateGreyContext();
@@ -5926,7 +6048,9 @@ async function loadPersonFilmography(person, entityKey = "directors", department
 
   closeMovieDetails();
 
+  removeContinuousSentinel();
   state.mode = "filmography";
+  state.currentView = "filmography";
 
   // Sidebar must remain visible! Match the origin view pane:
   const originView = state.savedSearchSnapshot?.currentView || state.currentView || "discover";
@@ -6153,12 +6277,126 @@ function formatVoteCount(count) {
   return `${num} ${num === 1 ? "vote" : "votes"}`;
 }
 
+function formatCompactNumber(count) {
+  const num = Number(count);
+  if (!num || isNaN(num) || num <= 0) return "";
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1).replace(/\.0$/, "")}M`;
+  }
+  if (num >= 1000) {
+    return `${(num / 1000).toFixed(num >= 10000 ? 0 : 1).replace(/\.0$/, "")}K`;
+  }
+  return String(num);
+}
+
+const prefetchedRatingsIds = new Set();
+function prefetchMovieRatings(tmdbId) {
+  if (!tmdbId) return;
+  const numId = Number(tmdbId);
+  if (isNaN(numId) || numId <= 0 || prefetchedRatingsIds.has(numId)) return;
+  prefetchedRatingsIds.add(numId);
+  fetchJSON(`/movies/${numId}/ratings`).catch(() => {
+    prefetchedRatingsIds.delete(numId);
+  });
+}
+
+function renderReceptionBarData(r) {
+  const container = elements.movieReceptionBar;
+  if (!container) return;
+  container.replaceChildren();
+
+  if (!r) {
+    container.classList.add("is-hidden");
+    return;
+  }
+
+  const items = [];
+
+  // 1. Rotten Tomatoes: 🍅 93% • 🍿 94%
+  const hasTomatoes = r.tomatoes !== null && r.tomatoes !== undefined;
+  const hasPopcorn = r.popcorn !== null && r.popcorn !== undefined;
+  if (hasTomatoes || hasPopcorn) {
+    const rtItem = document.createElement("span");
+    rtItem.className = "reception-item";
+    let rtContent = "";
+    if (hasTomatoes) {
+      rtContent += `<span class="reception-score">🍅 ${r.tomatoes}%</span>`;
+    }
+    if (hasTomatoes && hasPopcorn) {
+      rtContent += `<span class="reception-dot" aria-hidden="true">•</span>`;
+    }
+    if (hasPopcorn) {
+      rtContent += `<span class="reception-score">🍿 ${r.popcorn}%</span>`;
+    }
+    rtItem.innerHTML = rtContent;
+    items.push(rtItem);
+  }
+
+  // 2. IMDb: IMDb 8.5 ★ 1.3M
+  if (r.imdb !== null && r.imdb !== undefined) {
+    const imdbItem = document.createElement("span");
+    imdbItem.className = "reception-item";
+    const votesStr = r.imdb_votes ? ` <span class="reception-votes">${formatCompactNumber(r.imdb_votes)}</span>` : "";
+    imdbItem.innerHTML = `<span class="reception-label">IMDb</span> <span class="reception-score">${r.imdb.toFixed(1)}</span> <span class="reception-star" aria-hidden="true">★</span>${votesStr}`;
+    items.push(imdbItem);
+  }
+
+  // 3. Metacritic: Meta 87
+  if (r.metacritic !== null && r.metacritic !== undefined) {
+    const metaItem = document.createElement("span");
+    metaItem.className = "reception-item";
+    metaItem.innerHTML = `<span class="reception-label">Meta</span> <span class="reception-score">${r.metacritic}</span>`;
+    items.push(metaItem);
+  }
+
+  if (items.length === 0) {
+    container.classList.add("is-hidden");
+    return;
+  }
+
+  items.forEach((item, index) => {
+    if (index > 0) {
+      const divider = document.createElement("span");
+      divider.className = "reception-divider";
+      divider.setAttribute("aria-hidden", "true");
+      divider.textContent = "|";
+      container.append(divider);
+    }
+    container.append(item);
+  });
+
+  container.classList.remove("is-hidden");
+}
+
+async function loadAndRenderReceptionBar(tmdbId, initialRatings = null, forceRefresh = false) {
+  if (initialRatings) {
+    renderReceptionBarData(initialRatings);
+    return;
+  }
+
+  const container = elements.movieReceptionBar;
+  if (!container) return;
+
+  container.replaceChildren();
+  container.classList.add("is-hidden");
+
+  try {
+    const url = `/movies/${tmdbId}/ratings${forceRefresh ? "?force_refresh=true" : ""}`;
+    const data = await fetchJSON(url);
+    if (!state.selectedMovie || Number(state.selectedMovie.tmdb_id) !== Number(tmdbId)) return;
+    renderReceptionBarData(data?.ratings);
+  } catch (_) {
+    container.classList.add("is-hidden");
+  }
+}
+
 function renderMovieDetails(movie) {
   state.selectedMovie = movie;
   updateGreyContext();
   elements.dialogPoster.replaceChildren(createPoster(movie));
   updateDialogKicker(movie);
   updateDetailPosterStatusBadge(movie);
+  loadAndRenderReceptionBar(movie.tmdb_id);
   elements.dialogTitle.textContent =
     movie.title || movie.original_title || "Untitled movie";
   elements.dialogTitle.style.color = "#DEC68B";
@@ -6630,7 +6868,7 @@ function updateDetailNavStepper(currentMovieId) {
   elements.detailPrevBtn.disabled = idx <= 0;
 
   let hasMoreToFetch = false;
-  if (state.browseMode === "continuous") {
+  if (state.browseMode === "continuous" && state.mode !== "filmography" && state.currentView !== "filmography") {
     if (state.currentView === "discover") {
       hasMoreToFetch = Number(state.searchPage || 1) < Number(state.searchTotalPages || 1);
     } else {
@@ -6641,6 +6879,14 @@ function updateDetailNavStepper(currentMovieId) {
   }
 
   elements.detailNextBtn.disabled = idx >= queue.length - 1 && !hasMoreToFetch;
+
+  // Pre-fetch ratings for adjacent movies in stepper queue so next/prev navigation is instant
+  if (idx > 0) {
+    prefetchMovieRatings(getMovieNavId(queue[idx - 1]));
+  }
+  if (idx < queue.length - 1) {
+    prefetchMovieRatings(getMovieNavId(queue[idx + 1]));
+  }
 }
 
 function navigatePrevMovie() {
@@ -6682,6 +6928,9 @@ async function navigateNextMovie() {
   }
 
   if (state.browseMode === "continuous") {
+    if (state.mode === "filmography" || state.currentView === "filmography") {
+      return;
+    }
     if (state.currentView === "discover") {
       if (Number(state.searchPage || 1) < Number(state.searchTotalPages || 1)) {
         await loadNextContinuousBatch();
@@ -9409,16 +9658,23 @@ async function syncCurrentMovieFromTMDB() {
 
   syncBtn?.classList.add("is-loading");
   try {
-    const freshMovie = await fetchJSON(`/movies/${state.selectedMovie.tmdb_id}?force_refresh=true`);
+    const tmdbId = state.selectedMovie.tmdb_id;
+    const [freshMovie, freshRatings] = await Promise.all([
+      fetchJSON(`/movies/${tmdbId}?force_refresh=true`),
+      fetchJSON(`/movies/${tmdbId}/ratings?force_refresh=true`).catch(() => null),
+    ]);
     if (freshMovie && (freshMovie.tmdb_id || freshMovie.id)) {
       state.selectedMovie = freshMovie;
       renderMovieDetails(freshMovie);
+      if (freshRatings?.ratings) {
+        renderReceptionBarData(freshRatings.ratings);
+      }
       renderDetailTrail();
       loadRelatedMovies(freshMovie.tmdb_id);
-      showNotice(`Synced "${freshMovie.title || "movie"}" live from TMDB`);
+      showNotice(`Synced "${freshMovie.title || "movie"}" live from TMDB & MDBList`);
     }
   } catch (err) {
-    showNotice(err.message || "Failed to sync movie from TMDB");
+    showNotice(err.message || "Failed to sync movie from TMDB & MDBList");
   } finally {
     setTimeout(() => {
       syncBtn?.classList.remove("is-loading");
@@ -11337,31 +11593,30 @@ async function initializeApp() {
   populateJournalYears();
   resetEntryFiltersToCurrent();
 
+  async function restoreDiscoveryAndProfiles() {
+    await loadProfiles();
+    return await restoreSearchState();
+  }
+
   if (openMovieIdFromHash) {
     // Non-blocking background preparation of origin view so return navigation is ready
     if (validLibraryViews.includes(initialView)) {
       Promise.all([
-        loadProfiles().catch(() => {}),
-        restoreSearchState().catch(() => {}),
+        restoreDiscoveryAndProfiles().catch(() => {}),
         loadShelf(initialView).catch(() => {}),
       ]);
     } else {
-      Promise.all([
-        loadProfiles().catch(() => {}),
-        restoreSearchState().catch(() => {}),
-      ]);
+      restoreDiscoveryAndProfiles().catch(() => {});
     }
   } else if (validLibraryViews.includes(initialView)) {
     await Promise.all([
-      loadProfiles().catch(() => {}),
-      restoreSearchState().catch(() => {}),
+      restoreDiscoveryAndProfiles().catch(() => {}),
       loadShelf(initialView),
     ]);
   } else if (validNotesViews.includes(initialView)) {
     resetEntryFiltersToCurrent();
     await Promise.all([
-      loadProfiles().catch(() => {}),
-      restoreSearchState().catch(() => {}),
+      restoreDiscoveryAndProfiles().catch(() => {}),
       loadShelf("entries"),
     ]);
     if (initialView === "entry-reader" && openEntryIdFromHash) {
@@ -11380,13 +11635,11 @@ async function initializeApp() {
     }
   } else if (validAuxViews.includes(initialView)) {
     await Promise.all([
-      loadProfiles().catch(() => {}),
-      restoreSearchState().catch(() => {}),
+      restoreDiscoveryAndProfiles().catch(() => {}),
       loadStorage(),
     ]);
   } else {
-    await loadProfiles();
-    const restoredMode = await restoreSearchState();
+    const restoredMode = await restoreDiscoveryAndProfiles();
     if (elements.discoverWorkspace) {
       elements.discoverWorkspace.classList.remove("is-hidden");
     }

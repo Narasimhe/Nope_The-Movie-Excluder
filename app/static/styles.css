@@ -9721,7 +9721,7 @@ footer {
   flex-wrap: wrap !important;
   align-items: center !important;
   gap: 0 !important;
-  margin: 0 0 10px 0 !important;
+  margin: 0 !important;
 }
 
 .movie-detail-page .dialog-genres .tag {
@@ -9785,6 +9785,64 @@ footer {
 
 .movie-detail-page .dialog-meta .meta-vote-count {
   color: #DEC68B !important;
+}
+
+/* Multi-Platform Reception Bar (MDBList: RT, IMDb, Letterboxd, Metacritic) */
+.movie-reception-bar {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  margin: 0 0 14px 0 !important;
+  font-size: 13.5px !important;
+  line-height: 1.4 !important;
+  color: #E5E7EB !important;
+  letter-spacing: 0.01em !important;
+}
+
+.movie-reception-bar.is-hidden {
+  display: none !important;
+}
+
+.reception-item {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  white-space: nowrap !important;
+}
+
+.reception-divider {
+  color: rgba(255, 255, 255, 0.2) !important;
+  margin: 0 12px !important;
+  font-weight: 300 !important;
+  user-select: none !important;
+}
+
+.reception-dot {
+  color: rgba(255, 255, 255, 0.35) !important;
+  margin: 0 6px !important;
+  user-select: none !important;
+}
+
+.reception-star {
+  color: #DEC68B !important;
+  font-size: 12px !important;
+}
+
+.reception-votes {
+  color: #D1D5DB !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  margin-left: 2px !important;
+}
+
+.reception-score {
+  font-weight: 500 !important;
+  color: #F3F4F6 !important;
+}
+
+.reception-label {
+  font-weight: 500 !important;
+  color: #D1D5DB !important;
 }
 
 /* Overview / Plot - Full column width matching section elements */

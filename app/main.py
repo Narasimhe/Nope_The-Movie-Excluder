@@ -26,6 +26,7 @@ from app.super_advanced_search_service import (
 )
 from app.storage_repository import StorageRepository
 from app.grey_service import GreyService
+from app.mdblist_client import MDBListClient
 
 
 @asynccontextmanager
@@ -72,6 +73,7 @@ search_state_repository = SearchStateRepository()
 general_entry_repository = GeneralEntryRepository()
 storage_repository = StorageRepository()
 grey_service = GreyService()
+mdblist_client = MDBListClient()
 tmdb_lookup_client = advanced_search_service.tmdb_client
 
 
@@ -818,6 +820,16 @@ def get_related_movies(
 )
 def get_movie_details(tmdb_id: int, force_refresh: bool = False):
     return movie_service.get_movie(tmdb_id)
+
+@app.get(
+    "/movies/{tmdb_id}/ratings",
+    tags=["movies"],
+    summary="Get verified multi-platform ratings",
+)
+def get_movie_ratings(tmdb_id: int, force_refresh: bool = False):
+    ratings = mdblist_client.get_ratings(tmdb_id, force_refresh=force_refresh)
+    return {"tmdb_id": tmdb_id, "ratings": ratings}
+
 
 
 @app.put(

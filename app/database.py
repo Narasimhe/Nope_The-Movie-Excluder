@@ -333,6 +333,18 @@ def _create_search_state_table(connection: sqlite3.Connection) -> None:
     )
 
 
+def _create_movie_ratings_table(connection: sqlite3.Connection) -> None:
+    connection.execute(
+        """
+        CREATE TABLE IF NOT EXISTS movie_ratings (
+            tmdb_id INTEGER PRIMARY KEY,
+            ratings_json TEXT NOT NULL,
+            fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+
+
 def _create_general_entries_table(connection: sqlite3.Connection) -> None:
     connection.executescript(
         """
@@ -560,6 +572,7 @@ def initialize_database() -> None:
         _create_movie_metadata_tables(connection)
         _create_search_preferences_table(connection)
         _create_search_state_table(connection)
+        _create_movie_ratings_table(connection)
         _create_general_entries_table(connection)
         connection.executescript(
             """

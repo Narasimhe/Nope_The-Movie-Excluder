@@ -4,17 +4,19 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
-- [ ] **Live Multi-Platform Reception Bar on Movie Detail Page (MDBList API)**
-  * **Goal**: Display live verified critical scores directly inside the single movie detail cockpit, positioned below the genre tags and above the overview synopsis with clean vertical spacing.
-  * **Locked Layout Specification**:
-    * `🍅 87% • 🍿 84%   |   IMDb 8.7 ★ (1.9M)   |   [Letterboxd 3-Lens Icon] 4.4 ★   |   MC 73`
-    * **Icons & Accents**: Tomato (`🍅`), Popcorn (`🍿`), `IMDb` wordmark, Letterboxd 3-circle lens emblem SVG, and Metacritic `MC` badge in brand yellow `#DEC68B`.
-    * **Sub-Metric Styling**: Scores in primary typography matching TMDB rating size; secondary vote counts (e.g. `1.9M`) in muted typography matching TMDB vote count.
-    * **Separators**: Clean vertical pipe delimiters (`|`) between platforms and dot delimiters (`•`) between RT critic and audience scores.
-  * **Data Engine & Caching (MDBList API)**:
-    * Query MDBList API (`/movie/{tmdb_id}`) for Letterboxd, IMDb, Rotten Tomatoes (critics + audience), and Metacritic in a single request.
-    * Cache payloads locally in SQLite table `movie_ratings` so repeat page opens consume 0 API calls.
-    * Gracefully hide absent platforms when older or foreign titles lack scores on specific services.
+- [ ] **Native Browser Back & Forward Navigation System (`popstate` / `pushState`)**
+  * **Goal**: Enable standard browser Back and Forward buttons, mouse thumb buttons, and keyboard shortcuts (`Alt + ←` / `Alt + →`) to navigate naturally across the application rather than exiting or doing nothing.
+  * **Architectural Blueprint**:
+    * **Intentional History Pushing (`history.pushState`)**: Transition from universal `history.replaceState` to selective `history.pushState` for primary navigation destinations:
+      * Opening a single movie detail page (`#movie:{id}`).
+      * Chaining related movies or actor/director exploration trails (*Movie A → Movie B → Movie C*).
+      * Switching master views (Discover ↔ Library shelves ↔ Notes editor).
+      * Opening the Entry Reader modal (`#entry-reader:{id}`).
+    * **In-Place Mutation Guard (`history.replaceState`)**: Retain `replaceState` for intra-view filter adjustments (genres, sliders, sort order, query typing) so users never have to click Back multiple times just to reverse filter adjustments.
+    * **Native `popstate` Event Pipeline**: Wire a dedicated `window.addEventListener("popstate")` handler to:
+      * Close movie details and restore the origin grid's exact scroll position seamlessly.
+      * Step backward cleanly through chained movie exploration trails (*C → B → A → Grid*).
+      * Keep URL hashes, UI master tabs, and view states in sync across native forward/back navigation.
 
 - [ ] **Studio Catalog & Filmography Mode (Direct 1-Click Catalog)**
   * **Goal**: Enable direct 1-click exploration of a studio / production company's complete release catalog (e.g. A24, Pixar, Studio Ghibli, Blumhouse, Warner Bros.), matching the behavior of Actor and Director filmography mode.
@@ -42,6 +44,20 @@
 ---
 
 ## ✅ Completed Tasks
+- [x] **Live Multi-Platform Reception Bar on Movie Detail Page (MDBList API)**
+  * **Layout & Typography**: Implemented the multi-platform reception strip with clean vertical cadence (14px below genre tags, 14px above synopsis) formatted as `🍅 93% • 🍿 94%  |  IMDb 8.5 ★ 1.3M  |  Meta 87` with gold star accents and compact vote counts (`1.3M`). Letterboxd was cleanly omitted to eliminate audience score redundancy.
+  * **Client & Caching Engine (`app/mdblist_client.py`, `app/database.py`)**: Built `MDBListClient` to query MDBList API (`https://mdblist.com/api/?apikey={key}&tm={tmdb_id}`) and persist responses in SQLite `movie_ratings` table, ensuring repeat visits use 0 API quota.
+  * **API Endpoint (`app/main.py`)**: Added `GET /movies/{tmdb_id}/ratings` route supporting on-demand `force_refresh=True` with automated test suite in `tests/test_mdblist_ratings.py`.
+  * **Unified Sync & Pre-Fetch Pipeline (`app/static/app.js`, `app/static/styles.css`, `app/web/index.html`)**: Details page loads instantly while reception data streams in without layout shift. Unified the header `Sync` button to refresh both TMDB metadata and MDBList scores on demand. Added stepper queue pre-fetching (next/prev adjacent movies in cockpit) and card hover-intent pre-fetching (280ms hover), eliminating loading delays while preserving API quota.
+- [x] **Active Search Preset Persistence & Startup Preset Indicator (`app/static/app.js`)**
+  * **Startup Race Condition Fix**: Eliminated the concurrency bug where `loadProfiles()` and `restoreSearchState()` ran simultaneously in `Promise.all` across startup branches (`validLibraryViews`, `validNotesViews`, `validAuxViews`, `openMovieIdFromHash`). `loadProfiles()` was resetting `<select id="profile-select">` to empty because `selectedId` was null, overwriting the preset ID restored from SQLite `/search-state`. Implemented sequential restoration via `restoreDiscoveryAndProfiles()` and added localStorage redundancy (`nope_active_preset_id`).
+  * **Preset Preservation in `loadProfiles`**: Ensured `loadProfiles` retains any currently selected or stored preset ID rather than clearing it upon rebuilding options.
+  * **Top Ribbon & Workshop Active State Sync**: Ensured the active preset chip is always included in the ribbon (even when unpinned) and both `#profile-ribbon` and `#ribbon-profiles-cloud` re-render and display active states immediately upon restoration.
+  * **Loading Indicator & Canvas Header Copy**: Updated discovery copy and count indicator during TMDB searches to dynamically show what preset is active and loading (e.g., `Loading “Sci-Fi”…` and `Active Preset` kicker) instead of generic "Searching…" / "Filtered discovery".
+- [x] **Filmography Page Infinite Scroll & Library Movie Isolation (`app/static/app.js`)**
+  * **Root Cause**: When opening an actor or director filmography from a library view in continuous browsing mode, `state.currentView` remained set to the prior library shelf (`watched`, `favorites`, etc.). Scrolling near the bottom with Grey open (`handleContinuousScrollCheck`) or advancing movie detail steppers invoked `loadNextContinuousBatch()`, which erroneously treated the filmography as the active library shelf and appended batches of 30 library movies into the filmography grid alongside the infinite scroll sentinel.
+  * **View Mode Isolation**: Set `state.currentView = "filmography"` and called `removeContinuousSentinel()` immediately upon entering filmography, while disconnecting the sentinel when exiting via `hideFilmographyToolbar()`.
+  * **Continuous & Filter Guards**: Guarded `isContinuousEligibleView()`, `handleContinuousScrollCheck()`, `loadNextContinuousBatch()`, `updateDetailNavStepper()`, `navigateNextMovie()`, `applyLibraryFilters()`, `searchPersonalLibrary()`, and `reloadCurrentLibraryView()` with `state.mode === "filmography" || state.currentView === "filmography"` checks to guarantee library movies can never be loaded or appended into a career filmography.
 - [x] **Emotional Verdict Tiers for Contextual Reaction GIFs (`app/grey/reactions.json`, `app/grey/service.py`, `app/grey/prompts/grey_core.md`)**
   * **Structured Schema Architecture**: Converted `reactions.json` into an explicit list of structured objects pairing `filename`, `verdict_tier`, and `trigger_context` (`transcendent`, `masterclass_acting`, `solid`, `popcorn_entertainment`, `mixed`, `boredom`, `repulsed`, `artificial`, `suspicious`, `disaster`, `ominous_warning`, `cringe_embarrassment`, `cozy`, `genre_mob`). Enriched trigger contexts with cultural cinema benchmarks (e.g. Mickey Rourke in *The Wrestler*, Daniel Day-Lewis, Scorsese, Kubrick).
   * **Two-Stage Decision Firewall**: Mandated a two-stage decision loop in `grey_core.md`. The model must first determine its emotional craft verdict before accessing any reaction media, strictly locking it out of incompatible buckets (e.g. high-praise critiques can never trigger `[repulsed]` or `[artificial]`). Made tier selection open-ended and dynamic so users can invent arbitrary new sentiment tiers (`visual_treat`, `mind_bending`, `tearjerker`, etc.) directly in `reactions.json`.
