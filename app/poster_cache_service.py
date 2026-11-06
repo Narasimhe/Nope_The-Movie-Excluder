@@ -6,8 +6,7 @@ from typing import Any
 
 import requests
 
-from app.config import DEFAULT_REQUEST_TIMEOUT, TMDB_IMAGE_BASE_URL
-from app.database import get_connection
+from app.config import TMDB_IMAGE_BASE_URL
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +83,8 @@ class PosterCacheService:
         return None
 
     def cache_posters_async(self, movies: list[dict[str, Any]]) -> None:
-        """Background thread caching for non-excluded movies."""
+        """Background thread caching strictly for user library shelves and favorites."""
+        library_statuses = {"watched", "watch_later", "rewatch", "new_discovery"}
         for m in movies:
             p = m.get("poster_path")
             if not p:
@@ -95,8 +95,15 @@ class PosterCacheService:
                 if isinstance(u_data, dict)
                 else m.get("status")
             )
-            # Storage Optimization invariant: Never cache posters for NOPE movies
-            if status == "excluded":
+            is_fav = bool(
+                u_data.get("is_favorite")
+                if isinstance(u_data, dict)
+                else m.get("is_favorite")
+            )
+            # Storage Optimization invariant:
+            # Only cache posters for movies actively tracked in user library shelves or favorites.
+            # Never cache posters for excluded (NOPE) or untracked discovery titles.
+            if status not in library_statuses and not is_fav:
                 continue
             self.executor.submit(self.cache_poster, p, False)
 
@@ -111,3 +118,64 @@ class PosterCacheService:
                 target.unlink()
             except Exception as e:
                 logger.debug(f"Could not purge excluded poster {filename}: {e}")
+
+    def reclaim_untracked_posters(self, retained_filenames: set[str]) -> dict[str, Any]:
+        """
+        Reclaims disk space by removing cached poster files that do NOT belong
+        to user's active library shelves or custom entries.
+        """
+        reclaimed_bytes = 0
+        deleted_count = 0
+        kept_count = 0
+        errors = 0
+
+        if not self.cache_dir.exists():
+            return {
+                "deleted_count": 0,
+                "reclaimed_bytes": 0,
+                "reclaimed_mb": 0.0,
+                "kept_count": 0,
+                "errors": 0,
+            }
+
+        for file_path in self.cache_dir.iterdir():
+            if not file_path.is_file():
+                continue
+            filename = file_path.name
+            if filename in retained_filenames:
+                kept_count += 1
+                continue
+            try:
+                size = file_path.stat().st_size
+                file_path.unlink()
+                reclaimed_bytes += size
+                deleted_count += 1
+            except Exception as e:
+                logger.warning(f"Could not delete untracked poster {filename}: {e}")
+                errors += 1
+
+        return {
+            "deleted_count": deleted_count,
+            "reclaimed_bytes": reclaimed_bytes,
+            "reclaimed_mb": round(reclaimed_bytes / (1024 * 1024), 2),
+            "kept_count": kept_count,
+            "errors": errors,
+        }
+
+    def get_cache_stats(self) -> dict[str, Any]:
+        """Returns statistics for local poster cache."""
+        total_files = 0
+        total_bytes = 0
+        if self.cache_dir.exists():
+            for p in self.cache_dir.iterdir():
+                if p.is_file():
+                    total_files += 1
+                    try:
+                        total_bytes += p.stat().st_size
+                    except OSError:
+                        pass
+        return {
+            "total_files": total_files,
+            "total_bytes": total_bytes,
+            "total_mb": round(total_bytes / (1024 * 1024), 2),
+        }

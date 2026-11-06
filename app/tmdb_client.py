@@ -1,13 +1,12 @@
 import json
 import logging
 import time
-from typing import Any
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from app.advanced_filters import AdvancedMovieFilters
-from app.config import DEFAULT_REQUEST_TIMEOUT, TMDB_BASE_URL, TMDB_READ_ACCESS_TOKEN
+from app.config import TMDB_BASE_URL, TMDB_READ_ACCESS_TOKEN
 from app.database import get_connection
 
 logger = logging.getLogger(__name__)
@@ -379,6 +378,28 @@ class TMDBClient:
         response = self.session.get(
             f"{BASE_URL}/company/{company_id}",
             headers=self.headers,
+            timeout=10,
+        )
+        response.raise_for_status()
+        return response.json()
+
+    def get_company_movies(
+        self,
+        company_id: int,
+        page: int = 1,
+        sort_by: str = "primary_release_date.desc",
+    ) -> dict:
+        self._validate_positive_id(company_id, "TMDB company ID")
+        self._validate_page(page)
+        response = self.session.get(
+            f"{BASE_URL}/discover/movie",
+            headers=self.headers,
+            params={
+                "with_companies": company_id,
+                "sort_by": sort_by,
+                "page": page,
+                "include_adult": False,
+            },
             timeout=10,
         )
         response.raise_for_status()

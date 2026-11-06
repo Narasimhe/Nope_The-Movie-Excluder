@@ -358,6 +358,7 @@ const elements = {
   storagePage: document.querySelector("#storage-page"),
   storageSummary: document.querySelector("#storage-summary"),
   cleanupCache: document.querySelector("#cleanup-cache"),
+  reclaimPostersBtn: document.querySelector("#reclaim-posters-btn"),
   purgeDeletedEntries: document.querySelector("#purge-deleted-entries"),
   storageFeedback: document.querySelector("#storage-feedback"),
   footerViews: [...document.querySelectorAll("[data-footer-view]")],
@@ -482,6 +483,9 @@ const state = {
   searchOriginMovie: null,
   savedSearchSnapshot: null,
   activeFilmographyPerson: null,
+  activeFilmographyCompany: null,
+  activeCompanyCatalogData: null,
+  isPopStateNav: false,
   readerEditing: false,
   readerTags: [],
   allKnownTags: [],
@@ -543,6 +547,23 @@ function updateShelfRibbonActiveState() {
   });
 }
 
+function navigateToHash(targetHash, { push = false, replace = false } = {}) {
+  if (!targetHash) return;
+  const hash = targetHash.startsWith("#") ? targetHash : `#${targetHash}`;
+  if (state.isPopStateNav) return;
+  if (window.location.hash === hash) return;
+
+  if (push && history.pushState) {
+    history.pushState(null, "", hash);
+  } else if (replace && history.replaceState) {
+    history.replaceState(null, "", hash);
+  } else if (history.replaceState) {
+    history.replaceState(null, "", hash);
+  } else {
+    window.location.hash = hash;
+  }
+}
+
 function setActiveView(view) {
   state.currentView = view;
   if (view) {
@@ -552,9 +573,10 @@ function setActiveView(view) {
   if (view && normalLibraryShelves.includes(view)) {
     state.lastNormalShelf = view;
   }
-  if (view && elements.filmographyToolbar) {
+  if (view && elements.filmographyToolbar && view !== "filmography") {
     elements.filmographyToolbar.classList.add("is-hidden");
     state.activeFilmographyPerson = null;
+    state.activeFilmographyCompany = null;
   }
   updateShelfRibbonActiveState();
 
@@ -584,6 +606,12 @@ function setActiveView(view) {
     }
     if (elements.discoverWorkspace) {
       elements.discoverWorkspace.classList.toggle("is-hidden", !isDiscover);
+    }
+    if (isDiscover) {
+      if (elements.advancedControls) elements.advancedControls.classList.remove("is-hidden");
+      if (elements.workspaceControls) elements.workspaceControls.classList.remove("is-hidden");
+      if (elements.personalFilters) elements.personalFilters.classList.remove("is-hidden");
+      if (elements.simpleControls) elements.simpleControls.classList.add("is-hidden");
     }
   }
 
@@ -629,8 +657,8 @@ function setActiveView(view) {
     elements.nopeModeToggle?.classList.remove("is-hidden");
   }
 
-  if (view && history.replaceState) {
-    history.replaceState(null, "", `#${view}`);
+  if (view && !state.isPopStateNav && view !== "filmography") {
+    navigateToHash(`#${view}`, { replace: true });
   }
 
   if (typeof updateLibrarySearchPlaceholder === "function") {
@@ -911,10 +939,6 @@ function clearNotice() {
     elements.notice.classList.remove("is-dismissing");
     elements.notice.textContent = "";
   }, 180);
-}
-
-function updatePickerSummary() {
-  // Chips show their active state directly
 }
 
 function buildMultiPicker(container, config) {
@@ -1541,6 +1565,13 @@ function renderSelectedEntities(key) {
         event.stopPropagation();
         loadPersonFilmography(entity, key.includes("Actor") ? "actors" : "directors");
       });
+    } else if (key === "companies") {
+      name.classList.add("is-filmography-link");
+      name.title = `View complete studio catalog for ${entity.name}`;
+      name.addEventListener("click", (event) => {
+        event.stopPropagation();
+        loadCompanyCatalog(entity);
+      });
     }
     remove.type = "button";
     remove.textContent = "×";
@@ -1754,26 +1785,36 @@ function initializeEntityPickers() {
   });
 }
 
+const entityDetailCache = new Map();
+
+async function fetchCachedEntityDetail(path, id) {
+  const cacheKey = `${path}${id}`;
+  if (entityDetailCache.has(cacheKey)) {
+    return entityDetailCache.get(cacheKey);
+  }
+  try {
+    const result = await fetchJSON(`${path}${id}`);
+    entityDetailCache.set(cacheKey, result);
+    return result;
+  } catch {
+    const fallback = { id: Number(id), name: `TMDB #${id}` };
+    entityDetailCache.set(cacheKey, fallback);
+    return fallback;
+  }
+}
+
 async function hydrateEntitySelections(filters) {
   const incIds = [...new Set((filters.include_keyword_ids || []).map(Number))];
   const excIds = [...new Set((filters.exclude_keyword_ids || []).map(Number))];
 
   const incKeywords = await Promise.all(incIds.map(async (id) => {
-    try {
-      const result = await fetchJSON(`${ENTITY_CONFIG.keywords.detailPath}${id}`);
-      return { id: Number(id), name: result.name || `TMDB #${id}`, mode: "include" };
-    } catch {
-      return { id: Number(id), name: `TMDB #${id}`, mode: "include" };
-    }
+    const result = await fetchCachedEntityDetail(ENTITY_CONFIG.keywords.detailPath, id);
+    return { id: Number(id), name: result.name || `TMDB #${id}`, mode: "include" };
   }));
 
   const excKeywords = await Promise.all(excIds.map(async (id) => {
-    try {
-      const result = await fetchJSON(`${ENTITY_CONFIG.keywords.detailPath}${id}`);
-      return { id: Number(id), name: result.name || `TMDB #${id}`, mode: "exclude" };
-    } catch {
-      return { id: Number(id), name: `TMDB #${id}`, mode: "exclude" };
-    }
+    const result = await fetchCachedEntityDetail(ENTITY_CONFIG.keywords.detailPath, id);
+    return { id: Number(id), name: result.name || `TMDB #${id}`, mode: "exclude" };
   }));
 
   const allKeywords = [...incKeywords, ...excKeywords];
@@ -1801,12 +1842,8 @@ async function hydrateEntitySelections(filters) {
     const config = ENTITY_CONFIG[key];
     if (!config) return;
     state.selectedEntities[key] = await Promise.all(ids.map(async (id) => {
-      try {
-        const result = await fetchJSON(`${config.detailPath}${id}`);
-        return { id: Number(id), name: result.name || `TMDB #${id}` };
-      } catch {
-        return { id: Number(id), name: `TMDB #${id}` };
-      }
+      const result = await fetchCachedEntityDetail(config.detailPath, id);
+      return { id: Number(id), name: result.name || `TMDB #${id}` };
     }));
     renderSelectedEntities(key);
   }));
@@ -1879,26 +1916,37 @@ function collectPersonalFilters() {
 
 function setWorkspaceCollapsed(collapsed, persist = true) {
   state.filtersCollapsed = Boolean(collapsed);
-  elements.workspaceControls.classList.toggle("is-hidden", state.filtersCollapsed);
-  elements.workspaceCollapse.setAttribute(
-    "aria-expanded",
-    String(!state.filtersCollapsed),
-  );
-  elements.workspaceCollapseLabel.textContent = state.filtersCollapsed
-    ? "Show filters"
-    : "Hide filters";
-  elements.workspaceSummary.textContent = state.filtersCollapsed
-    ? `${state.discoveryMode === "super" ? "Super Advanced" : state.discoveryMode === "advanced" ? "Advanced Search" : "Simple Discovery"} controls`
-    : "Discovery controls";
+  // Modern sidebar layout keeps controls visible; never collapse controls away
+  if (elements.workspaceControls) {
+    elements.workspaceControls.classList.remove("is-hidden");
+  }
+  if (elements.workspaceCollapse) {
+    elements.workspaceCollapse.setAttribute(
+      "aria-expanded",
+      "true",
+    );
+  }
+  if (elements.workspaceCollapseLabel) {
+    elements.workspaceCollapseLabel.textContent = "Hide filters";
+  }
+  if (elements.workspaceSummary) {
+    elements.workspaceSummary.textContent = "Discovery controls";
+  }
   if (persist) scheduleSearchStateSave();
 }
 
 async function saveSearchState() {
-  const selectedPreferenceId = Number(elements.profileSelect.value) || null;
+  let selectedPreferenceId = Number(elements.profileSelect?.value) || null;
+  if (!selectedPreferenceId && state.mode === "search" && state.presetBeforeSearch) {
+    selectedPreferenceId = Number(state.presetBeforeSearch) || null;
+  }
+  if (!selectedPreferenceId && typeof detectMatchingPresetId === "function") {
+    selectedPreferenceId = detectMatchingPresetId();
+  }
   try {
     if (selectedPreferenceId) {
       localStorage.setItem("nope_active_preset_id", String(selectedPreferenceId));
-    } else {
+    } else if (state.mode !== "search") {
       localStorage.removeItem("nope_active_preset_id");
     }
   } catch {}
@@ -1941,17 +1989,20 @@ async function restoreSearchState() {
         }
       } catch {}
     }
+    if (!activeId && typeof detectMatchingPresetId === "function") {
+      const detected = detectMatchingPresetId();
+      if (detected) {
+        activeId = String(detected);
+      }
+    }
 
     if (activeId && (state.preferences || []).some((p) => String(p.preference_id) === activeId)) {
       elements.profileSelect.value = activeId;
       try {
         localStorage.setItem("nope_active_preset_id", activeId);
       } catch {}
-    } else if (!saved.selected_preference_id) {
+    } else {
       elements.profileSelect.value = "";
-      try {
-        localStorage.removeItem("nope_active_preset_id");
-      } catch {}
     }
 
     updateProfileButtons();
@@ -2304,6 +2355,9 @@ function renderActiveFilterTags() {
   (state.selectedEntities?.directors || []).forEach((d) => {
     chips.push({
       label: `Director: ${d.name}`,
+      entity: d,
+      isPerson: true,
+      personRole: "directors",
       onRemove: () => {
         state.selectedEntities.directors = state.selectedEntities.directors.filter((item) => item.id !== d.id);
         renderSelectedEntities("directors");
@@ -2316,9 +2370,39 @@ function renderActiveFilterTags() {
   (state.selectedEntities?.actors || []).forEach((a) => {
     chips.push({
       label: `Actor: ${a.name}`,
+      entity: a,
+      isPerson: true,
+      personRole: "actors",
       onRemove: () => {
         state.selectedEntities.actors = state.selectedEntities.actors.filter((item) => item.id !== a.id);
         renderSelectedEntities("actors");
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  });
+  (state.selectedEntities?.companies || []).forEach((c) => {
+    chips.push({
+      label: `Studio: ${c.name}`,
+      entity: c,
+      isCompany: true,
+      onRemove: () => {
+        state.selectedEntities.companies = state.selectedEntities.companies.filter((item) => item.id !== c.id);
+        renderSelectedEntities("companies");
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  });
+  (state.selectedEntities?.excludedCompanies || []).forEach((c) => {
+    chips.push({
+      label: `− Studio: ${c.name}`,
+      isExcluded: true,
+      onRemove: () => {
+        state.selectedEntities.excludedCompanies = state.selectedEntities.excludedCompanies.filter((item) => item.id !== c.id);
+        renderSelectedEntities("excludedCompanies");
         updateFilterPillBadges();
         renderActiveFilterTags();
         runDiscoverySearch();
@@ -2355,12 +2439,32 @@ function renderActiveFilterTags() {
     if (chip.isExcluded) {
       el.classList.add("is-excluded");
     }
-    el.textContent = chip.label;
+    const labelSpan = document.createElement("span");
+    labelSpan.className = "active-filter-chip-label";
+    labelSpan.textContent = chip.label;
+    if (chip.isCompany && chip.entity) {
+      labelSpan.classList.add("is-filmography-link");
+      labelSpan.title = `View complete studio catalog for ${chip.entity.name}`;
+      labelSpan.addEventListener("click", () => {
+        loadCompanyCatalog(chip.entity);
+      });
+    } else if (chip.isPerson && chip.entity) {
+      labelSpan.classList.add("is-filmography-link");
+      labelSpan.title = `View filmography for ${chip.entity.name}`;
+      labelSpan.addEventListener("click", () => {
+        loadPersonFilmography(chip.entity, chip.personRole || "directors");
+      });
+    }
+    el.append(labelSpan);
+
     const btn = document.createElement("button");
     btn.type = "button";
     btn.textContent = "✕";
     btn.title = `Remove ${chip.label}`;
-    btn.addEventListener("click", chip.onRemove);
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      chip.onRemove();
+    });
     el.append(btn);
     container.append(el);
   });
@@ -2580,6 +2684,8 @@ async function setAdvancedFilters(filters = {}) {
   elements.releaseYearTo.value = mergedFilters.release_year_to ?? "";
   elements.sortBy.value = mergedFilters.sort_by || "popularity.desc";
   syncSortChips(elements.sortBy.value);
+  updateFilterPillBadges();
+  renderActiveFilterTags();
   await hydrateEntitySelections(mergedFilters);
   updateFilterPillBadges();
   renderActiveFilterTags();
@@ -2684,8 +2790,13 @@ function createPoster(movie, className = "") {
     const cdnUrl = getPosterUrl(movie.poster_path);
     const localUrl = getLocalPosterUrl(movie.poster_path);
 
+    const status = movie.user_data?.status;
+    const isFavorite = Boolean(movie.user_data?.is_favorite);
+    const isLibraryMovie = isFavorite || ["watched", "watch_later", "rewatch", "new_discovery"].includes(status);
+
     const image = document.createElement("img");
-    image.src = localUrl || cdnUrl;
+    // Library movies prioritize local cached poster; untracked / discover stream directly from TMDB CDN
+    image.src = isLibraryMovie ? (localUrl || cdnUrl) : (cdnUrl || localUrl);
     image.alt = `${title} poster`;
     image.loading = "lazy";
     image.decoding = "async";
@@ -2693,9 +2804,14 @@ function createPoster(movie, className = "") {
     image.addEventListener("error", () => {
       if (!image.dataset.fallbackAttempted) {
         image.dataset.fallbackAttempted = "1";
-        // If we tried local and failed, try CDN only if not explicitly offline
+        // If local failed, fallback to CDN only if not explicitly offline
         if (image.src.includes("/images/posters/") && cdnUrl && !isExplicitlyOffline) {
           image.src = cdnUrl;
+          return;
+        }
+        // If CDN failed (e.g. offline), fallback to local if available
+        if (!image.src.includes("/images/posters/") && localUrl) {
+          image.src = localUrl;
           return;
         }
       }
@@ -3324,11 +3440,11 @@ function setAuxiliaryView(view = null) {
   if (typeof updateBackToTopVisibility === "function") {
     updateBackToTopVisibility();
   }
-  if (view && history.replaceState) {
+  if (view && !state.isPopStateNav) {
     if (view === "entry-reader" && state.entryReaderEntry?.entry_id) {
-      history.replaceState(null, "", `#entry-reader:${state.entryReaderEntry.entry_id}`);
+      navigateToHash(`#entry-reader:${state.entryReaderEntry.entry_id}`, { push: true });
     } else {
-      history.replaceState(null, "", `#${view}`);
+      navigateToHash(`#${view}`, { replace: true });
     }
   }
 }
@@ -3337,7 +3453,11 @@ function setEntriesVisible(visible) {
   setAuxiliaryView(visible ? "entries" : null);
 }
 
-async function activateDiscoverView() {
+async function activateDiscoverView({ pushHistory = false } = {}) {
+  hideFilmographyToolbar();
+  if (pushHistory && !state.isPopStateNav) {
+    navigateToHash("#discover", { push: true });
+  }
   setSearchOriginMovie();
   state.mode = "discover";
   state.currentView = "discover";
@@ -3345,21 +3465,43 @@ async function activateDiscoverView() {
     document.body.dataset.activeView = "discover";
   }
   setEntriesVisible(false);
+  if (elements.sidebarPaneDiscover) {
+    elements.sidebarPaneDiscover.classList.remove("is-hidden");
+  }
   if (elements.discoverWorkspace) {
     elements.discoverWorkspace.classList.remove("is-hidden");
+  }
+  if (elements.advancedControls) {
+    elements.advancedControls.classList.remove("is-hidden");
+  }
+  if (elements.workspaceControls) {
+    elements.workspaceControls.classList.remove("is-hidden");
+  }
+  if (elements.personalFilters) {
+    elements.personalFilters.classList.remove("is-hidden");
+  }
+  if (elements.simpleControls) {
+    elements.simpleControls.classList.add("is-hidden");
   }
   if (elements.notesSearchContainer) {
     elements.notesSearchContainer.classList.add("is-hidden");
   }
   setActiveView("discover");
+  elements.empty.classList.add("is-hidden");
+  showLoadingCards();
 
-  const targetPresetId = state.presetBeforeSearch || (function () {
+  let targetPresetId = state.presetBeforeSearch || (function () {
     try {
       return localStorage.getItem("nope_active_preset_id");
     } catch {
       return null;
     }
   })();
+
+  if (!targetPresetId && typeof detectMatchingPresetId === "function") {
+    const detected = detectMatchingPresetId();
+    if (detected) targetPresetId = String(detected);
+  }
 
   if (targetPresetId && (state.preferences || []).some((p) => String(p.preference_id) === String(targetPresetId))) {
     state.presetBeforeSearch = null;
@@ -3370,6 +3512,15 @@ async function activateDiscoverView() {
       localStorage.setItem("nope_active_preset_id", String(targetPresetId));
     } catch {}
     updateProfileButtons();
+    if (elements.advancedControls) {
+      elements.advancedControls.classList.remove("is-hidden");
+    }
+    if (elements.workspaceControls) {
+      elements.workspaceControls.classList.remove("is-hidden");
+    }
+    if (elements.personalFilters) {
+      elements.personalFilters.classList.remove("is-hidden");
+    }
     await applySelectedProfile();
     renderProfileRibbon();
     renderProfileWorkshop();
@@ -4045,7 +4196,7 @@ function applyLibraryFilters(targetPage = 1) {
     });
   }
 
-  // 7. Sorting — when a search query is active, preserve the 5-Tier Relevance Hierarchy first
+  // 7. Sorting — Sort Results
   const sortBy = elements.libSortCloud?.querySelector(".filter-chip.is-active")?.dataset.sort || "recent";
   const compareBySortChip = (a, b) => {
     if (sortBy === "title_asc") {
@@ -4166,7 +4317,7 @@ function hasActiveLibraryFilters() {
   const hasGenres = Boolean(state.libSelectedGenres && state.libSelectedGenres.size > 0);
   const hasLangs = Boolean(state.libSelectedLanguages && state.libSelectedLanguages.size > 0);
   const hasKw = Boolean(state.selectedEntities.libKeywords && state.selectedEntities.libKeywords.length > 0);
-  const hasDirs = Boolean(state.selectedEntities.libDirectors && state.selectedEntities.libDirectors.length > 0);
+  const hasDirectors = Boolean(state.selectedEntities.libDirectors && state.selectedEntities.libDirectors.length > 0);
   const hasActors = Boolean(state.selectedEntities.libActors && state.selectedEntities.libActors.length > 0);
   return Boolean(
     q ||
@@ -4175,7 +4326,7 @@ function hasActiveLibraryFilters() {
     !isNaN(yearTo) ||
     hasLangs ||
     hasKw ||
-    hasDirs ||
+    hasDirectors ||
     hasActors
   );
 }
@@ -4231,10 +4382,6 @@ function resetLibraryFilters({ silent = false } = {}) {
 }
 
 let librarySearchDebounce = null;
-
-function markLibrarySearchDirty() {
-  // Kept as passive dummy for layout parity with Discover
-}
 
 function markLibrarySearchClean() {
   const btn = document.querySelector("#run-library-search");
@@ -4302,6 +4449,7 @@ async function searchPersonalLibrary() {
   });
 
   const hasExistingCards = Boolean(elements.grid?.children?.length && !elements.grid?.querySelector(".skeleton-card"));
+  elements.empty.classList.add("is-hidden");
   if (!hasExistingCards) {
     showLoadingCards();
     elements.count.textContent = `Searching ${scope === "all" ? "personal library" : "current shelf"}…`;
@@ -4404,7 +4552,6 @@ function setupLibraryFilters() {
   if (elements.libSortCloud) {
     elements.libSortCloud.querySelectorAll(".filter-chip").forEach((chip) => {
       chip.addEventListener("click", () => {
-        if (chip.classList.contains("is-active")) return;
         elements.libSortCloud.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("is-active"));
         chip.classList.add("is-active");
         applyLibraryFilters(1);
@@ -4800,8 +4947,11 @@ function setupShelfViewToggle() {
   });
 }
 
-async function loadShelf(view, page = 1) {
+async function loadShelf(view, page = 1, { pushHistory = false } = {}) {
   hideFilmographyToolbar();
+  if (pushHistory && !state.isPopStateNav) {
+    navigateToHash(`#${view}`, { push: true });
+  }
   if (view === "entries") {
     await loadEntries(page);
     return;
@@ -4847,6 +4997,7 @@ async function loadShelf(view, page = 1) {
   }
 
   const hasExistingCards = Boolean(elements.grid?.children?.length && !elements.grid?.querySelector(".skeleton-card"));
+  elements.empty.classList.add("is-hidden");
   if (!hasExistingCards) {
     showLoadingCards();
     elements.count.textContent = "Loading…";
@@ -5308,6 +5459,22 @@ function isProfileFiltersDiverged(preference) {
   }
 }
 
+function detectMatchingPresetId() {
+  if (elements.profileSelect?.value) {
+    const val = Number(elements.profileSelect.value);
+    if (val && (state.preferences || []).some((p) => Number(p.preference_id) === val)) {
+      return val;
+    }
+  }
+  if (!state.preferences || !state.preferences.length) return null;
+  for (const pref of state.preferences) {
+    if (!isProfileFiltersDiverged(pref)) {
+      return Number(pref.preference_id);
+    }
+  }
+  return null;
+}
+
 function updateProfileButtons() {
   const preferenceId = Number(elements.profileSelect.value);
   const preference = state.preferences?.find(
@@ -5390,7 +5557,14 @@ function getAllProfilesList() {
 }
 
 function syncRibbonActiveState() {
-  const activeId = elements.profileSelect?.value ? String(elements.profileSelect.value) : null;
+  let activeId = elements.profileSelect?.value ? String(elements.profileSelect.value) : null;
+  if (!activeId) {
+    const detected = detectMatchingPresetId();
+    if (detected) {
+      activeId = String(detected);
+      if (elements.profileSelect) elements.profileSelect.value = activeId;
+    }
+  }
   const ribbon = document.querySelector("#profile-ribbon");
   if (!ribbon) return;
 
@@ -5417,7 +5591,14 @@ function renderProfileRibbon() {
     .map((k) => allProfiles.find((p) => Number(p.id) === Number(k)))
     .filter(Boolean);
 
-  const activeProfileId = elements.profileSelect?.value ? Number(elements.profileSelect.value) : null;
+  let activeProfileId = elements.profileSelect?.value ? Number(elements.profileSelect.value) : null;
+  if (!activeProfileId) {
+    const detected = detectMatchingPresetId();
+    if (detected) {
+      activeProfileId = detected;
+      if (elements.profileSelect) elements.profileSelect.value = String(detected);
+    }
+  }
   const activePreference = (state.preferences || []).find((p) => Number(p.preference_id) === activeProfileId);
   const isDiverged = isProfileFiltersDiverged(activePreference);
 
@@ -5482,6 +5663,10 @@ function renderProfileRibbon() {
         try {
           localStorage.setItem("nope_active_preset_id", String(prof.id));
         } catch {}
+        syncRibbonActiveState();
+        elements.empty.classList.add("is-hidden");
+        showLoadingCards();
+        elements.count.textContent = `Loading “${prof.name}”…`;
         await applySelectedProfile();
         clearDiscoveryCache();
         await runDiscoverySearch();
@@ -5589,6 +5774,9 @@ function renderProfileWorkshop() {
           try {
             localStorage.setItem("nope_active_preset_id", String(prof.id));
           } catch {}
+          elements.empty.classList.add("is-hidden");
+          showLoadingCards();
+          elements.count.textContent = `Loading “${prof.name}”…`;
           await applySelectedProfile();
         }
         renderProfileWorkshop();
@@ -5615,6 +5803,10 @@ async function loadProfiles(selectedId = null) {
           targetId = stored;
         }
       } catch {}
+    }
+    if (!targetId && typeof detectMatchingPresetId === "function") {
+      const detected = detectMatchingPresetId();
+      if (detected) targetId = String(detected);
     }
     elements.profileSelect.replaceChildren();
     const emptyOption = document.createElement("option");
@@ -5791,22 +5983,6 @@ function markSelectedProfileModified() {
   }
   scheduleSearchStateSave();
 }
-
-function appendMetaItem(content, isHtml = false) {
-  if (!content) {
-    return;
-  }
-
-  const item = document.createElement("span");
-  if (isHtml) {
-    item.innerHTML = content;
-    item.className = "meta-item-with-icon";
-  } else {
-    item.textContent = content;
-  }
-  elements.dialogMeta.append(item);
-}
-
 
 function updateDetailPosterStatusBadge(movie, overrideStatus = null) {
   const wrap = document.querySelector("#dialog-poster-wrap");
@@ -6067,7 +6243,9 @@ function hideFilmographyToolbar() {
   }
   removeContinuousSentinel();
   state.activeFilmographyPerson = null;
+  state.activeFilmographyCompany = null;
   state.activeFilmographyData = null;
+  state.activeCompanyCatalogData = null;
   updateGreyContext();
 }
 
@@ -6085,11 +6263,15 @@ async function loadPersonFilmography(person, entityKey = "directors", department
     saveCurrentSearchSnapshot(originInfo);
   }
 
-  closeMovieDetails();
+  closeMovieDetails({ fromPopState: true });
 
   removeContinuousSentinel();
   state.mode = "filmography";
   state.currentView = "filmography";
+  state.activeFilmographyPerson = person;
+  state.activeFilmographyCompany = null;
+
+  navigateToHash(`#person:${personId}`, { push: !state.isPopStateNav });
 
   // Sidebar must remain visible! Match the origin view pane:
   const originView = state.savedSearchSnapshot?.currentView || state.currentView || "discover";
@@ -6102,6 +6284,12 @@ async function loadPersonFilmography(person, entityKey = "directors", department
   }
   if (elements.discoverWorkspace) {
     elements.discoverWorkspace.classList.toggle("is-hidden", !isOriginDiscover);
+  }
+  if (isOriginDiscover) {
+    if (elements.advancedControls) elements.advancedControls.classList.remove("is-hidden");
+    if (elements.workspaceControls) elements.workspaceControls.classList.remove("is-hidden");
+    if (elements.personalFilters) elements.personalFilters.classList.remove("is-hidden");
+    if (elements.simpleControls) elements.simpleControls.classList.add("is-hidden");
   }
   if (elements.sidebarPaneLibrary) {
     elements.sidebarPaneLibrary.classList.toggle("is-hidden", !isOriginLibrary);
@@ -6124,7 +6312,11 @@ async function loadPersonFilmography(person, entityKey = "directors", department
     elements.returnToOrigin.textContent = `← Return to ${previousTitle}`;
     elements.returnToOrigin.classList.remove("is-hidden");
     elements.returnToOrigin.onclick = () => {
-      restoreSearchSnapshot();
+      if (window.history.length > 1) {
+        history.back();
+      } else {
+        restoreSearchSnapshot();
+      }
     };
   }
 
@@ -6154,10 +6346,14 @@ async function loadPersonFilmography(person, entityKey = "directors", department
         }
       }
 
+      if (elements.filmographyTabs) {
+        elements.filmographyTabs.classList.remove("is-hidden");
+      }
       const currentDept = data.department || "all";
       if (elements.filmTabAll) {
         elements.filmTabAll.textContent = `All (${data.total_count})`;
         elements.filmTabAll.classList.toggle("is-active", currentDept === "all");
+        elements.filmTabAll.classList.remove("is-hidden");
         elements.filmTabAll.onclick = () => loadPersonFilmography(person, entityKey, "all");
       }
       if (elements.filmTabDirecting) {
@@ -6192,6 +6388,122 @@ async function loadPersonFilmography(person, entityKey = "directors", department
 
 async function explorePerson(person, entityKey) {
   await loadPersonFilmography(person, entityKey);
+}
+
+async function loadCompanyCatalog(company, sortBy = "primary_release_date.desc") {
+  const companyId = Number(company.id || company.company_id);
+  if (!companyId) return;
+
+  const originInfo = state.selectedMovie ? {
+    id: state.selectedMovie.tmdb_id,
+    title: state.selectedMovie.title || state.selectedMovie.original_title,
+    fromMovieDetails: true,
+  } : null;
+
+  if (state.mode !== "filmography") {
+    saveCurrentSearchSnapshot(originInfo);
+  }
+
+  closeMovieDetails({ fromPopState: true });
+
+  removeContinuousSentinel();
+  state.mode = "filmography";
+  state.currentView = "filmography";
+  state.activeFilmographyCompany = company;
+  state.activeFilmographyPerson = null;
+
+  navigateToHash(`#company:${companyId}`, { push: !state.isPopStateNav });
+
+  // Sidebar must remain visible! Match the origin view pane:
+  const originView = state.savedSearchSnapshot?.currentView || state.currentView || "discover";
+  const isOriginDiscover = originView === "discover" || (!originView && state.savedSearchSnapshot?.mode === "discovery");
+  const isOriginLibrary = ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes"].includes(originView);
+  const isOriginNotes = originView === "entries";
+
+  if (elements.sidebarPaneDiscover) {
+    elements.sidebarPaneDiscover.classList.toggle("is-hidden", !isOriginDiscover);
+  }
+  if (elements.discoverWorkspace) {
+    elements.discoverWorkspace.classList.toggle("is-hidden", !isOriginDiscover);
+  }
+  if (isOriginDiscover) {
+    if (elements.advancedControls) elements.advancedControls.classList.remove("is-hidden");
+    if (elements.workspaceControls) elements.workspaceControls.classList.remove("is-hidden");
+    if (elements.personalFilters) elements.personalFilters.classList.remove("is-hidden");
+    if (elements.simpleControls) elements.simpleControls.classList.add("is-hidden");
+  }
+  if (elements.sidebarPaneLibrary) {
+    elements.sidebarPaneLibrary.classList.toggle("is-hidden", !isOriginLibrary);
+  }
+  if (elements.sidebarPaneNotes) {
+    elements.sidebarPaneNotes.classList.toggle("is-hidden", !isOriginNotes);
+  }
+
+  const discoverHeader = document.querySelector("#discover-canvas-header");
+  if (discoverHeader) discoverHeader.classList.add("is-hidden");
+  const libHeaderFilmo = document.querySelector("#library-canvas-header");
+  if (libHeaderFilmo) libHeaderFilmo.classList.add("is-hidden");
+  if (elements.notesSearchContainer) elements.notesSearchContainer.classList.add("is-hidden");
+  const headingBlock = document.querySelector("#section-heading-block");
+  if (headingBlock) headingBlock.classList.add("is-hidden");
+
+  const previousTitle = state.savedSearchSnapshot?.originInfo?.title || state.savedSearchSnapshot?.title || "Discover";
+  if (elements.returnToOrigin) {
+    elements.returnToOrigin.textContent = `← Return to ${previousTitle}`;
+    elements.returnToOrigin.classList.remove("is-hidden");
+    elements.returnToOrigin.onclick = () => {
+      if (window.history.length > 1) {
+        history.back();
+      } else {
+        restoreSearchSnapshot();
+      }
+    };
+  }
+
+  showLoadingCards();
+  elements.pagination?.classList.add("is-hidden");
+
+  try {
+    const data = await fetchJSON(`/companies/${companyId}/catalog?sort_by=${encodeURIComponent(sortBy)}`);
+    state.activeFilmographyCompany = data.company;
+    state.activeCompanyCatalogData = data;
+
+    if (elements.filmographyToolbar) {
+      elements.filmographyToolbar.classList.remove("is-hidden");
+      if (elements.filmographyName) elements.filmographyName.textContent = data.company.name;
+      if (elements.filmographyKicker) {
+        const country = data.company.origin_country ? ` • ${data.company.origin_country}` : "";
+        elements.filmographyKicker.textContent = `Studio Catalog${country}`;
+      }
+      if (elements.filmographyAvatar) {
+        if (data.company.logo_path) {
+          elements.filmographyAvatar.src = `${IMAGE_BASE_URL}${data.company.logo_path}`;
+          elements.filmographyAvatar.alt = data.company.name;
+          elements.filmographyAvatar.classList.remove("is-hidden");
+        } else {
+          elements.filmographyAvatar.classList.add("is-hidden");
+        }
+      }
+
+      if (elements.filmographyTabs) {
+        elements.filmographyTabs.classList.add("is-hidden");
+      }
+    }
+
+    state.movies = data.movies || [];
+    state.totalResults = data.total_results || state.movies.length;
+    renderMovies(state.movies, "search", state.movies.length);
+    if (headingBlock) headingBlock.classList.add("is-hidden");
+
+    if (elements.shelfCount) {
+      elements.shelfCount.textContent = `${state.totalResults} ${state.totalResults === 1 ? "movie" : "movies"}`;
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    updateGreyContext();
+  } catch (error) {
+    showNotice(`Could not load studio catalog for ${company.name || "studio"}: ${error.message}`);
+  }
 }
 
 function renderVerdict(value) {
@@ -6266,30 +6578,6 @@ function renderPersonalControls(movie) {
   elements.favoriteButton.setAttribute("aria-label", favoriteAction);
   elements.favoriteButton.title = favoriteAction;
   renderVerdict(userData?.verdict ?? null);
-}
-
-function formatReleaseDate(value) {
-  if (!value) return "Release date unavailable";
-  // Midday UTC prevents the calendar date moving backward in western zones.
-  const date = new Date(`${value}T12:00:00Z`);
-  return Number.isNaN(date.getTime())
-    ? String(value)
-    : date.toLocaleDateString(undefined, {
-      year: "numeric", month: "long", day: "numeric",
-      timeZone: JOURNAL_TIME_ZONE,
-    });
-}
-
-function formatBadgeVoteCount(count) {
-  const num = Number(count);
-  if (!num || isNaN(num) || num <= 0) return "";
-  if (num >= 1000000) {
-    return `${(num / 1000000).toFixed(1).replace(/\.0$/, "")}M votes`;
-  }
-  if (num >= 1000) {
-    return `${(num / 1000).toFixed(1).replace(/\.0$/, "")}k votes`;
-  }
-  return `${num} ${num === 1 ? "vote" : "votes"}`;
 }
 
 function formatCompactVotes(count) {
@@ -6507,9 +6795,16 @@ function renderMovieDetails(movie) {
 function renderDetailTrail() {
   elements.detailTrail.replaceChildren();
   const trail = state.detailTrail;
-  elements.detailBackLabel.textContent = trail.length > 1
-    ? `Back to ${trail[trail.length - 2].title}`
-    : state.detailReturnLabel;
+  if (trail.length > 1) {
+    elements.detailBackLabel.textContent = "Back";
+    const prevTitle = trail[trail.length - 2].title;
+    elements.dialogClose?.setAttribute("title", `Back to ${prevTitle}`);
+    elements.dialogClose?.setAttribute("aria-label", `Back to ${prevTitle}`);
+  } else {
+    elements.detailBackLabel.textContent = state.detailReturnLabel;
+    elements.dialogClose?.removeAttribute("title");
+    elements.dialogClose?.setAttribute("aria-label", state.detailReturnLabel);
+  }
 
   if (trail.length <= 1) return;
   const visibleIndexes = trail.length <= 4
@@ -6771,8 +7066,8 @@ async function openMovieDetails(
     }
     renderMovieDetails(movie);
     renderDetailTrail();
-    if (history.replaceState) {
-      history.replaceState(null, "", `#movie:${movie.tmdb_id}`);
+    if (!state.isPopStateNav) {
+      navigateToHash(`#movie:${movie.tmdb_id}`, { push: trailMode === "push" || !window.location.hash.startsWith("#movie:") });
     }
     try {
       sessionStorage.setItem("nope_open_movie_id", String(movie.tmdb_id));
@@ -6824,7 +7119,7 @@ async function openMovieDetails(
   }
 }
 
-function closeMovieDetails() {
+function closeMovieDetails({ fromPopState = false } = {}) {
   if (movieNotesDebounceTimer) {
     saveSelectedNotes({ silent: true });
   }
@@ -6833,8 +7128,12 @@ function closeMovieDetails() {
   } catch (_) {}
   document.documentElement.classList.remove("is-route-movie");
   const returnView = state.currentView || "discover";
-  if (history.replaceState) {
-    history.replaceState(null, "", `#${returnView}`);
+  if (!fromPopState && window.location.hash.startsWith("#movie:")) {
+    if (window.history.length > 1) {
+      history.back();
+      return;
+    }
+    navigateToHash(`#${returnView}`, { replace: true });
   }
   elements.detailPage.classList.add("is-hidden");
   elements.shell.classList.remove("is-hidden");
@@ -8912,6 +9211,12 @@ async function loadStorage() {
         icon: "database"
       },
       {
+        value: summary.poster_cache_mb != null ? `${summary.poster_cache_mb} MB` : formatBytes(summary.poster_cache_bytes || 0),
+        label: "Poster Cache",
+        desc: `${summary.poster_cache_files != null ? summary.poster_cache_files.toLocaleString() : 0} images on disk`,
+        icon: "photo_library"
+      },
+      {
         value: typeof summary.cached_movies === "number" ? summary.cached_movies.toLocaleString() : summary.cached_movies,
         label: "Cached Movies",
         desc: "Offline TMDB cache",
@@ -9373,12 +9678,14 @@ if (elements.query) {
   let queryClearDebounce = null;
   elements.query.addEventListener("input", () => {
     if ((state.mode === "search" || state.currentView === "discover") && !elements.query.value.trim()) {
+      elements.empty.classList.add("is-hidden");
+      showLoadingCards();
       window.clearTimeout(queryClearDebounce);
       queryClearDebounce = window.setTimeout(() => {
         if ((state.mode === "search" || state.currentView === "discover") && !elements.query.value.trim()) {
           activateDiscoverView();
         }
-      }, 250);
+      }, 200);
     }
   });
 
@@ -9546,7 +9853,7 @@ elements.navLinks.forEach((button) => {
       if (state.currentView === "favorites") {
         const exitTarget = state.previousFavReturnShelf || state.lastNormalShelf || "watched";
         state.previousFavReturnShelf = null;
-        loadShelf(exitTarget);
+        loadShelf(exitTarget, 1, { pushHistory: true });
         return;
       }
       const normalShelves = [
@@ -9563,7 +9870,7 @@ elements.navLinks.forEach((button) => {
       } else {
         state.previousFavReturnShelf = state.lastNormalShelf || "watched";
       }
-      loadShelf("favorites");
+      loadShelf("favorites", 1, { pushHistory: true });
       return;
     }
 
@@ -9575,7 +9882,7 @@ elements.navLinks.forEach((button) => {
       if (state.currentView === "movie-notes") {
         const exitTarget = state.movieNotesShelfFilter || state.lastNormalShelf || "watched";
         state.movieNotesShelfFilter = null;
-        loadShelf(exitTarget);
+        loadShelf(exitTarget, 1, { pushHistory: true });
         return;
       }
       const targetShelf = normalLibraryShelves.includes(state.currentView)
@@ -9583,6 +9890,7 @@ elements.navLinks.forEach((button) => {
         : (state.lastNormalShelf || "watched");
       state.lastNormalShelf = targetShelf;
       state.movieNotesShelfFilter = targetShelf;
+      navigateToHash("#movie-notes", { push: true });
       loadMovieNotes(1);
       return;
     }
@@ -9590,11 +9898,12 @@ elements.navLinks.forEach((button) => {
     if (state.currentView === "movie-notes" && normalLibraryShelves.includes(clickedView)) {
       if (state.movieNotesShelfFilter === clickedView) {
         state.movieNotesShelfFilter = null;
-        loadShelf(clickedView);
+        loadShelf(clickedView, 1, { pushHistory: true });
         return;
       }
       state.movieNotesShelfFilter = clickedView;
       state.lastNormalShelf = clickedView;
+      navigateToHash("#movie-notes", { push: true });
       loadMovieNotes(1);
       return;
     }
@@ -9603,7 +9912,7 @@ elements.navLinks.forEach((button) => {
     if (clickedView === "entries") {
       resetEntryFiltersToCurrent();
     }
-    loadShelf(clickedView);
+    loadShelf(clickedView, 1, { pushHistory: true });
   });
 });
 
@@ -9611,16 +9920,16 @@ elements.masterTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     const tabType = tab.dataset.masterTab;
     if (tabType === "discover") {
-      loadShelf("discover");
+      loadShelf("discover", 1, { pushHistory: true });
     } else if (tabType === "library") {
       let target = "new_discovery";
       try {
         target = localStorage.getItem("nope_last_library_shelf") || "new_discovery";
       } catch {}
-      loadShelf(target);
+      loadShelf(target, 1, { pushHistory: true });
     } else if (tabType === "notes") {
       resetEntryFiltersToCurrent();
-      loadShelf("entries");
+      loadShelf("entries", 1, { pushHistory: true });
     }
   });
 });
@@ -9629,7 +9938,7 @@ elements.mobileView.addEventListener("change", () => {
   if (elements.mobileView.value === "entries") {
     resetEntryFiltersToCurrent();
   }
-  loadShelf(elements.mobileView.value);
+  loadShelf(elements.mobileView.value, 1, { pushHistory: true });
 });
 
 elements.modeButtons.forEach((button) => {
@@ -10419,6 +10728,25 @@ elements.cleanupCache.addEventListener("click", async () => {
     elements.cleanupCache.disabled = false;
   }
 });
+
+if (elements.reclaimPostersBtn) {
+  elements.reclaimPostersBtn.addEventListener("click", async () => {
+    if (!window.confirm("Purge untracked browsing posters from disk? All active library shelf posters (Watched, Watch Later, Rewatch, Favorites) will be preserved.")) return;
+    elements.reclaimPostersBtn.disabled = true;
+    try {
+      const result = await fetchJSON("/storage/reclaim-posters", { method: "POST" });
+      const msg = `Reclaimed ${result.reclaimed_mb} MB (${result.deleted_count.toLocaleString()} untracked posters purged, ${result.kept_count.toLocaleString()} library posters kept).`;
+      feedback(elements.storageFeedback, msg);
+      showNotice(msg, "success");
+      await loadStorage();
+    } catch (error) {
+      feedback(elements.storageFeedback, error.message, "error");
+      showNotice(error.message, "error");
+    } finally {
+      elements.reclaimPostersBtn.disabled = false;
+    }
+  });
+}
 
 elements.purgeDeletedEntries.addEventListener("click", async () => {
   if (!window.confirm("Permanently delete removed notes? This cannot be undone.")) return;
@@ -11634,7 +11962,12 @@ async function initializeApp() {
     setAuxiliaryView("storage");
   } else {
     setActiveView("discover");
+    if (elements.sidebarPaneDiscover) elements.sidebarPaneDiscover.classList.remove("is-hidden");
     if (elements.discoverWorkspace) elements.discoverWorkspace.classList.remove("is-hidden");
+    if (elements.advancedControls) elements.advancedControls.classList.remove("is-hidden");
+    if (elements.workspaceControls) elements.workspaceControls.classList.remove("is-hidden");
+    if (elements.personalFilters) elements.personalFilters.classList.remove("is-hidden");
+    if (elements.simpleControls) elements.simpleControls.classList.add("is-hidden");
     if (elements.notesSearchContainer) elements.notesSearchContainer.classList.add("is-hidden");
     setEntriesVisible(false);
   }
@@ -11698,14 +12031,15 @@ async function initializeApp() {
       loadStorage(),
     ]);
   } else {
-    const restoredMode = await restoreDiscoveryAndProfiles();
-    if (elements.discoverWorkspace) {
-      elements.discoverWorkspace.classList.remove("is-hidden");
-    }
-    if (elements.notesSearchContainer) {
-      elements.notesSearchContainer.classList.add("is-hidden");
-    }
     setActiveView("discover");
+    if (elements.sidebarPaneDiscover) elements.sidebarPaneDiscover.classList.remove("is-hidden");
+    if (elements.discoverWorkspace) elements.discoverWorkspace.classList.remove("is-hidden");
+    if (elements.advancedControls) elements.advancedControls.classList.remove("is-hidden");
+    if (elements.workspaceControls) elements.workspaceControls.classList.remove("is-hidden");
+    if (elements.personalFilters) elements.personalFilters.classList.remove("is-hidden");
+    if (elements.simpleControls) elements.simpleControls.classList.add("is-hidden");
+    if (elements.notesSearchContainer) elements.notesSearchContainer.classList.add("is-hidden");
+    const restoredMode = await restoreDiscoveryAndProfiles();
     await setDiscoveryMode(restoredMode || "super", true);
   }
 
@@ -11714,55 +12048,101 @@ async function initializeApp() {
   }
 }
 
-window.addEventListener("hashchange", () => {
-  let hashView = (window.location.hash || "").replace(/^#/, "").trim();
-  if (hashView.startsWith("movie:")) {
-    const parts = hashView.split(":");
-    const mId = parts[1];
-    if (mId && (!state.selectedMovie || String(state.selectedMovie.tmdb_id) !== String(mId))) {
-      openMovieDetails(mId);
-    }
-    return;
-  } else if (elements.detailPage && !elements.detailPage.classList.contains("is-hidden")) {
-    closeMovieDetails();
-  }
-  if (hashView.startsWith("entry-reader")) {
-    const parts = hashView.split(":");
-    const noteId = parts[1] || "";
-    if (noteId && (!state.entryReaderEntry || String(state.entryReaderEntry.entry_id) !== String(noteId))) {
-      fetchJSON(`/entries/${noteId}`).then((res) => {
-        if (res && res.entry) openEntryReader(res.entry);
-      }).catch(() => {});
-    }
-    return;
-  }
-  if (hashView === "library") {
-    try {
-      hashView = localStorage.getItem("nope_last_library_shelf") || "new_discovery";
-    } catch {
-      hashView = "new_discovery";
-    }
-  } else if (hashView === "notes") {
-    hashView = "entries";
-  }
+async function handlePopStateNavigation() {
+  state.isPopStateNav = true;
+  try {
+    let hashView = (window.location.hash || "").replace(/^#/, "").trim();
 
-  if (!hashView || hashView === "discover") {
-    if (state.currentView !== "discover") {
-      activateDiscoverView();
-    }
-  } else if (["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "entries", "movie-notes"].includes(hashView)) {
-    if (state.currentView !== hashView || state.entryReaderEntry) {
-      if (hashView === "entries") {
-        resetEntryFiltersToCurrent();
+    // 1. Movie details route: #movie:{id}
+    if (hashView.startsWith("movie:")) {
+      const parts = hashView.split(":");
+      const mId = parts[1];
+      if (mId && (!state.selectedMovie || String(state.selectedMovie.tmdb_id) !== String(mId))) {
+        await openMovieDetails(mId, { trailMode: "jump" });
       }
-      loadShelf(hashView);
+      return;
     }
-  } else if (hashView === "storage") {
-    if (state.currentView !== "storage") {
-      loadStorage();
+
+    // If movie details is open but current hash is NOT a movie, close details!
+    if (elements.detailPage && !elements.detailPage.classList.contains("is-hidden")) {
+      closeMovieDetails({ fromPopState: true });
     }
+
+    // 2. Company / Studio catalog route: #company:{id} or #studio:{id}
+    if (hashView.startsWith("company:") || hashView.startsWith("studio:")) {
+      const parts = hashView.split(":");
+      const cId = Number(parts[1]);
+      if (cId && (!state.activeFilmographyCompany || Number(state.activeFilmographyCompany.id) !== cId)) {
+        await loadCompanyCatalog({ id: cId });
+      }
+      return;
+    }
+
+    // 3. Person filmography route: #person:{id} or #filmography:{id}
+    if (hashView.startsWith("person:") || hashView.startsWith("filmography:")) {
+      const parts = hashView.split(":");
+      const pId = Number(parts[1]);
+      if (pId && (!state.activeFilmographyPerson || Number(state.activeFilmographyPerson.id) !== pId)) {
+        await loadPersonFilmography({ id: pId });
+      }
+      return;
+    }
+
+    // If filmography toolbar was open but new hash is standard shelf/discover, hide it
+    if (state.mode === "filmography") {
+      hideFilmographyToolbar();
+    }
+
+    // 4. Entry reader route: #entry-reader:{id}
+    if (hashView.startsWith("entry-reader")) {
+      const parts = hashView.split(":");
+      const noteId = parts[1] || "";
+      if (noteId && (!state.entryReaderEntry || String(state.entryReaderEntry.entry_id) !== String(noteId))) {
+        fetchJSON(`/entries/${noteId}`).then((res) => {
+          if (res && res.entry) openEntryReader(res.entry);
+        }).catch(() => {});
+      }
+      return;
+    }
+
+    if (state.entryReaderEntry && !hashView.startsWith("entry-reader")) {
+      closeEntryReader();
+    }
+
+    // 5. Standard library views and Discover
+    if (hashView === "library") {
+      try {
+        hashView = localStorage.getItem("nope_last_library_shelf") || "new_discovery";
+      } catch {
+        hashView = "new_discovery";
+      }
+    } else if (hashView === "notes") {
+      hashView = "entries";
+    }
+
+    if (!hashView || hashView === "discover") {
+      if (state.currentView !== "discover" || state.mode === "filmography") {
+        await activateDiscoverView();
+      }
+    } else if (["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "entries", "movie-notes"].includes(hashView)) {
+      if (state.currentView !== hashView || state.entryReaderEntry || state.mode === "filmography") {
+        if (hashView === "entries") {
+          resetEntryFiltersToCurrent();
+        }
+        await loadShelf(hashView);
+      }
+    } else if (hashView === "storage") {
+      if (state.currentView !== "storage") {
+        await loadStorage();
+      }
+    }
+  } finally {
+    state.isPopStateNav = false;
   }
-});
+}
+
+window.addEventListener("popstate", handlePopStateNavigation);
+window.addEventListener("hashchange", handlePopStateNavigation);
 
 initializeApp().catch((error) => showNotice(error.message));
 

@@ -1,4 +1,3 @@
-import uuid
 from contextlib import asynccontextmanager
 from enum import Enum
 from pathlib import Path
@@ -25,7 +24,7 @@ from app.super_advanced_search_service import (
     SuperAdvancedSearchService,
 )
 from app.storage_repository import StorageRepository
-from app.grey_service import GreyService
+from app.grey import GreyService
 from app.mdblist_client import MDBListClient
 
 
@@ -643,6 +642,110 @@ def get_company(company_id: int):
         "name": company.get("name"),
         "origin_country": company.get("origin_country"),
         "logo_path": company.get("logo_path"),
+    }
+
+
+@app.get(
+    "/companies/{company_id}/catalog",
+    tags=["TMDB lookup"],
+    summary="Get complete release catalog of a production company with local user library data",
+)
+def get_company_catalog(
+    company_id: int,
+    page: int = 1,
+    sort_by: str = "primary_release_date.desc",
+):
+    try:
+        company = tmdb_lookup_client.get_company(company_id)
+        movies_data = tmdb_lookup_client.get_company_movies(
+            company_id=company_id,
+            page=page,
+            sort_by=sort_by,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    except Exception as error:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Failed to fetch company catalog: {error}",
+        ) from error
+
+    raw_results = list(movies_data.get("results") or [])
+    total_pages = int(movies_data.get("total_pages") or 1)
+
+    # Fetch subsequent catalog pages concurrently so complete release catalogs are displayed
+    if page == 1 and total_pages > 1:
+        from concurrent.futures import ThreadPoolExecutor
+
+        max_pages_to_fetch = min(total_pages, 10)
+
+        def _fetch_page(p: int):
+            try:
+                return tmdb_lookup_client.get_company_movies(
+                    company_id=company_id,
+                    page=p,
+                    sort_by=sort_by,
+                ).get("results", [])
+            except Exception:
+                return []
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            subsequent_results = list(
+                executor.map(_fetch_page, range(2, max_pages_to_fetch + 1))
+            )
+        for page_results in subsequent_results:
+            raw_results.extend(page_results)
+
+    # Deduplicate by movie ID while preserving release date ordering
+    seen_ids = set()
+    deduped_results = []
+    for m in raw_results:
+        mid = m.get("id")
+        if mid and mid not in seen_ids:
+            seen_ids.add(mid)
+            deduped_results.append(m)
+    raw_results = deduped_results
+
+    all_movie_ids = [m["id"] for m in raw_results if m.get("id")]
+    user_data_by_id = movie_service.user_repository.get_user_movie_data_bulk(
+        all_movie_ids
+    )
+
+    normalized_movies = [
+        {
+            "id": m.get("id"),
+            "tmdb_id": m.get("id"),
+            "title": m.get("title") or m.get("original_title") or "Untitled",
+            "original_title": m.get("original_title"),
+            "poster_path": m.get("poster_path"),
+            "backdrop_path": m.get("backdrop_path"),
+            "release_date": m.get("release_date"),
+            "vote_average": m.get("vote_average"),
+            "vote_count": m.get("vote_count"),
+            "overview": m.get("overview"),
+            "popularity": m.get("popularity", 0),
+            "original_language": m.get("original_language"),
+            "genre_ids": m.get("genre_ids") or [],
+            "user_data": user_data_by_id.get(m.get("id")),
+        }
+        for m in raw_results
+    ]
+
+    return {
+        "company": {
+            "id": company.get("id"),
+            "name": company.get("name"),
+            "origin_country": company.get("origin_country"),
+            "logo_path": company.get("logo_path"),
+            "headquarters": company.get("headquarters"),
+            "homepage": company.get("homepage"),
+            "description": company.get("description"),
+        },
+        "movies": normalized_movies,
+        "page": movies_data.get("page", 1),
+        "total_pages": movies_data.get("total_pages", 1),
+        "total_results": movies_data.get("total_results", len(normalized_movies)),
+        "sort_by": sort_by,
     }
 
 
@@ -1366,6 +1469,16 @@ def cleanup_old_movie_cache(days: int = 90):
 def purge_deleted_general_entries():
     result = storage_repository.purge_deleted_entries()
     return {"message": "Deleted entries permanently removed", **result}
+
+
+@app.post(
+    "/storage/reclaim-posters",
+    tags=["settings"],
+    summary="Reclaim disk space by purging untracked browsing posters",
+)
+def reclaim_untracked_posters():
+    result = storage_repository.reclaim_untracked_posters()
+    return {"message": "Untracked posters purged successfully", **result}
 
 
 class GreyChatRequest(BaseModel):

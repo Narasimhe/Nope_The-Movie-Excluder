@@ -9,7 +9,7 @@
 
 ## Architectural & Data Invariants
 - **Strict Layering**: Keep HTTP routes in `main.py`, orchestration in `*_service.py`, and all SQLite queries isolated in `*_repository.py`.
-- **Storage Optimization**: Movies marked as excluded (`NOPE`) must only store their TMDB ID and status flag—never cache poster images or bloated metadata for them.
+- **Storage Optimization**: Never cache poster images on disk for excluded (`NOPE`) or untracked discovery titles (posters stream directly via TMDB Cloudflare CDN). Disk poster caching is reserved exclusively for personal library shelves. Text metadata (credits, directors, keywords) in SQLite is preserved so movie details remain fully viewable.
 - **Search Boundaries**: Never scan `.venv/`, `__pycache__/`, or binary `.db` files.
 
 ## Non-Negotiable Operational Rules
@@ -17,3 +17,9 @@
 2. **NO UNREQUESTED BROWSER SUBAGENTS**: Never launch the headless browser tool or take verification screenshots unless explicitly asked for visual UI testing.
 3. **NO GIT COMMANDS**: Never run `git add`, `git commit`, or `git push` (user manages Git manually). Always preserve existing comments/docstrings and update `docs/IMPROVEMENTS.md` when completing tasks.
 4. **BACKEND VERIFICATION**: Run `python -m pytest` (or `run.bat test`) only after modifying backend Python files; skip test runs for pure CSS/HTML/prompt tweaks.
+
+## CSS Guidelines
+- NEVER use `!important`. If a rule doesn't apply, fix the selector specificity or nesting order.
+- NEVER use raw hex or rgb colors in component rules. Every color MUST use an existing `var(--token-name)`.
+- Never append duplicate selector blocks. Inspect the existing classes in the file and edit them in-place.
+

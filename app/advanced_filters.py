@@ -322,16 +322,6 @@ class AdvancedMovieFilters:
 
         return True
 
-    def apply_local_rules(
-        self,
-        movies: list[dict[str, Any]],
-    ) -> list[dict[str, Any]]:
-        return [
-            movie
-            for movie in movies
-            if self.matches_local_rules(movie)
-        ]
-
     def needs_country_details(self, movie: dict[str, Any]) -> bool:
         has_country_rules = bool(
             self.include_origin_countries

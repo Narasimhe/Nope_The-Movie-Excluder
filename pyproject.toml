@@ -1,0 +1,21 @@
+[tool.ruff]
+target-version = "py311"
+extend-exclude = ["scratch", "data", "logs"]
+
+[tool.ruff.lint]
+# F = pyflakes (unused imports/variables, undefined names)
+# E9 = syntax errors, B = bugbear (likely bugs)
+select = ["F", "E9", "B"]
+
+[tool.vulture]
+paths = ["app", "tests"]
+min_confidence = 60
+# FastAPI route handlers and pytest fixtures are invoked by the framework.
+ignore_decorators = ["@app.*", "@pytest.*"]
+ignore_names = [
+    "row_factory",          # sqlite3 connection attribute
+    "TMDB",                 # Enum member used via value lookup
+    "requested_status",     # test fakes record call arguments
+    "requested_ids",
+    "default_id",
+]

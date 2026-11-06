@@ -7,9 +7,8 @@ except ImportError:  # Helpful for lightweight test environments.
         return False
 
 
-loaded = load_dotenv()
+load_dotenv()
 
-TMDB_API_KEY = os.getenv("TMDB_API_KEY")
 TMDB_READ_ACCESS_TOKEN = os.getenv("TMDB_READ_ACCESS_TOKEN")
 TMDB_BASE_URL = os.getenv("TMDB_BASE_URL", "https://api.themoviedb.org/3")
 TMDB_IMAGE_BASE_URL = os.getenv("TMDB_IMAGE_BASE_URL", "https://image.tmdb.org/t/p")

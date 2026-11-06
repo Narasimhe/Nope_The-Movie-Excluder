@@ -251,7 +251,7 @@ class TMDBClientAdvancedDiscoveryTests(unittest.TestCase):
         self.assertEqual(res2["crew"][0]["id"], 27205)
 
         # 3. Third call with force_refresh=True forces network call (call_count=2)
-        res3 = client.get_person_movie_credits(525, force_refresh=True)
+        client.get_person_movie_credits(525, force_refresh=True)
         self.assertEqual(client.session.call_count, 2)
 
 

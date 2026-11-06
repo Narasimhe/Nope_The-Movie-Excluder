@@ -219,6 +219,8 @@ def _create_movie_metadata_tables(
 
         CREATE INDEX IF NOT EXISTS idx_movie_credits_person
         ON movie_credits (tmdb_person_id);
+
+        DROP TABLE IF EXISTS movie_companies;
         """
     )
 

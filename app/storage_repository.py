@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any
 
 from app import database
-from app.movie_status import MovieStatus
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +26,8 @@ class StorageRepository:
 
         path = Path(database.DATABASE_PATH)
         size_bytes = path.stat().st_size if path.exists() else 0
+        from app.poster_cache_service import PosterCacheService
+        poster_stats = PosterCacheService().get_cache_stats()
         return {
             "database_path": str(path),
             "size_bytes": size_bytes,
@@ -34,7 +35,19 @@ class StorageRepository:
             "personal_movies": personal_movies,
             "old_unprotected_cache_movies": cleanup_candidates,
             "soft_deleted_entries": deleted_entries,
+            "poster_cache_files": poster_stats["total_files"],
+            "poster_cache_bytes": poster_stats["total_bytes"],
+            "poster_cache_mb": poster_stats["total_mb"],
         }
+
+    def reclaim_untracked_posters(self, poster_cache_service: Any = None) -> dict[str, Any]:
+        """Reclaims disk space by purging untracked browsing posters."""
+        from app.movie_repository import MovieRepository
+        from app.poster_cache_service import PosterCacheService
+        movie_repo = MovieRepository()
+        retained = movie_repo.get_all_retained_poster_filenames()
+        poster_service = poster_cache_service or PosterCacheService()
+        return poster_service.reclaim_untracked_posters(retained)
 
     def cleanup_old_cache(self, days: int = 90) -> dict[str, Any]:
         if isinstance(days, bool) or not isinstance(days, int) or days < 30:
@@ -61,28 +74,6 @@ class StorageRepository:
                     SELECT 1 FROM movies WHERE movies.tmdb_id = movie_country_cache.tmdb_id
                 )
                 """
-            )
-            # Storage optimization invariant: NOPE movies never keep bloated metadata
-            connection.execute(
-                """
-                DELETE FROM movie_credits
-                WHERE tmdb_id IN (
-                    SELECT tmdb_id FROM user_movie_data WHERE status = ?
-                )
-                """,
-                (MovieStatus.EXCLUDED.value,),
-            )
-            connection.execute(
-                """
-                DELETE FROM movie_keywords
-                WHERE tmdb_id IN (
-                    SELECT tmdb_id FROM user_movie_data WHERE status = ?
-                )
-                AND keyword_id IN (
-                    SELECT keyword_id FROM keywords WHERE is_custom = 0
-                )
-                """,
-                (MovieStatus.EXCLUDED.value,),
             )
             connection.execute(
                 """

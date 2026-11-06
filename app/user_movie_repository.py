@@ -162,35 +162,6 @@ class UserMovieRepository:
         result["is_favorite"] = bool(result["is_favorite"])
         return result
 
-    def get_watched_movie_ids(self) -> set[int]:
-        with get_connection() as connection:
-            rows = connection.execute(
-                """
-                SELECT tmdb_id
-                FROM user_movie_data
-                WHERE status IN (?, ?)
-                """,
-                (
-                    MovieStatus.WATCHED.value,
-                    MovieStatus.REWATCH.value,
-                ),
-            ).fetchall()
-
-        return {row[0] for row in rows}
-
-    def get_excluded_movie_ids(self) -> set[int]:
-        with get_connection() as connection:
-            rows = connection.execute(
-                """
-                SELECT tmdb_id
-                FROM user_movie_data
-                WHERE status = ?
-                """,
-                (MovieStatus.EXCLUDED.value,),
-            ).fetchall()
-
-        return {row[0] for row in rows}
-
     def get_user_movie_data_bulk(
         self,
         tmdb_ids: list[int],

@@ -1,4 +1,3 @@
-import json
 import logging
 
 from app.movie_metadata_repository import MovieMetadataRepository
@@ -48,6 +47,9 @@ class MovieService:
 
     def is_poster_caching_allowed(self, filename: str) -> bool:
         return not self.movie_repository.is_poster_excluded(filename)
+
+    def is_library_poster(self, filename: str) -> bool:
+        return self.movie_repository.is_library_poster(filename)
 
     def _find_movie_in_discover_cache(self, tmdb_id: int) -> dict | None:
         return self.movie_repository.find_in_discover_cache(tmdb_id)
@@ -99,6 +101,19 @@ class MovieService:
         credits = self.metadata_repository.get_movie_credits(tmdb_id)
         result["directors"] = credits.get("directors", [])
         result["actors"] = credits.get("actors", [])
+
+        # Self-healing: if credits are missing (e.g. from previously excluded titles), fetch online
+        if not result["directors"] and not result["actors"] and not force_refresh:
+            try:
+                self._fetch_and_save_movie_metadata(tmdb_id)
+                credits = self.metadata_repository.get_movie_credits(tmdb_id)
+                result["directors"] = credits.get("directors", [])
+                result["actors"] = credits.get("actors", [])
+                result["genres"] = self.metadata_repository.get_movie_genres(tmdb_id)
+                result["keywords"] = self.metadata_repository.get_movie_keywords(tmdb_id)
+            except Exception as e:
+                logger.debug(f"Could not heal missing credits for {tmdb_id}: {e}")
+
         result["user_data"] = (
             self.user_repository.get_user_movie_data(tmdb_id)
         )
@@ -106,7 +121,10 @@ class MovieService:
             local_movie.get("metadata_fetched_at") is None
             or int(local_movie.get("metadata_version") or 1) < 2
         )
-        if result.get("poster_path") and (result.get("user_data") or {}).get("status") != "excluded":
+        # Storage Optimization: Only cache posters on disk for active library shelves or favorites
+        status = (result.get("user_data") or {}).get("status")
+        is_fav = bool((result.get("user_data") or {}).get("is_favorite"))
+        if result.get("poster_path") and (status in ("watched", "watch_later", "rewatch", "new_discovery") or is_fav):
             self.poster_cache_service.cache_posters_async([result])
         return result
 
@@ -307,9 +325,6 @@ class MovieService:
 
     def mark_for_rewatch(self, tmdb_id: int) -> dict:
         return self.set_movie_status(tmdb_id, MovieStatus.REWATCH)
-
-    def mark_as_new_discovery(self, tmdb_id: int) -> dict:
-        return self.set_movie_status(tmdb_id, MovieStatus.NEW_DISCOVERY)
 
     def add_custom_keyword(
         self,
@@ -547,10 +562,15 @@ class MovieService:
         if not isinstance(is_favorite, bool):
             raise ValueError("is_favorite must be true or false.")
 
-        return self.user_repository.set_favorite(
+        res = self.user_repository.set_favorite(
             tmdb_id,
             is_favorite,
         )
+        if is_favorite:
+            local_movie = self.movie_repository.get_movie(tmdb_id)
+            if local_movie and local_movie.get("poster_path"):
+                self.poster_cache_service.cache_posters_async([{**local_movie, "user_data": res}])
+        return res
 
     def set_movie_status(
         self,
@@ -575,13 +595,14 @@ class MovieService:
             validated_status,
         )
 
-        # Storage optimization invariant: NOPE movies never cache posters or bloated metadata
+        # Storage optimization invariant: NOPE movies never cache posters on disk
         if validated_status == MovieStatus.EXCLUDED:
             if local_movie and local_movie.get("poster_path"):
                 self.poster_cache_service.purge_excluded_poster(local_movie["poster_path"])
-            self.metadata_repository.purge_movie_metadata(tmdb_id)
+            # Lean Storage Architecture: We preserve text metadata (cast, director, keywords)
+            # in SQLite (~1-2 KB), so we do NOT purge metadata here.
         elif local_movie and local_movie.get("poster_path"):
-            self.poster_cache_service.cache_posters_async([local_movie])
+            self.poster_cache_service.cache_posters_async([{**local_movie, "user_data": res}])
 
         return res
 
@@ -593,22 +614,6 @@ class MovieService:
         ):
             raise ValueError("TMDB movie ID must be a positive integer.")
         self.user_repository.remove_status(tmdb_id)
-
-    def _filter_discovery_results(self, movies: list[dict]) -> list[dict]:
-        watched_ids = self.user_repository.get_watched_movie_ids()
-        excluded_ids = self.user_repository.get_excluded_movie_ids()
-
-        hidden_ids = watched_ids | excluded_ids
-
-        filtered_movies = []
-
-        for movie in movies:
-            movie_id = movie.get("tmdb_id", movie.get("id"))
-
-            if movie_id is not None and movie_id not in hidden_ids:
-                filtered_movies.append(movie)
-
-        return filtered_movies  
 
     def exclude_movie(self, tmdb_id: int, notes: str | None = None) -> dict:
         self.set_movie_status(tmdb_id, MovieStatus.EXCLUDED)

@@ -4,46 +4,14 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
-- [ ] **Multi-Platform Reception Sorting & Filters in Personal Library (Rotten Tomatoes & IMDb)**
-  * **Goal**: Enable sorting and quick filtering of personal library shelves (*Watched*, *Watch Later*, *Favorites*) by both critic and audience reception using locally cached MDBList scores (neither currently exists in the library).
-  * **Key Components**:
-    * **SQLite Score Extraction (`app/movie_repository.py`)**: Leverage cached ratings in the `movie_ratings` table (`json_extract(ratings_json, '$.tomatoes')`, `json_extract(ratings_json, '$.imdb')`) via `LEFT JOIN` on `tmdb_id` to sort and filter library movies with zero API overhead.
-    * **Library Sort Options (`app/static/app.js`, `app/web/index.html`)**:
-      * Add "🍅 Rotten Tomatoes (Highest First)" to the shelf sort chips/dropdown.
-      * Add "★ IMDb Rating (Highest First)" to the shelf sort chips/dropdown.
-    * **Quick Filter Chips**:
-      * "🍅 80%+ Certified Fresh" quick toggle chip.
-      * "★ 7.5+ High IMDb" quick toggle chip.
-    * **Card Badge / Indicator**: Optionally display the cached RT / IMDb score badge directly on library movie cards when rating data is present in SQLite.
-
-- [ ] **Native Browser Back & Forward Navigation System (`popstate` / `pushState`)**
-  * **Goal**: Enable standard browser Back and Forward buttons, mouse thumb buttons, and keyboard shortcuts (`Alt + ←` / `Alt + →`) to navigate naturally across the application rather than exiting or doing nothing.
-  * **Architectural Blueprint**:
-    * **Intentional History Pushing (`history.pushState`)**: Transition from universal `history.replaceState` to selective `history.pushState` for primary navigation destinations:
-      * Opening a single movie detail page (`#movie:{id}`).
-      * Chaining related movies or actor/director exploration trails (*Movie A → Movie B → Movie C*).
-      * Switching master views (Discover ↔ Library shelves ↔ Notes editor).
-      * Opening the Entry Reader modal (`#entry-reader:{id}`).
-    * **In-Place Mutation Guard (`history.replaceState`)**: Retain `replaceState` for intra-view filter adjustments (genres, sliders, sort order, query typing) so users never have to click Back multiple times just to reverse filter adjustments.
-    * **Native `popstate` Event Pipeline**: Wire a dedicated `window.addEventListener("popstate")` handler to:
-      * Close movie details and restore the origin grid's exact scroll position seamlessly.
-      * Step backward cleanly through chained movie exploration trails (*C → B → A → Grid*).
-      * Keep URL hashes, UI master tabs, and view states in sync across native forward/back navigation.
-
-- [ ] **Studio Catalog & Filmography Mode (Direct 1-Click Catalog)**
-  * **Goal**: Enable direct 1-click exploration of a studio / production company's complete release catalog (e.g. A24, Pixar, Studio Ghibli, Blumhouse, Warner Bros.), matching the behavior of Actor and Director filmography mode.
-  * **Key Components**:
-    * **Direct Click Trigger**: Make studio tags/chips (in Discovery sidebar "Studios" picker, active filter tags, and Movie Details production company credits) clickable links (`.is-filmography-link` / studio catalog mode).
-    * **Zero-Preset Bypass**: Bypass all active discovery presets, language exclusions, vote minimums, and genre exclusions to retrieve the studio's full release credits directly via TMDB (`with_companies={company_id}`).
-    * **Catalog Surface & Shelf Badging**: Display films chronologically with personal library shelf status badges (*Watched*, *Nope*, *Watch Later*, *New Discovery*) and a clean return button back to origin.
-
+- [ ] **Remove Data Portability & Backups Card (Storage Page)**
+  * **Goal**: Completely remove the *"Data Portability & Backups"* card from the Footer > Storage page along with its action buttons (*Export Notes (.md)* and *Export Library (.json)*) and related export handlers.
 
 - [ ] **Storage Telemetry Labels**
   * **Storage Page "Personal Library" Label Cutoff**: Fix card width, padding, or label sizing on the Footer > Storage page so the *"Personal Library"* metric labels and sublabels never clip or truncate.
 
-- [ ] **Grey Contextual Help & Google Sheets Export**
+- [ ] **Grey Contextual Help**
   * **Screen-Relevant Help Docs in Grey**: Give Grey access to a concise internal UI/formatting help guide (especially when on the Notes editor screen) so questions like *"Hey Grey, how do I use formatted titles in notes?"* return the exact syntax and examples from the app docs.
-  * **Export Library / NOPE Database to Google Sheets**: Add an export workflow from the SQLite database (Personal Library / NOPE shelves) into a structured Google Sheet.
 
 - [ ] **Dedicated API & Network Telemetry Space (Footer / System View)**
   * **Goal**: Provide a clean, dedicated space (similar to the Storage page, accessible via footer or system navigation) that visualizes outbound TMDB API consumption, cache efficiency, and network health without cluttering the main footer or UI.
@@ -53,9 +21,56 @@
     * **Rate Limit & Health Telemetry**: Display circuit-breaker status, response latencies, and TMDB throttle/health state.
     * **Dedicated Zen Surface**: Kept cleanly out of the primary footer surface into its own harmonious memory page/modal.
 
+- [ ] **Code Health Phase 3: CSS Consolidation (`app/static/styles.css`)**
+  * **Goal**: Shrink the ~11.5k-line stylesheet by roughly half and retire the append-only override layers ("Final cascade…", "Keep … authoritative after legacy rules…").
+  * **Steps**: Introduce design tokens (colours, spacing, radii) in `:root` → merge the 280+ duplicate selector blocks into one canonical rule each → delete `!important` section by section → reorder into tokens → base → layout → components → pages → Grey → responsive.
+  * **Guardrail**: `run.bat lint` ratchets `!important` count, duplicate selectors and hex colours; run `python scripts/lint_frontend.py --update-baseline` after each improvement. Needs visual verification per section.
+
+- [ ] **Code Health Phase 4: Split `app.js` into ES Modules**
+  * **Goal**: Break the 12k-line single file into native ES modules (`api.js`, `discover.js`, `library.js`, `detail.js`, `notes.js`, `grey.js`, `state.js`) without introducing a build step.
+
 ---
 
 ## ✅ Completed Tasks
+- [x] **Code Health Phases 0–2: Junk Removal, Dead Code Purge & Lint Tooling**
+  * **Junk Removed**: Empty `app/movie_repository import.py`, legacy `app/grey_service.py` re-export shim (imports now use `app.grey`), unused `app/time_utils.py`, zero-byte `movies.db`/`nope.db`, duplicate root `IMPLEMENTATION.md` and `tests/INSTALL.md`, ~2 MB of stale app copies in `scratch/`. `check_db.py` moved to `scripts/inspect_db_schema.py`.
+  * **Phantom Tests Deleted**: 9 `tests/test_*.py` files contained no pytest-collectable tests (plain `main()` scripts that would have written fake statuses into the real database if run by hand). Test count unchanged at 219.
+  * **Dead Python Removed**: `MovieService.mark_as_new_discovery` / `_filter_discovery_results`, `UserMovieRepository.get_watched_movie_ids` / `get_excluded_movie_ids`, `AdvancedFilters.apply_local_rules`, `GreyService.invalidate_dossier_cache` (cache already self-invalidates via signature), unused `TMDB_API_KEY` config, 19 unused imports/variables.
+  * **Dead Frontend Removed**: 5 never-called JS functions; 116 CSS rule blocks + 16 selector-list entries targeting 44 classes/ids that nothing renders (~700 lines). Fixed a stray `}` with orphaned declarations in `styles.css` that was silently voiding the following `.reader-tag-input:focus` rule.
+  * **Config Docs Fixed**: `.env.example` now lists the variables the app actually reads (`TMDB_READ_ACCESS_TOKEN`, optional `MDBLIST_API_KEY`).
+  * **Lint Tooling**: `run.bat lint` runs ruff (pyflakes + bugbear), vulture (dead code, config in `pyproject.toml`) and `scripts/lint_frontend.py` (brace balance, unused CSS classes/ids, unused JS functions, ratcheted `!important` / duplicate-selector / hex-colour counts in `scripts/frontend_lint_baseline.json`). Dev tools pinned in `requirements-dev.txt`.
+- [x] **Architectural Refinement: Lean Storage Architecture, Library-Only Poster Caching & Metadata Preservation (`app/movie_service.py`, `app/poster_cache_service.py`, `app/movie_repository.py`, `app/storage_repository.py`, `app/main.py`, `app/static/app.js`, `app/web/index.html`)**
+  * **Reclaimed ~875 MB Disk Space**: Purged 11,200+ disposable discover poster `.jpg` files accumulated from casual feed scrolling, shrinking `data/posters/` from 935.43 MB down to 59.96 MB while preserving all library shelf posters and custom entry images intact.
+  * **Direct CDN Streaming for Discover Browsing**: Re-engineered poster handling so untracked discover titles and search presets stream image assets directly from TMDB's free Cloudflare CDN (`image.tmdb.org`) without saving `.jpg` files to disk.
+  * **Strict Library-Only Poster Disk Caching**: Limited background disk caching in `PosterCacheService.cache_posters_async()` exclusively to movies actively added to personal library shelves (*Watched*, *Watch Later*, *Rewatch*, *New Discovery*) or marked as favorites.
+  * **Preserved Text Metadata for NOPE Movies**: Stopped purging credits and keywords in `set_movie_status()` and `StorageRepository.cleanup_old_cache()`. Lightweight text metadata (~1–2 KB per movie in SQLite) is fully preserved for rejected movies, ensuring detail popups never display broken "Not available" text.
+  * **Automatic Credit Self-Healing**: Added self-healing inside `MovieService.get_movie()`: if a movie detail modal is opened for a title whose credits were previously purged, it automatically fetches and restores director, cast, and keyword data on the fly.
+  * **Storage UI & 1-Click Reclamation**: Added a "Lean Poster Storage" management card in the Storage view (`#storage-page`) with live disk telemetry (`Poster Cache` stat card) and a 1-click `Reclaim Poster Storage` button (`POST /storage/reclaim-posters`).
+  * **Full Automated Test Coverage**: Added dedicated test suite in `tests/test_lean_poster_storage.py` verifying NOPE metadata preservation, missing credit self-healing, library-only caching filters, and disk reclamation. All 219 tests pass cleanly.
+- [x] **Discover Sidebar Zero-Delay Loading & Visibility Fix (`app/static/app.js`)**
+  * **Root Cause**: When returning to Discover from Library shelf views or on initial load, `#advanced-controls` remained hidden (`.is-hidden` with `display: none !important`), collapsing `.discovery-workspace` into an empty padding box while the movie grid rendered. Additionally, `setAdvancedFilters()` synchronously awaited un-cached entity detail network requests for every keyword and person in the active preset before un-hiding controls or updating filter badges.
+  * **Instant Synchronous Visibility**: Updated `setActiveView("discover")`, `activateDiscoverView()`, and `initializeApp()` to synchronously ensure `elements.sidebarPaneDiscover`, `elements.discoverWorkspace`, `elements.advancedControls`, `elements.workspaceControls`, and `elements.personalFilters` are visible before any asynchronous network round-trips occur.
+  * **Zero-Delay UI Updates**: Wired immediate synchronous rendering of sort chips, filter badges, and active filter tags in `setAdvancedFilters()`, preventing UI layout delays while background entity names resolve.
+  * **In-Memory Entity Detail Caching**: Added an in-memory `entityDetailCache` (`Map`) in `hydrateEntitySelections()`, ensuring repeated lookups for keywords, directors, actors, and studios resolve instantly in 0ms without redundant network requests.
+  * **Collapse Guard**: Prevented `setWorkspaceCollapsed()` from hiding `elements.workspaceControls` under the modern sidebar design where collapsible buttons are disabled.
+- [x] **Native Browser Back & Forward Navigation System (`popstate` / `pushState`) (`app/static/app.js`)**
+  * **Intentional History Pushing (`history.pushState`)**: Transitioned from uniform `history.replaceState` to selective `history.pushState` for primary navigation destinations: opening movie details (`#movie:{id}`), navigating shelf views (`#watched`, `#watch_later`, `#favorites`, `#entries`, `#discover`), switching person filmographies (`#person:{id}:{name}`), studio catalogs (`#company:{id}:{name}`), and opening the Entry Reader (`#entry-reader:{id}`).
+  * **In-Place Mutation Guard (`history.replaceState`)**: Kept `history.replaceState` for filter adjustments, sliders, and query typing so users never get trapped in redundant filter undo cycles. Added an active `state.isPopStateNav` loop-guard to eliminate circular history events.
+  * **Native `popstate` & `hashchange` Event Pipeline**: Wired unified popstate routing to restore exact scroll positions, step cleanly backward through chained exploration trails (*Movie C → Movie B → Movie A → Grid*), synchronize ribbon and view state tabs, and cleanly close modals without orphaned history entries.
+  * **Header Breadcrumb Redundancy Elimination (`renderDetailTrail`)**: Streamlined the detail view back button to a concise, non-repeating `← Back` (with accessible tooltip and aria-label) when navigating chained exploration trails, letting the adjacent breadcrumb (`Forgotten Island → Kubo and the Two Strings`) cleanly represent the journey without echoing the previous movie's title twice.
+- [x] **Studio Catalog & Filmography Mode (Direct 1-Click Catalog) (`app/tmdb_client.py`, `app/main.py`, `app/static/app.js`)**
+  * **Zero Local Storage Footprint**: Studios and production companies are completely excluded from local SQLite tables (`movie_companies` table dropped, zero database overhead).
+  * **Backend Catalog Endpoint (`GET /companies/{company_id}/catalog`)**: Wired multi-page concurrent aggregation (fetching up to 10 TMDB pages / 200+ titles) with deduplication and bulk user shelf status attachment (*Watched*, *Nope*, *Watch Later*, *New Discovery*), ensuring complete studio release histories load rather than stopping at the first 20 titles.
+  * **1-Click Frontend Triggers**: Made studio chips interactive across the Discovery sidebar Studios picker and active filter tags (`.is-filmography-link`). Removed studio line from movie details cockpit to keep the details layout cleanly focused on Director, Cast, and personal notes.
+  * **Unified Filmography Canvas**: Integrated studio catalog browsing into the existing filmography toolbar, featuring company avatar, origin badge, chronological release ordering, and 1-click return to origin without unnecessary tab clutter.
+- [x] **Active Preset Visual Highlighting & Filter-Matching Auto-Detection (`app/static/styles.css`, `app/static/app.js`)**
+  * **Unmistakable Visual Contrast**: Re-engineered `.profile-ribbon .ribbon-chip.is-active` and `.profile-workshop-chip.is-active`. Replaced the previous 6% invisible dark tint and off-white text with vibrant brand yellow styling (`color: #DEC68B`, `border: 1.5px solid #DEC68B`, `background: rgba(222, 198, 139, 0.16)`, subtle gold ambient halo `box-shadow: 0 0 12px rgba(222, 198, 139, 0.30)`, and bold 600 weight), making active presets visually pop with high contrast against dark mode.
+  * **Filter-Matching Auto-Detection (`detectMatchingPresetId`)**: Added automatic reverse-lookup comparing current form filters against saved search presets. Even if `<select id="profile-select">` value was temporarily emptied or lost during navigation, the active preset is automatically detected, restored, and highlighted on its matching ribbon chip.
+  * **Title Search Preset Protection (`saveSearchState`)**: Guarded `saveSearchState()` against overwriting `selected_preference_id` or `localStorage.getItem("nope_active_preset_id")` with null during raw title searches (`state.mode === "search"`), preserving preset continuity when returning to discover mode.
+  * **Instant Click Feedback**: Added immediate `syncRibbonActiveState()` inside preset chip click handlers so chips illuminate instantaneously without awaiting asynchronous TMDB discovery network round-trips.
+- [x] **Elimination of Brief "No Movies Found" Empty State Flash during View & Preset Transitions (`app/static/app.js`)**
+  * **Root Cause**: If the previous view or query had yielded 0 movies, `#empty-state` remained visible on screen during asynchronous preset hydration and network round trips before `showLoadingCards()` was invoked deep inside `executeDiscoverySearch()`.
+  * **Immediate Skeleton Transition**: Forced `elements.empty.classList.add("is-hidden")` and invoked `showLoadingCards()` immediately upon entering `activateDiscoverView()`, clicking preset chips, clearing search inputs, or loading shelves, ensuring clean skeleton loaders render instantly with zero empty-state flicker.
 - [x] **Active Search Preset Restoration on Search Clear & Async Hydration Fix (`app/static/app.js`)**
   * **Preset Memory across Search Queries**: Stashed active preset ID (`state.presetBeforeSearch`) before launching raw TMDB title searches (`searchMovies`). When the search input is cleared (via backspace `input` event, native clear button `search` event, or empty form submit), `activateDiscoverView()` automatically restores the active preset ID, re-applies its filters via `applySelectedProfile()`, and re-highlights the corresponding ribbon chip.
   * **Async Hydration Fix**: Awaited `applySelectedProfile()` in ribbon preset chip clicks before running discovery search, preventing race conditions with keyword metadata hydration that previously caused false filter divergence and un-highlighting.

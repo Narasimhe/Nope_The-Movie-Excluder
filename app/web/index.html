@@ -11,6 +11,8 @@
   >
   <title>NOPE</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/tokens.css?v=20261101_zen_224">
+  <link rel="stylesheet" href="/static/topbar.css?v=20261101_zen_224">
   <link rel="stylesheet" href="/static/styles.css?v=20261101_zen_224">
   <script>
     (function () {
@@ -1015,6 +1017,22 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
                 <button id="cleanup-cache" class="storage-action-btn" type="button">
                   <span class="material-symbols-outlined" aria-hidden="true">mop</span>
                   <span>Clear Cache (>90d)</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="storage-card-zone">
+              <div class="storage-zone-header">
+                <span class="material-symbols-outlined storage-zone-icon" aria-hidden="true">photo_library</span>
+                <div>
+                  <h3 class="storage-zone-title">Lean Poster Storage</h3>
+                  <p class="storage-zone-desc">Reclaim disk space by purging untracked browsing posters. All active library shelf posters are preserved.</p>
+                </div>
+              </div>
+              <div class="storage-zone-actions">
+                <button id="reclaim-posters-btn" class="storage-action-btn storage-action-btn--primary" type="button">
+                  <span class="material-symbols-outlined" aria-hidden="true">folder_zip</span>
+                  <span>Reclaim Poster Storage</span>
                 </button>
               </div>
             </div>

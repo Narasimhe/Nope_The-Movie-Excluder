@@ -4,7 +4,7 @@ cd /d "%~dp0"
 
 rem Movie Excluder single 1-click launcher & dev CLI.
 rem Double-click to launch server and open browser automatically.
-rem Usage: run.bat [start|init|test|install|help]
+rem Usage: run.bat [start|init|test|lint|install|help]
 
 set "COMMAND=%~1"
 if "%COMMAND%"=="" set "COMMAND=start"
@@ -38,6 +38,7 @@ if "%PYTHON%"=="" (
 if /I "%COMMAND%"=="start" goto start
 if /I "%COMMAND%"=="init" goto init
 if /I "%COMMAND%"=="test" goto test
+if /I "%COMMAND%"=="lint" goto lint
 if /I "%COMMAND%"=="install" goto install
 
 echo Unknown command: %COMMAND%
@@ -74,6 +75,26 @@ exit /b %errorlevel%
 call %PYTHON% -m pytest
 exit /b %errorlevel%
 
+:lint
+rem Code hygiene: Python lint (ruff), dead Python code (vulture), CSS/JS checks.
+rem Install the tools once with: %PYTHON% -m pip install -r requirements-dev.txt
+set "LINT_FAILED=0"
+echo [1/3] ruff - unused imports, undefined names, likely bugs
+call %PYTHON% -m ruff check app scripts tests || set "LINT_FAILED=1"
+echo.
+echo [2/3] vulture - dead Python code
+call %PYTHON% -m vulture || set "LINT_FAILED=1"
+echo.
+echo [3/3] frontend - CSS tokens, !important, and duplicate selector linter
+call %PYTHON% scripts\lint_frontend.py --ratchet || set "LINT_FAILED=1"
+echo.
+if "%LINT_FAILED%"=="1" (
+    echo [LINT] Problems found.
+    exit /b 1
+)
+echo [LINT] All checks passed.
+exit /b 0
+
 :install
 echo Installing project dependencies...
 call %PYTHON% -m pip install -r requirements.txt
@@ -86,5 +107,6 @@ echo   run.bat          Start the app and open your browser (default).
 echo   run.bat start    Start the development server and open browser.
 echo   run.bat init     Initialize or migrate the local database.
 echo   run.bat test     Run the automated tests.
+echo   run.bat lint     Check code hygiene (dead code, CSS/JS bloat).
 echo   run.bat install  Install dependencies from requirements.txt.
 exit /b 1

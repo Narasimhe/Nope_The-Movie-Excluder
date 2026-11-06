@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+from pathlib import Path
 from typing import Any
 
 from app.database import get_connection
@@ -624,6 +625,73 @@ class MovieRepository:
                 (f"%{filename}",),
             ).fetchone()
             return bool(row and row["status"] == "excluded")
+
+    def is_library_poster(self, filename: str) -> bool:
+        clean = Path(filename).name
+        if not clean:
+            return False
+        with get_connection() as conn:
+            row = conn.execute(
+                """
+                SELECT 1
+                FROM movies m
+                JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
+                WHERE m.poster_path LIKE ?
+                  AND (u.status IN ('watched', 'watch_later', 'rewatch', 'new_discovery') OR u.is_favorite = 1)
+                LIMIT 1
+                """,
+                (f"%{clean}",),
+            ).fetchone()
+            if row:
+                return True
+
+            try:
+                g_row = conn.execute(
+                    """
+                    SELECT 1 FROM general_entries
+                    WHERE image_url LIKE ?
+                    LIMIT 1
+                    """,
+                    (f"%{clean}",),
+                ).fetchone()
+                if g_row:
+                    return True
+            except Exception:
+                pass
+            return False
+
+    def get_all_retained_poster_filenames(self) -> set[str]:
+        retained: set[str] = set()
+        with get_connection() as conn:
+            rows = conn.execute(
+                """
+                SELECT m.poster_path
+                FROM movies m
+                JOIN user_movie_data u ON m.tmdb_id = u.tmdb_id
+                WHERE (u.status IN ('watched', 'watch_later', 'rewatch', 'new_discovery') OR u.is_favorite = 1)
+                  AND m.poster_path IS NOT NULL
+                """
+            ).fetchall()
+            for r in rows:
+                p = r["poster_path"]
+                if p:
+                    name = Path(p).name
+                    if name:
+                        retained.add(name)
+
+            try:
+                g_rows = conn.execute(
+                    "SELECT image_url FROM general_entries WHERE image_url IS NOT NULL"
+                ).fetchall()
+                for r in g_rows:
+                    url = r["image_url"]
+                    if url:
+                        name = Path(url).name
+                        if name:
+                            retained.add(name)
+            except Exception:
+                pass
+        return retained
 
     def find_in_discover_cache(self, tmdb_id: int) -> dict | None:
         try:

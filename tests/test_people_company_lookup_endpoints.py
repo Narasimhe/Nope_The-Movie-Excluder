@@ -90,6 +90,31 @@ class FakeTMDBLookupClient:
             ],
         }
 
+    def get_company(self, company_id: int) -> dict:
+        return {
+            "id": company_id,
+            "name": "Syncopy",
+            "origin_country": "GB",
+            "logo_path": "/syncopy.png",
+        }
+
+    def get_company_movies(
+        self, company_id: int, page: int = 1, sort_by: str = "primary_release_date.desc"
+    ) -> dict:
+        return {
+            "page": page,
+            "total_pages": 1,
+            "total_results": 1,
+            "results": [
+                {
+                    "id": 872585,
+                    "title": "Oppenheimer",
+                    "release_date": "2023-07-19",
+                    "poster_path": "/oppenheimer.jpg",
+                }
+            ],
+        }
+
 
 class PeopleCompanyLookupEndpointTests(unittest.TestCase):
     def test_lookup_routes_are_registered(self) -> None:
@@ -100,6 +125,7 @@ class PeopleCompanyLookupEndpointTests(unittest.TestCase):
 
         self.assertIn("/people/search", route_paths)
         self.assertIn("/companies/search", route_paths)
+        self.assertIn("/companies/{company_id}/catalog", route_paths)
         self.assertIn("/people/{person_id}/filmography", route_paths)
 
     def test_people_results_are_shaped_for_autocomplete(self) -> None:
@@ -160,6 +186,17 @@ class PeopleCompanyLookupEndpointTests(unittest.TestCase):
         self.assertEqual(directing_result["movies"][0]["title"], "Oppenheimer")
         self.assertEqual(len(acting_result["movies"]), 1)
         self.assertEqual(acting_result["movies"][0]["title"], "Tarantella")
+
+    def test_company_catalog_endpoint(self) -> None:
+        client = FakeTMDBLookupClient()
+
+        with patch.object(main, "tmdb_lookup_client", client):
+            result = main.get_company_catalog(9993)
+
+        self.assertEqual(result["company"]["id"], 9993)
+        self.assertEqual(result["company"]["name"], "Syncopy")
+        self.assertEqual(len(result["movies"]), 1)
+        self.assertEqual(result["movies"][0]["title"], "Oppenheimer")
 
 
 if __name__ == "__main__":

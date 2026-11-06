@@ -248,10 +248,6 @@ class GreyService:
         conn.row_factory = sqlite3.Row
         return conn
 
-    def invalidate_dossier_cache(self) -> None:
-        """Clear cached dossier after any status or note mutation."""
-        self._dossier_cache = None
-
     def get_taste_dossier(self) -> dict[str, Any]:
         """Extract user taste dossier using 2 consolidated SQLite queries + RAM cache (down from 17 queries)."""
         favorites: list[dict[str, Any]] = []

@@ -1,0 +1,85 @@
+/* ============================================================
+   NOPE Design System Tokens
+   ============================================================ */
+
+:root {
+  color-scheme: dark;
+
+  /* Typography */
+  --font-ui: "Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, sans-serif;
+
+  /* Dominant Backgrounds & Surfaces */
+  --bg: #09090b;
+  --bg-glass: rgba(9, 9, 11, 0.94);
+  --surface: #15151b;
+  --surface-workspace: rgba(15, 15, 18, 0.6);
+  --surface-elevated: #181820;
+  --surface-card: rgba(255, 255, 255, 0.04);
+  --surface-card-hover: rgba(255, 255, 255, 0.08);
+  --surface-card-active: rgba(255, 255, 255, 0.12);
+  --surface-input: rgba(255, 255, 255, 0.03);
+  --surface-input-focus: rgba(255, 255, 255, 0.05);
+
+  /* Text & Foreground Hierarchy */
+  --text: #f5f3ee;
+  --text-primary: #ffffff;
+  --text-secondary: #e5e7eb;
+  --text-muted: #9ca3af;
+  --text-dim: #6b7280;
+  --text-inverse: #09090b;
+
+  /* Brand Signature Palette */
+  --brand-red: #ef4444;
+  --brand-red-glow: rgba(239, 68, 68, 0.65);
+  --brand-red-ambient: rgba(220, 38, 38, 0.35);
+  --brand-gold: #DEC68B;
+  --brand-gold-light: #E6D5B8;
+  --brand-gold-dim: #8E8468;
+  --brand-gold-tint: rgba(222, 198, 139, 0.12);
+  --brand-gold-border: rgba(212, 175, 55, 0.5);
+  --brand-gold-glow: rgba(222, 198, 139, 0.30);
+  --accent: #f2c94c;
+  --accent-bright: #ffe071;
+  --accent-ink: #16130a;
+
+  /* Status & Shelf Semantics */
+  --danger: #ff6b6b;
+  --success: #72d6a0;
+  --status-new-discovery: #f2c94c;
+  --status-new-discovery-border: rgba(242, 201, 76, 0.45);
+  --status-watched: #4ade80;
+  --status-watched-border: rgba(74, 222, 128, 0.45);
+  --status-watch-later: #38bdf8;
+  --status-watch-later-border: rgba(56, 189, 248, 0.45);
+  --status-rewatch: #fb923c;
+  --status-rewatch-border: rgba(251, 146, 60, 0.45);
+  --status-nope: #ef4444;
+  --status-nope-border: rgba(239, 68, 68, 0.45);
+  --status-exclude-text: #ce8484;
+  --status-exclude-border: rgba(224, 109, 109, 0.5);
+
+  /* Lines & Borders */
+  --line: rgba(255, 255, 255, 0.08);
+  --line-subtle: rgba(255, 255, 255, 0.06);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-card: rgba(255, 255, 255, 0.1);
+  --border-card-hover: rgba(255, 255, 255, 0.2);
+
+  /* Border Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 28px;
+  --radius-pill: 999px;
+
+  /* Shadows */
+  --shadow-topbar: 0 4px 18px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-dropdown: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-modal: 0 24px 70px rgba(0, 0, 0, 0.38);
+  --shadow-brand-glow: 0 0 14px var(--brand-red-glow), 0 0 28px var(--brand-red-ambient), 0 2px 4px rgba(0, 0, 0, 0.9);
+  --shadow-brand-glow-hover: 0 0 18px rgba(239, 68, 68, 0.8), 0 0 34px rgba(220, 38, 38, 0.45), 0 2px 6px rgba(0, 0, 0, 0.9);
+}

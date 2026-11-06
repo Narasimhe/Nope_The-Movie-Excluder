@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 from app import database
 from app.database import initialize_database
 from app.general_entry_repository import GeneralEntryRepository
-from app.grey_service import GreyService
+from app.grey import GreyService
 
 
 def test_grey_loads_prompt_file_and_replaces_placeholders():
@@ -380,7 +380,7 @@ def test_grey_set_movie_status_action_is_pruned():
             initialize_database()
             from app.movie_repository import MovieRepository
             from app.movie_service import MovieService
-            movie_svc = MovieService()
+            MovieService()
             movie_repo = MovieRepository()
             movie_repo.save_movie({
                 "id": 76726,
@@ -414,7 +414,7 @@ def test_grey_set_movie_status_action_is_pruned():
                 }
                 mock_post.return_value = mock_resp
 
-                res = service.chat("add this to new discovery", inspected_movie_id=76726)
+                service.chat("add this to new discovery", inspected_movie_id=76726)
                 # Status actions are pruned from Grey — backend does not modify user movie status
                 from app.user_movie_repository import UserMovieRepository
                 user_repo = UserMovieRepository()
@@ -513,7 +513,7 @@ def test_grey_batch_set_movie_status_is_pruned():
                 }
                 mock_post.return_value = mock_resp
 
-                res = service.chat(
+                service.chat(
                     "add the YES movies to new discovery",
                     related_movies=[
                         {"id": 1391, "title": "Cape Fear"},
@@ -568,7 +568,7 @@ def test_grey_slash_command_skill_routing():
 
 
 def test_grey_pruned_skills():
-    from app.grey_service import SKILLS_REGISTRY
+    from app.grey import SKILLS_REGISTRY
     # /tonight, /nope, /watchlist, and /batch pruned from registry
     assert "tonight" not in SKILLS_REGISTRY
     assert "nope" not in SKILLS_REGISTRY
