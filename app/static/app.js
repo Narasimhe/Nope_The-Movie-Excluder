@@ -107,6 +107,27 @@ const STATUS_GLYPH_NAMES = {
   excluded: "close",
 };
 
+function shouldRenderStatusBadgeForCard(status) {
+  if (!status || status === "untracked" || !STATUS_GLYPH_NAMES[status]) {
+    return false;
+  }
+  const browsingStatus = state.currentView === "movie-notes"
+    ? (state.movieNotesShelfFilter || state.activeLibraryShelf)
+    : state.currentView;
+  const isBrowsingSpecificShelf = Boolean(
+    browsingStatus &&
+    browsingStatus !== "discover" &&
+    browsingStatus !== "entries" &&
+    browsingStatus !== "storage" &&
+    browsingStatus !== "favorites" &&
+    state.librarySearchScope !== "all"
+  );
+  if (isBrowsingSpecificShelf) {
+    return false;
+  }
+  return true;
+}
+
 function getStatusBadgeElement(status) {
   if (!status || status === "untracked" || !STATUS_GLYPH_NAMES[status]) {
     return null;
@@ -122,7 +143,7 @@ function getStatusBadgeElement(status) {
 
 function updateCardStatusBadge(container, status) {
   const existing = container.querySelector(".status-badge");
-  if (!status || status === "untracked" || !STATUS_GLYPH_NAMES[status]) {
+  if (!shouldRenderStatusBadgeForCard(status)) {
     existing?.remove();
     return;
   }
@@ -358,7 +379,6 @@ const elements = {
   storagePage: document.querySelector("#storage-page"),
   storageSummary: document.querySelector("#storage-summary"),
   cleanupCache: document.querySelector("#cleanup-cache"),
-  reclaimPostersBtn: document.querySelector("#reclaim-posters-btn"),
   purgeDeletedEntries: document.querySelector("#purge-deleted-entries"),
   storageFeedback: document.querySelector("#storage-feedback"),
   footerViews: [...document.querySelectorAll("[data-footer-view]")],
@@ -422,7 +442,8 @@ const state = {
   librarySearchTarget: "all",
   isSearchingLibrary: false,
   movieNotesShelfFilter: null,
-  lastNormalShelf: "favorites",
+  activeLibraryShelf: "watched",
+  lastNormalShelf: "watched",
   mode: "shelf",
   currentView: "new_discovery",
   browseMode: (function () {
@@ -530,20 +551,29 @@ function updateShelfRibbonActiveState() {
   const isAllShelvesActive = state.librarySearchScope === "all";
   const effectiveView = isAllShelvesActive ? null : state.currentView;
 
+  const isFav = effectiveView === "favorites";
+  const isNotes = effectiveView === "movie-notes";
+
   const shelfHeartEl = document.querySelector(".shelf-favorites-btn");
   if (shelfHeartEl) {
-    shelfHeartEl.classList.toggle("is-active", effectiveView === "favorites");
+    shelfHeartEl.classList.toggle("is-active", isFav && !isNotes);
   }
+
+  const shelfNotesEl = document.querySelector(".shelf-notes-lens-btn");
+  if (shelfNotesEl) {
+    shelfNotesEl.classList.toggle("is-active", isNotes && !isFav);
+  }
+
+  const activeShelf = isNotes
+    ? (state.movieNotesShelfFilter || state.activeLibraryShelf || state.lastNormalShelf || "watched")
+    : (isFav ? null : effectiveView);
+
   elements.navLinks.forEach((button) => {
     const btnView = button.dataset.view;
-    const isPrimary = btnView === effectiveView;
-    const isPairedShelf = Boolean(
-      effectiveView === "movie-notes" &&
-      state.movieNotesShelfFilter &&
-      btnView === state.movieNotesShelfFilter
-    );
-    button.classList.toggle("is-active", Boolean(isPrimary || isPairedShelf));
-    button.classList.toggle("is-notes-paired", isPairedShelf);
+    if (btnView === "favorites" || btnView === "movie-notes") return;
+    const isPrimary = btnView === activeShelf;
+    button.classList.toggle("is-active", Boolean(isPrimary));
+    button.classList.toggle("is-notes-paired", Boolean(isNotes && isPrimary));
   });
 }
 
@@ -569,8 +599,9 @@ function setActiveView(view) {
   if (view) {
     document.body.dataset.activeView = view;
   }
-  const normalLibraryShelves = ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery"];
-  if (view && normalLibraryShelves.includes(view)) {
+  const primaryLibraryShelves = ["new_discovery", "watch_later", "watched", "rewatch", "excluded"];
+  if (view && primaryLibraryShelves.includes(view)) {
+    state.activeLibraryShelf = view;
     state.lastNormalShelf = view;
   }
   if (view && elements.filmographyToolbar && view !== "filmography") {
@@ -670,7 +701,7 @@ function setActiveView(view) {
   if (view && ["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes", "entries", "discover"].includes(view)) {
     try {
       localStorage.setItem("nope_current_view", view);
-      if (["favorites", "watched", "watch_later", "rewatch", "excluded", "new_discovery", "movie-notes"].includes(view)) {
+      if (["new_discovery", "watch_later", "watched", "rewatch", "excluded"].includes(view)) {
         localStorage.setItem("nope_last_library_shelf", view);
       }
     } catch {}
@@ -3026,7 +3057,7 @@ function createMovieCard(movie) {
 
   // Note icon removed from library movie posters per user directive
 
-  if (status && status !== "untracked") {
+  if (shouldRenderStatusBadgeForCard(status)) {
     const statusBadge = getStatusBadgeElement(status);
     if (statusBadge) {
       posterButton.append(statusBadge);
@@ -4799,16 +4830,6 @@ function setupLibraryFilters() {
     });
   }
 
-  const notesLensBtn = document.querySelector("#shelf-notes-lens-btn");
-  if (notesLensBtn) {
-    notesLensBtn.addEventListener("dblclick", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const exitTarget = state.lastNormalShelf || "watched";
-      state.movieNotesShelfFilter = null;
-      loadShelf(exitTarget);
-    });
-  }
 
   if (elements.scopeBtnAll && elements.scopeBtnShelf) {
     elements.scopeBtnAll.addEventListener("click", () => {
@@ -5989,7 +6010,7 @@ function updateDetailPosterStatusBadge(movie, overrideStatus = null) {
   if (!wrap) return;
   const status = overrideStatus !== null ? overrideStatus : (getStatus(movie) || "untracked");
   const existing = wrap.querySelector(".detail-poster-status-badge");
-  if (!status || status === "untracked" || !STATUS_GLYPH_NAMES[status]) {
+  if (!shouldRenderStatusBadgeForCard(status)) {
     existing?.remove();
     return;
   }
@@ -6521,7 +6542,10 @@ function renderVerdict(value) {
     elements.verdictStars.append(star);
   }
   if (elements.clearVerdict) {
-    elements.clearVerdict.classList.toggle("is-hidden", selected <= 0);
+    const hasRating = selected > 0;
+    elements.clearVerdict.disabled = !hasRating;
+    elements.clearVerdict.classList.toggle("is-disabled", !hasRating);
+    elements.clearVerdict.classList.remove("is-hidden");
   }
 }
 
@@ -6834,6 +6858,7 @@ function renderDetailTrail() {
     }
     const button = document.createElement("button");
     button.type = "button";
+    button.className = "detail-trail-btn";
     button.textContent = item.title;
     button.addEventListener("click", () => {
       openMovieDetails(item.id, { trailMode: "jump", trailIndex: index });
@@ -8722,22 +8747,15 @@ function renderEntries(entries) {
 
       const labelWrap = document.createElement("span");
       labelWrap.className = "timeline-header-label";
-      const tick = document.createElement("span");
-      tick.className = "timeline-tick";
-      tick.setAttribute("aria-hidden", "true");
       const labelText = document.createElement("span");
       labelText.textContent = `${bucket.year} · ${bucket.monthName.toUpperCase()}`;
-      labelWrap.append(tick, labelText);
+      labelWrap.append(labelText);
 
       const countSpan = document.createElement("span");
       countSpan.className = "timeline-header-count";
       countSpan.textContent = `(${bucket.items.length} ${bucket.items.length === 1 ? "note" : "notes"})`;
 
-      const line = document.createElement("span");
-      line.className = "timeline-header-line";
-      line.setAttribute("aria-hidden", "true");
-
-      header.append(labelWrap, countSpan, line);
+      header.append(labelWrap, countSpan);
       section.append(header);
 
       const ledgerGroup = document.createElement("div");
@@ -9200,77 +9218,54 @@ async function loadStorage() {
   state.currentView = "storage";
   setActiveView(null);
   setAuxiliaryView("storage");
-  elements.storageSummary.innerHTML = '<div class="entry-empty">Reading local storage…</div>';
+  elements.storageSummary.innerHTML = '<span class="storage-summary-loading">Reading local storage…</span>';
   try {
     const summary = await fetchJSON("/storage");
-    const stats = [
-      {
-        value: formatBytes(summary.size_bytes),
-        label: "Database Size",
-        desc: "SQLite on disk",
-        icon: "database"
-      },
-      {
-        value: summary.poster_cache_mb != null ? `${summary.poster_cache_mb} MB` : formatBytes(summary.poster_cache_bytes || 0),
-        label: "Poster Cache",
-        desc: `${summary.poster_cache_files != null ? summary.poster_cache_files.toLocaleString() : 0} images on disk`,
-        icon: "photo_library"
-      },
-      {
-        value: typeof summary.cached_movies === "number" ? summary.cached_movies.toLocaleString() : summary.cached_movies,
-        label: "Cached Movies",
-        desc: "Offline TMDB cache",
-        icon: "movie"
-      },
-      {
-        value: typeof summary.personal_movies === "number" ? summary.personal_movies.toLocaleString() : summary.personal_movies,
-        label: "Personal Library",
-        desc: "Shelves & ratings",
-        icon: "bookmark"
-      },
-      {
-        value: typeof summary.old_unprotected_cache_movies === "number" ? summary.old_unprotected_cache_movies.toLocaleString() : summary.old_unprotected_cache_movies,
-        label: "Stale Cache",
-        desc: "Untouched for 90+ days",
-        icon: "auto_delete"
-      },
-      {
-        value: typeof summary.soft_deleted_entries === "number" ? summary.soft_deleted_entries.toLocaleString() : summary.soft_deleted_entries,
-        label: "Trash Bin",
-        desc: "Deleted notes retained",
-        icon: "delete_outline"
-      },
-    ];
-    elements.storageSummary.replaceChildren();
-    stats.forEach((item) => {
-      const card = document.createElement("div");
-      card.className = "storage-stat";
+    const dbSize = formatBytes(summary.size_bytes);
+    const libraryCount = (typeof summary.personal_movies === "number" ? summary.personal_movies : 0).toLocaleString();
+    const cachedCount = (typeof summary.cached_movies === "number" ? summary.cached_movies : 0).toLocaleString();
+    const staleCount = typeof summary.old_unprotected_cache_movies === "number" ? summary.old_unprotected_cache_movies : 0;
+    const trashCount = typeof summary.soft_deleted_entries === "number" ? summary.soft_deleted_entries : 0;
 
-      const top = document.createElement("div");
-      top.className = "storage-stat-top";
+    elements.storageSummary.innerHTML = `
+      <div class="storage-stat">
+        <span class="storage-stat-label">Database Size</span>
+        <span class="storage-stat-value">${dbSize}</span>
+        <span class="storage-stat-sub">SQLite on disk</span>
+      </div>
+      <div class="storage-stat">
+        <span class="storage-stat-label">Personal Library</span>
+        <span class="storage-stat-value">${libraryCount}</span>
+        <span class="storage-stat-sub">Titles in library</span>
+      </div>
+      <div class="storage-stat">
+        <span class="storage-stat-label">Cached Metadata</span>
+        <span class="storage-stat-value">${cachedCount}</span>
+        <span class="storage-stat-sub">TMDB records saved</span>
+      </div>
+    `.trim();
 
-      const label = document.createElement("span");
-      label.className = "storage-stat-label";
-      label.textContent = item.label;
+    if (elements.cleanupCache) {
+      elements.cleanupCache.innerHTML = `<span>Clear Cache (>90d) · ${staleCount.toLocaleString()}</span>`;
+      if (staleCount <= 0) {
+        elements.cleanupCache.classList.add("is-dormant");
+        elements.cleanupCache.setAttribute("aria-disabled", "true");
+      } else {
+        elements.cleanupCache.classList.remove("is-dormant");
+        elements.cleanupCache.removeAttribute("aria-disabled");
+      }
+    }
 
-      const glyph = document.createElement("span");
-      glyph.className = "material-symbols-outlined storage-stat-glyph";
-      glyph.setAttribute("aria-hidden", "true");
-      glyph.textContent = item.icon;
-
-      top.append(label, glyph);
-
-      const val = document.createElement("div");
-      val.className = "storage-stat-value";
-      val.textContent = String(item.value);
-
-      const desc = document.createElement("div");
-      desc.className = "storage-stat-desc";
-      desc.textContent = item.desc;
-
-      card.append(top, val, desc);
-      elements.storageSummary.append(card);
-    });
+    if (elements.purgeDeletedEntries) {
+      elements.purgeDeletedEntries.innerHTML = `<span>Purge Trash · ${trashCount.toLocaleString()}</span>`;
+      if (trashCount <= 0) {
+        elements.purgeDeletedEntries.classList.add("is-dormant");
+        elements.purgeDeletedEntries.setAttribute("aria-disabled", "true");
+      } else {
+        elements.purgeDeletedEntries.classList.remove("is-dormant");
+        elements.purgeDeletedEntries.removeAttribute("aria-disabled");
+      }
+    }
   } catch (error) {
     feedback(elements.storageFeedback, error.message, "error");
   }
@@ -9840,54 +9835,43 @@ if (elements.refreshFeed) {
 elements.navLinks.forEach((button) => {
   button.addEventListener("click", () => {
     const clickedView = button.dataset.view;
-    const normalLibraryShelves = [
-      "favorites",
-      "watched",
+    const primaryShelves = [
+      "new_discovery",
       "watch_later",
+      "watched",
       "rewatch",
       "excluded",
-      "new_discovery",
     ];
 
+    // 1. HEART FAVOURITES (Single click active and inactive - restores active library status)
     if (clickedView === "favorites") {
+      // If already active -> single click deactivates and restores active library status
       if (state.currentView === "favorites") {
-        const exitTarget = state.previousFavReturnShelf || state.lastNormalShelf || "watched";
-        state.previousFavReturnShelf = null;
-        loadShelf(exitTarget, 1, { pushHistory: true });
-        return;
-      }
-      const normalShelves = [
-        "watched",
-        "watch_later",
-        "rewatch",
-        "excluded",
-        "new_discovery",
-        "discover",
-      ];
-      if (normalShelves.includes(state.currentView)) {
-        state.previousFavReturnShelf = state.currentView;
-        state.lastNormalShelf = state.currentView;
-      } else {
-        state.previousFavReturnShelf = state.lastNormalShelf || "watched";
-      }
-      loadShelf("favorites", 1, { pushHistory: true });
-      return;
-    }
-
-    if (clickedView !== "movie-notes") {
-      state.previousFavReturnShelf = null;
-    }
-
-    if (clickedView === "movie-notes") {
-      if (state.currentView === "movie-notes") {
-        const exitTarget = state.movieNotesShelfFilter || state.lastNormalShelf || "watched";
+        const exitTarget = state.activeLibraryShelf || state.lastNormalShelf || "watched";
         state.movieNotesShelfFilter = null;
         loadShelf(exitTarget, 1, { pushHistory: true });
         return;
       }
-      const targetShelf = normalLibraryShelves.includes(state.currentView)
+      // If not active -> activate favorites (notes lens deactivated; they never work together)
+      state.movieNotesShelfFilter = null;
+      loadShelf("favorites", 1, { pushHistory: true });
+      return;
+    }
+
+    // 2. MOVIE NOTES LENS (Single click active and inactive - works with active library status)
+    if (clickedView === "movie-notes") {
+      // If already active -> single click deactivates and restores active library status
+      if (state.currentView === "movie-notes") {
+        const exitTarget = state.movieNotesShelfFilter || state.activeLibraryShelf || state.lastNormalShelf || "watched";
+        state.movieNotesShelfFilter = null;
+        loadShelf(exitTarget, 1, { pushHistory: true });
+        return;
+      }
+      // If not active -> activate notes lens for the current active library status (never with favorites)
+      const targetShelf = primaryShelves.includes(state.currentView)
         ? state.currentView
-        : (state.lastNormalShelf || "watched");
+        : (state.activeLibraryShelf || state.lastNormalShelf || "watched");
+      state.activeLibraryShelf = targetShelf;
       state.lastNormalShelf = targetShelf;
       state.movieNotesShelfFilter = targetShelf;
       navigateToHash("#movie-notes", { push: true });
@@ -9895,19 +9879,35 @@ elements.navLinks.forEach((button) => {
       return;
     }
 
-    if (state.currentView === "movie-notes" && normalLibraryShelves.includes(clickedView)) {
-      if (state.movieNotesShelfFilter === clickedView) {
-        state.movieNotesShelfFilter = null;
-        loadShelf(clickedView, 1, { pushHistory: true });
+    // 3. PRIMARY SHELF CLICK (new_discovery, watch_later, watched, rewatch, excluded)
+    if (primaryShelves.includes(clickedView)) {
+      if (state.currentView === "movie-notes") {
+        // If clicking the SAME shelf that notes lens is currently on -> single click restores normal shelf
+        if (state.movieNotesShelfFilter === clickedView) {
+          state.movieNotesShelfFilter = null;
+          state.activeLibraryShelf = clickedView;
+          state.lastNormalShelf = clickedView;
+          loadShelf(clickedView, 1, { pushHistory: true });
+          return;
+        }
+        // If clicking a DIFFERENT shelf -> notes works with active library status, switch active status and reload notes
+        state.activeLibraryShelf = clickedView;
+        state.lastNormalShelf = clickedView;
+        state.movieNotesShelfFilter = clickedView;
+        navigateToHash("#movie-notes", { push: true });
+        loadMovieNotes(1);
         return;
       }
-      state.movieNotesShelfFilter = clickedView;
+
+      // Normal navigation: deactivates notes filter and switches to clicked shelf
+      state.movieNotesShelfFilter = null;
+      state.activeLibraryShelf = clickedView;
       state.lastNormalShelf = clickedView;
-      navigateToHash("#movie-notes", { push: true });
-      loadMovieNotes(1);
+      loadShelf(clickedView, 1, { pushHistory: true });
       return;
     }
 
+    // 4. OTHER VIEWS (entries, etc.)
     state.movieNotesShelfFilter = null;
     if (clickedView === "entries") {
       resetEntryFiltersToCurrent();
@@ -10729,25 +10729,6 @@ elements.cleanupCache.addEventListener("click", async () => {
   }
 });
 
-if (elements.reclaimPostersBtn) {
-  elements.reclaimPostersBtn.addEventListener("click", async () => {
-    if (!window.confirm("Purge untracked browsing posters from disk? All active library shelf posters (Watched, Watch Later, Rewatch, Favorites) will be preserved.")) return;
-    elements.reclaimPostersBtn.disabled = true;
-    try {
-      const result = await fetchJSON("/storage/reclaim-posters", { method: "POST" });
-      const msg = `Reclaimed ${result.reclaimed_mb} MB (${result.deleted_count.toLocaleString()} untracked posters purged, ${result.kept_count.toLocaleString()} library posters kept).`;
-      feedback(elements.storageFeedback, msg);
-      showNotice(msg, "success");
-      await loadStorage();
-    } catch (error) {
-      feedback(elements.storageFeedback, error.message, "error");
-      showNotice(error.message, "error");
-    } finally {
-      elements.reclaimPostersBtn.disabled = false;
-    }
-  });
-}
-
 elements.purgeDeletedEntries.addEventListener("click", async () => {
   if (!window.confirm("Permanently delete removed notes? This cannot be undone.")) return;
   elements.purgeDeletedEntries.disabled = true;
@@ -10762,72 +10743,6 @@ elements.purgeDeletedEntries.addEventListener("click", async () => {
     showNotice(error.message, "error");
   } finally {
     elements.purgeDeletedEntries.disabled = false;
-  }
-});
-
-const exportNotesMdBtn = document.querySelector("#export-notes-md");
-exportNotesMdBtn?.addEventListener("click", async () => {
-  exportNotesMdBtn.disabled = true;
-  try {
-    const res = await fetchJSON("/entries?page=1&per_page=500&date_field=created_at");
-    const entries = Array.isArray(res.results) ? res.results : [];
-    const lines = ["# NOPE — Notes & Film Essays Export", ""];
-    entries.forEach((entry) => {
-      const dateStr = formatEntryDateTime(entry.created_at || entry.updated_at);
-      const tagsStr = (entry.tags || []).map((t) => `#${t.name}`).join(" ");
-      lines.push(`## ${entry.title || "Untitled"}`);
-      lines.push(`*${dateStr}*${tagsStr ? ` · ${tagsStr}` : ""}`);
-      lines.push("");
-      if (entry.body) lines.push(entry.body);
-      if (entry.url) lines.push(`\nLinks:\n${entry.url}`);
-      lines.push("\n---\n");
-    });
-    const blob = new Blob([lines.join("\n")], { type: "text/markdown;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `nope-notes-${new Date().toISOString().slice(0, 10)}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
-    const msg = `Exported ${entries.length} notes to Markdown.`;
-    feedback(elements.storageFeedback, msg);
-    showNotice(msg, "success");
-  } catch (error) {
-    feedback(elements.storageFeedback, error.message, "error");
-    showNotice(error.message, "error");
-  } finally {
-    exportNotesMdBtn.disabled = false;
-  }
-});
-
-const exportLibraryJsonBtn = document.querySelector("#export-library-json");
-exportLibraryJsonBtn?.addEventListener("click", async () => {
-  exportLibraryJsonBtn.disabled = true;
-  try {
-    const [entriesRes, shelvesRes] = await Promise.all([
-      fetchJSON("/entries?page=1&per_page=500&date_field=created_at"),
-      fetchJSON("/movies/personal?page=1&per_page=5000"),
-    ]);
-    const payload = {
-      exported_at: new Date().toISOString(),
-      personal_movies: shelvesRes.results || [],
-      notes: entriesRes.results || [],
-    };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `nope-library-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    const msg = "Exported full library & notes JSON snapshot.";
-    feedback(elements.storageFeedback, msg);
-    showNotice(msg, "success");
-  } catch (error) {
-    feedback(elements.storageFeedback, error.message, "error");
-    showNotice(error.message, "error");
-  } finally {
-    exportLibraryJsonBtn.disabled = false;
   }
 });
 
@@ -11027,7 +10942,7 @@ function loadGreyDailySession() {
 function appendGreyMessage(role, text, subtext, pills, { skipSave = false, skillTag = null, reaction = null } = {}) {
   if (!elements.greyMessages) return;
   const msgEl = document.createElement("div");
-  msgEl.className = `grey-msg grey-msg-${role}`;
+  msgEl.className = role === "user" ? "grey-msg grey-msg-user" : "grey-msg grey-msg-bot";
 
   const bubble = document.createElement("div");
   bubble.className = "grey-bubble";

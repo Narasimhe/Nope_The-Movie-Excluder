@@ -40,15 +40,6 @@ class StorageRepository:
             "poster_cache_mb": poster_stats["total_mb"],
         }
 
-    def reclaim_untracked_posters(self, poster_cache_service: Any = None) -> dict[str, Any]:
-        """Reclaims disk space by purging untracked browsing posters."""
-        from app.movie_repository import MovieRepository
-        from app.poster_cache_service import PosterCacheService
-        movie_repo = MovieRepository()
-        retained = movie_repo.get_all_retained_poster_filenames()
-        poster_service = poster_cache_service or PosterCacheService()
-        return poster_service.reclaim_untracked_posters(retained)
-
     def cleanup_old_cache(self, days: int = 90) -> dict[str, Any]:
         if isinstance(days, bool) or not isinstance(days, int) or days < 30:
             raise ValueError("Cache cleanup age must be at least 30 days.")

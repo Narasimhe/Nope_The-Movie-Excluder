@@ -1471,16 +1471,6 @@ def purge_deleted_general_entries():
     return {"message": "Deleted entries permanently removed", **result}
 
 
-@app.post(
-    "/storage/reclaim-posters",
-    tags=["settings"],
-    summary="Reclaim disk space by purging untracked browsing posters",
-)
-def reclaim_untracked_posters():
-    result = storage_repository.reclaim_untracked_posters()
-    return {"message": "Untracked posters purged successfully", **result}
-
-
 class GreyChatRequest(BaseModel):
     message: str
     current_view: str = "library"

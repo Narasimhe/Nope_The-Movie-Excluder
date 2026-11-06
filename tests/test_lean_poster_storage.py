@@ -153,36 +153,3 @@ def test_is_library_poster_check(test_env):
     # Movie excluded -> is_library_poster is False
     service.set_movie_status(1891, MovieStatus.EXCLUDED)
     assert movie_repo.is_library_poster("starwars.jpg") is False
-
-
-def test_reclaim_untracked_posters(test_env):
-    """Verifies that reclaim_untracked_posters deletes untracked posters while keeping library ones."""
-    posters_dir: Path = test_env["posters_dir"]
-    poster_service: PosterCacheService = test_env["poster_service"]
-    service: MovieService = test_env["movie_service"]
-    storage_repo: StorageRepository = test_env["storage_repo"]
-
-    # Create library movie
-    service.get_movie(1891)
-    service.set_movie_status(1891, MovieStatus.WATCHED)
-
-    # Put files on disk
-    library_file = posters_dir / "starwars.jpg"
-    library_file.write_bytes(b"library poster data")
-
-    untracked_file1 = posters_dir / "random1.jpg"
-    untracked_file1.write_bytes(b"random untracked 1")
-
-    untracked_file2 = posters_dir / "random2.jpg"
-    untracked_file2.write_bytes(b"random untracked 2")
-
-    assert library_file.exists()
-    assert untracked_file1.exists()
-    assert untracked_file2.exists()
-
-    result = storage_repo.reclaim_untracked_posters(poster_cache_service=poster_service)
-    assert result["deleted_count"] == 2
-    assert result["kept_count"] == 1
-    assert library_file.exists()
-    assert not untracked_file1.exists()
-    assert not untracked_file2.exists()

@@ -23,3 +23,7 @@
 - NEVER use raw hex or rgb colors in component rules. Every color MUST use an existing `var(--token-name)`.
 - Never append duplicate selector blocks. Inspect the existing classes in the file and edit them in-place.
 
+### Color & Styling Guardrails
+- NEVER invent new hex or rgb color codes.
+- NEVER add new shades of yellow or gold. All active states, highlights, badges, and accents must exclusively use `var(--accent-primary)`, `var(--accent-subtle)`, or `var(--accent-text)`.
+- If an element needs an active or highlighted look, use `var(--accent-primary)` for borders/icons, `var(--accent-subtle)` for backgrounds, and `var(--accent-text)` for text.

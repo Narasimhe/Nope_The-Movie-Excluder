@@ -119,49 +119,6 @@ class PosterCacheService:
             except Exception as e:
                 logger.debug(f"Could not purge excluded poster {filename}: {e}")
 
-    def reclaim_untracked_posters(self, retained_filenames: set[str]) -> dict[str, Any]:
-        """
-        Reclaims disk space by removing cached poster files that do NOT belong
-        to user's active library shelves or custom entries.
-        """
-        reclaimed_bytes = 0
-        deleted_count = 0
-        kept_count = 0
-        errors = 0
-
-        if not self.cache_dir.exists():
-            return {
-                "deleted_count": 0,
-                "reclaimed_bytes": 0,
-                "reclaimed_mb": 0.0,
-                "kept_count": 0,
-                "errors": 0,
-            }
-
-        for file_path in self.cache_dir.iterdir():
-            if not file_path.is_file():
-                continue
-            filename = file_path.name
-            if filename in retained_filenames:
-                kept_count += 1
-                continue
-            try:
-                size = file_path.stat().st_size
-                file_path.unlink()
-                reclaimed_bytes += size
-                deleted_count += 1
-            except Exception as e:
-                logger.warning(f"Could not delete untracked poster {filename}: {e}")
-                errors += 1
-
-        return {
-            "deleted_count": deleted_count,
-            "reclaimed_bytes": reclaimed_bytes,
-            "reclaimed_mb": round(reclaimed_bytes / (1024 * 1024), 2),
-            "kept_count": kept_count,
-            "errors": errors,
-        }
-
     def get_cache_stats(self) -> dict[str, Any]:
         """Returns statistics for local poster cache."""
         total_files = 0

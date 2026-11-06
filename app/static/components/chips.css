@@ -1,0 +1,280 @@
+/* ============================================================
+   NOPE Chips & Ribbon Component Styles
+   ============================================================ */
+
+/* 1. Ribbon Row Containers */
+.discover-ribbon-row,
+.library-ribbon-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.profile-ribbon,
+.library-shelf-ribbon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  min-height: 32px;
+  width: 100%;
+  max-width: 670px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 2px 0;
+  box-sizing: border-box;
+}
+
+body.grey-docked-open .library-shelf-ribbon {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 670px;
+  width: 100%;
+}
+
+body.grey-docked-open .library-shelf-ribbon .ribbon-chip {
+  flex-shrink: 0;
+}
+
+.profile-ribbon::-webkit-scrollbar,
+.library-shelf-ribbon::-webkit-scrollbar {
+  display: none;
+}
+
+/* 2. Base Ribbon Chip (Unified Flat Zen Squircle Parity) */
+.ribbon-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-chip);
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-sizing: border-box;
+  box-shadow: none;
+  cursor: pointer;
+  user-select: none;
+  transition: all 140ms ease;
+  flex-shrink: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.ribbon-chip > span,
+.ribbon-chip-text {
+  display: inline-block;
+  white-space: nowrap;
+  text-align: center;
+}
+
+/* 3. Preset Ribbon Specifics */
+.profile-ribbon .ribbon-chip {
+  flex-shrink: 0;
+  max-width: 200px;
+}
+
+.profile-ribbon .ribbon-chip:last-child {
+  flex-shrink: 1;
+  min-width: 48px;
+}
+
+.profile-ribbon .ribbon-chip .ribbon-chip-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  vertical-align: middle;
+}
+
+/* 4. Hover States */
+.ribbon-chip:hover {
+  background: var(--surface-input-focus);
+  border-color: var(--line-strong);
+  color: var(--text-secondary);
+  box-shadow: none;
+  transform: none;
+}
+
+.profile-ribbon .ribbon-chip:hover {
+  background: var(--surface-input-focus);
+  border-color: var(--line-strong);
+  color: var(--text-secondary);
+}
+
+/* 5. Active Highlighting (Strictly Flat Matte Zen Parity: 1px Gold Border, Transparent BG, Zero Glow) */
+.ribbon-chip.is-active,
+.profile-ribbon .ribbon-chip.is-active,
+.library-shelf-ribbon .ribbon-chip.is-active {
+  background: transparent;
+  border: 1px solid var(--accent-border);
+  color: var(--accent-text);
+  font-weight: 400;
+  box-shadow: none;
+}
+
+.profile-ribbon .ribbon-chip.is-active .ribbon-chip-text,
+.profile-ribbon .ribbon-chip.is-active > span {
+  color: var(--accent-text);
+  font-weight: 400;
+}
+
+
+
+.ribbon-chip.is-active:hover,
+.profile-ribbon .ribbon-chip.is-active:hover,
+.library-shelf-ribbon .ribbon-chip.is-active:hover {
+  background: var(--surface-input-focus);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+.library-shelf-ribbon .ribbon-chip.is-notes-paired {
+  border-color: var(--accent-border);
+  background: transparent;
+  color: var(--accent-text);
+  box-shadow: none;
+}
+
+.profile-ribbon .ribbon-chip.is-active:hover .ribbon-chip-text,
+.profile-ribbon .ribbon-chip.is-active:hover > span {
+  color: var(--text-primary);
+}
+
+/* Diverged State (Filter modified from saved preset) */
+.profile-ribbon .ribbon-chip.is-active.is-diverged {
+  border-style: dashed;
+  border-color: var(--accent-border);
+  background: transparent;
+  box-shadow: none;
+}
+
+/* 6. Chip Icons */
+.ribbon-chip .shelf-chip-icon {
+  width: 13px;
+  height: 13px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: color 140ms ease;
+}
+
+.ribbon-chip:hover .shelf-chip-icon {
+  color: var(--text-primary);
+}
+
+.ribbon-chip.is-active .shelf-chip-icon {
+  color: var(--accent-primary);
+}
+
+.library-shelf-ribbon .ribbon-chip .shelf-chip-icon {
+  color: var(--accent-primary);
+}
+
+.library-shelf-ribbon .ribbon-chip:hover .shelf-chip-icon,
+.library-shelf-ribbon .ribbon-chip.is-active .shelf-chip-icon {
+  color: var(--accent-primary);
+}
+
+/* 7. Inline Update Button on Preset Chip */
+.ribbon-chip .chip-update-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 3px;
+  background: transparent;
+  border: none;
+  color: var(--accent-primary);
+  cursor: pointer;
+  padding: 0;
+  opacity: 0.85;
+  transition: opacity 140ms ease, transform 180ms ease;
+}
+
+.ribbon-chip .chip-update-btn:hover {
+  opacity: 1;
+  transform: rotate(60deg);
+}
+
+/* 8. Shelf Ribbon Divider & Lens Buttons */
+.shelf-ribbon-divider {
+  display: inline-block;
+  width: 1px;
+  height: 16px;
+  background: var(--line);
+  margin: 0 6px 0 auto;
+  flex: 0 0 1px;
+}
+
+.shelf-notes-lens-btn,
+.shelf-favorites-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  min-width: 26px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 4px;
+  border-radius: var(--radius-chip);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 140ms ease;
+  flex-shrink: 0;
+  box-shadow: none;
+}
+
+.shelf-notes-lens-btn:hover,
+.shelf-favorites-btn:hover {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
+.shelf-notes-lens-btn.is-active {
+  background: transparent;
+  border: none;
+  color: var(--accent-primary);
+  box-shadow: none;
+}
+
+.shelf-notes-lens-btn.is-active svg {
+  stroke: var(--accent-primary);
+}
+
+.shelf-favorites-btn.is-active {
+  background: transparent;
+  border: none;
+  color: var(--danger-primary);
+  box-shadow: none;
+}
+
+.shelf-favorites-btn.is-active svg {
+  stroke: var(--danger-primary);
+  fill: var(--danger-primary);
+}
+
+.shelf-notes-lens-btn .shelf-note-icon,
+.shelf-favorites-btn .shelf-heart-icon {
+  width: 14px;
+  height: 14px;
+  color: inherit;
+  transition: color 140ms ease;
+}

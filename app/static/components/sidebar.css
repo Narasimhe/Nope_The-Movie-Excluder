@@ -1,0 +1,781 @@
+/* ============================================================
+   NOPE Sidebar & Filter Accordions Component Styles
+   ============================================================ */
+
+/* 1. Base Sidebar Layout & Scrolling */
+.sidebar,
+#app-sidebar {
+  position: sticky;
+  top: 86px;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 14px 20px 0;
+  border-right: 1px solid var(--line);
+  overflow: visible;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.sidebar::-webkit-scrollbar,
+#app-sidebar::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.sidebar-pane.is-hidden {
+  display: none;
+}
+
+/* 2. Sidebar Filters Header & Actions (Reset, Sync) */
+.sidebar-filters-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 8px 4px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sidebar-filters-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sidebar-reset-link,
+.sidebar-action-link,
+.sidebar-fetch-live-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--radius-xs);
+  transition: color 140ms ease;
+  user-select: none;
+}
+
+.sidebar-reset-link:hover,
+.sidebar-action-link:hover,
+.sidebar-fetch-live-link:hover {
+  color: var(--text-primary);
+}
+
+.sidebar-reset-link .reset-icon,
+.sidebar-fetch-live-link .fetch-live-icon {
+  width: 11px;
+  height: 11px;
+  color: var(--text-muted);
+  transition: transform 220ms ease, color 140ms ease;
+}
+
+.sidebar-reset-link:hover .reset-icon {
+  transform: rotate(-45deg);
+  color: var(--text-primary);
+}
+
+.sidebar-fetch-live-link:hover .fetch-live-icon {
+  transform: rotate(180deg);
+  color: var(--text-primary);
+}
+
+.sidebar-fetch-live-link.is-loading .fetch-live-icon {
+  animation: spin 1s linear infinite;
+  color: var(--accent-primary);
+}
+
+/* 3. Top Action Bar: See Results & Update Preset */
+.sidebar-search-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.sidebar-search-actions .see-results-btn {
+  flex: 1;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: normal;
+  text-align: center;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.sidebar-search-actions .see-results-btn:hover {
+  background: var(--surface-card-hover);
+  border-color: var(--border-card-hover);
+  color: var(--text-primary);
+}
+
+.sidebar-search-actions .update-profile-top-btn {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-chip);
+  background: var(--accent-subtle);
+  color: var(--accent-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 140ms ease;
+  white-space: nowrap;
+}
+
+.sidebar-search-actions .update-profile-top-btn:hover {
+  background: var(--accent-glow);
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+}
+
+/* 4. Accordion Stack & Triggers */
+.sidebar-accordion {
+  border-bottom: 1px solid var(--line-subtle);
+  margin-bottom: 4px;
+}
+
+.filter-pills-bar.sidebar-pills-bar,
+.sidebar-pills-bar {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 3px;
+}
+
+.sidebar-accordion-item {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--line-subtle);
+  margin-bottom: 3px;
+}
+
+.sidebar-accordion-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 140ms ease, background-color 140ms ease;
+}
+
+.sidebar-accordion-trigger:hover {
+  background: var(--surface-card);
+  color: var(--text-primary);
+}
+
+.sidebar-accordion-trigger.is-open {
+  background: var(--accent-subtle);
+  color: var(--text-primary);
+}
+
+.sidebar-accordion-trigger .pill-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.sidebar-accordion-trigger .pill-icon {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  transition: color 140ms ease;
+}
+
+.sidebar-accordion-trigger:hover .pill-icon,
+.sidebar-accordion-trigger.is-open .pill-icon {
+  color: var(--accent-primary);
+}
+
+.sidebar-accordion-trigger .pill-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-primary);
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: auto;
+  margin-right: 8px;
+}
+
+.sidebar-accordion-trigger .pill-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  line-height: 1;
+  transition: transform 180ms ease, color 140ms ease;
+}
+
+.sidebar-accordion-trigger:has(.pill-badge:not(.is-hidden)) .pill-caret {
+  margin-left: 0;
+}
+
+.sidebar-accordion-trigger:hover .pill-caret,
+.sidebar-accordion-trigger.is-open .pill-caret {
+  color: var(--accent-primary);
+}
+
+.sidebar-accordion-trigger.is-open .pill-caret {
+  transform: rotate(180deg);
+}
+
+/* 5. Filter Cards Inside Accordion Items */
+.sidebar-accordion-item .filter-card.is-collapsed {
+  display: none;
+}
+
+.sidebar-accordion-item .filter-card:not(.is-collapsed) {
+  display: block;
+  padding: 8px 4px 14px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+/* 6. Genre Mode Switch (Exclude / Include) */
+.genre-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface-workspace);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-chip);
+  padding: 2px;
+  width: 100%;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.genre-mode-btn {
+  flex: 1;
+  padding: 5px 8px;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 140ms ease;
+  text-align: center;
+}
+
+.genre-mode-btn:hover {
+  color: var(--text-secondary);
+}
+
+.genre-mode-btn.is-active[data-mode="exclude"] {
+  background: var(--danger-glow);
+  color: var(--danger-primary);
+  font-weight: 700;
+}
+
+.genre-mode-btn.is-active[data-mode="include"] {
+  background: var(--accent-glow);
+  color: var(--accent-primary);
+  font-weight: 700;
+}
+
+/* 7. Number Grids (Rating, Votes, Release Year) */
+.sidebar-number-grid,
+.number-grid.sidebar-number-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#card-votes .sidebar-number-grid,
+#card-votes .number-grid {
+  grid-template-columns: 1fr;
+}
+
+.sidebar-number-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  width: 100%;
+}
+
+.sidebar-number-grid input,
+.sidebar-number-grid select,
+.number-grid.sidebar-number-grid input {
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  box-sizing: border-box;
+}
+
+.sidebar-number-grid input:focus,
+.sidebar-number-grid select:focus,
+.number-grid.sidebar-number-grid input:focus {
+  border-color: var(--accent-border);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+/* 8. Entity Grids (Directors, Cast, Studios) */
+.sidebar-entity-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.sidebar-entity-grid label {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.sidebar-entity-grid input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  box-sizing: border-box;
+}
+
+/* 9. Unified Flat Squircle Chips in Sidebar */
+.tri-chip-cloud,
+.chip-cloud,
+.sort-chip-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: none;
+  overflow-y: visible;
+  padding: 4px 0;
+  scrollbar-width: none;
+}
+
+.tri-chip-cloud::-webkit-scrollbar,
+.chip-cloud::-webkit-scrollbar,
+.sort-chip-cloud::-webkit-scrollbar {
+  display: none;
+}
+
+/* Base Neutral Pill (State 0: Neutral / Inactive) */
+.tri-chip,
+.filter-chip,
+.sort-chip,
+.chip-adder,
+.status-options label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-chip);
+  background: var(--surface-input);
+  border: 1px solid var(--line);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  box-shadow: none;
+  background-image: none;
+  transition: all 140ms ease;
+}
+
+.tri-chip:hover,
+.filter-chip:hover,
+.sort-chip:hover,
+.chip-adder:hover,
+.status-options label:hover {
+  background: var(--surface-input-focus);
+  border-color: var(--line-strong);
+  color: var(--text-secondary);
+}
+
+.filter-chip input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+  margin: 0;
+}
+
+/* Tri-State Icon (+ / -) */
+.tri-chip .tri-chip-icon {
+  display: inline-block;
+  font-size: 13px;
+  line-height: 1;
+  margin-right: 1px;
+  transition: color 140ms ease;
+}
+
+.tri-chip .tri-chip-icon:empty {
+  display: none;
+}
+
+/* State 1: Included Warm Gold (+) */
+.tri-chip.is-included {
+  background: transparent;
+  border: 1px solid var(--accent-border);
+  box-shadow: none;
+}
+
+.tri-chip.is-included .tri-chip-icon {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.tri-chip.is-included .tri-chip-label {
+  color: var(--accent-text);
+  font-weight: 400;
+}
+
+/* State 2: Excluded Red (-) */
+.tri-chip.is-excluded {
+  background: transparent;
+  border: 1px solid var(--danger-border);
+  box-shadow: none;
+}
+
+.tri-chip.is-excluded .tri-chip-icon {
+  color: var(--danger-primary);
+  font-weight: 600;
+}
+
+.tri-chip.is-excluded .tri-chip-label {
+  color: var(--danger-text);
+  font-weight: 400;
+}
+
+/* 2-State Active Pills (Sort, Library Status) */
+.sort-chip.is-active,
+.filter-chip.is-active,
+.filter-chip:has(input:checked),
+.status-options label:has(input:checked) {
+  background: transparent;
+  border: 1px solid var(--accent-border);
+  color: var(--accent-text);
+  box-shadow: none;
+}
+
+/* Status Options Grid (2x3) */
+.status-options.status-grid-2x3 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  width: 100%;
+}
+
+.status-options label {
+  width: 100%;
+}
+
+/* Material Symbols Glyphs inside Sort and Status Chips */
+.sort-chip-glyph,
+.status-chip-glyph {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--text-dim);
+  opacity: 0.75;
+  transition: color 140ms ease, opacity 140ms ease;
+}
+
+.sort-chip:hover .sort-chip-glyph,
+.status-options label:hover .status-chip-glyph {
+  color: var(--text-secondary);
+  opacity: 0.9;
+}
+
+.sort-chip.is-active .sort-chip-glyph,
+.status-options label:has(input:checked) .status-chip-glyph {
+  color: var(--accent-primary);
+  opacity: 1;
+}
+
+/* Tri-Chip Dismiss / Unpin Button */
+.tri-chip .chip-unpin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  height: 12px;
+  margin-left: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 140ms ease, color 140ms ease;
+}
+
+.tri-chip:hover .chip-unpin,
+.tri-chip:focus-within .chip-unpin {
+  opacity: 1;
+}
+
+.tri-chip .chip-unpin:hover {
+  color: var(--danger-primary);
+}
+
+/* 10. Search Profiles Workshop in Sidebar Drawer */
+.profile-workshop {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.profile-chips-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.profile-workshop-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-chip);
+  background: var(--surface-input);
+  border: 1px solid var(--line);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  box-shadow: none;
+  transition: all 140ms ease;
+}
+
+.profile-workshop-chip:hover {
+  background: var(--surface-input-focus);
+  border-color: var(--line-strong);
+  color: var(--text-secondary);
+}
+
+.profile-workshop-chip.is-active {
+  background: transparent;
+  border: 1px solid var(--accent-border);
+  color: var(--accent-text);
+  box-shadow: none;
+}
+
+.profile-workshop-chip .chip-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-workshop-chip .chip-del-btn,
+.profile-workshop-chip .chip-pin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  transition: opacity 140ms ease, color 140ms ease;
+}
+
+.profile-workshop-chip.is-pinned .chip-pin-btn {
+  color: var(--accent-primary);
+  opacity: 1;
+}
+
+.profile-workshop-chip:not(.is-pinned) .chip-pin-btn,
+.profile-workshop-chip .chip-del-btn {
+  opacity: 0;
+}
+
+.profile-workshop-chip:hover .chip-del-btn,
+.profile-workshop-chip:hover .chip-pin-btn,
+.profile-workshop-chip:focus-within .chip-del-btn,
+.profile-workshop-chip:focus-within .chip-pin-btn {
+  opacity: 0.85;
+}
+
+.profile-workshop-chip .chip-del-btn:hover {
+  opacity: 1;
+  color: var(--danger-primary);
+}
+
+.profile-workshop-chip .chip-pin-btn:hover {
+  opacity: 1;
+  color: var(--accent-primary);
+}
+
+.profile-toolbar {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+}
+
+.profile-action-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin-top: 14px;
+  padding: 0;
+}
+
+.save-preset-link,
+#save-profile {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  max-width: 100%;
+  height: 32px;
+  min-height: 32px;
+  padding: 0 10px;
+  box-sizing: border-box;
+  gap: 8px;
+  border-radius: var(--radius-chip);
+  background: var(--surface-input);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 450;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  transition: all 140ms ease;
+}
+
+.save-preset-link:hover,
+#save-profile:hover {
+  background: var(--surface-hover);
+  border-color: var(--line-strong);
+  color: var(--text-primary);
+}
+
+.save-preset-link[data-mode="edit"],
+#save-profile[data-mode="edit"] {
+  background: var(--surface-input);
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+}
+
+.save-preset-link[data-mode="edit"]:hover,
+#save-profile[data-mode="edit"]:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent-border);
+  color: var(--text-primary);
+}
+
+.save-preset-link .preset-action-svg,
+#save-profile .preset-action-svg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  fill: none;
+  flex-shrink: 0;
+  margin: 0;
+  line-height: 1;
+  opacity: 0.8;
+}
+
+.save-preset-link:hover .preset-action-svg,
+#save-profile:hover .preset-action-svg {
+  opacity: 1;
+}
+
+.save-preset-link .preset-action-text,
+#save-profile .preset-action-text {
+  display: inline-block;
+  font-size: 12.5px;
+  line-height: 1;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}

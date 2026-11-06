@@ -4,11 +4,13 @@
 
 ## 🟢 Pending Tasks (Active Focus)
 
-- [ ] **Remove Data Portability & Backups Card (Storage Page)**
+- [x] **Remove Data Portability & Backups Card (Storage Page)**
   * **Goal**: Completely remove the *"Data Portability & Backups"* card from the Footer > Storage page along with its action buttons (*Export Notes (.md)* and *Export Library (.json)*) and related export handlers.
+  * **Status**: Completed. Fully removed UI from `index.html` and stripped handlers/logic from `app.js`.
 
-- [ ] **Storage Telemetry Labels**
+- [x] **Storage Telemetry Labels & Zen Redesign**
   * **Storage Page "Personal Library" Label Cutoff**: Fix card width, padding, or label sizing on the Footer > Storage page so the *"Personal Library"* metric labels and sublabels never clip or truncate.
+  * **Status**: Completed. Redesigned storage page into clean Zen cards (`storage.css`), 100% tokenized with no truncation.
 
 - [ ] **Grey Contextual Help**
   * **Screen-Relevant Help Docs in Grey**: Give Grey access to a concise internal UI/formatting help guide (especially when on the Notes editor screen) so questions like *"Hey Grey, how do I use formatted titles in notes?"* return the exact syntax and examples from the app docs.
@@ -23,7 +25,18 @@
 
 - [ ] **Code Health Phase 3: CSS Consolidation (`app/static/styles.css`)**
   * **Goal**: Shrink the ~11.5k-line stylesheet by roughly half and retire the append-only override layers ("Final cascade…", "Keep … authoritative after legacy rules…").
-  * **Steps**: Introduce design tokens (colours, spacing, radii) in `:root` → merge the 280+ duplicate selector blocks into one canonical rule each → delete `!important` section by section → reorder into tokens → base → layout → components → pages → Grey → responsive.
+  * **Progress**:
+    - **Tokens System** (`app/static/tokens.css`): Defined master accent palette (Zen Gold `#DEC68B`), master danger palette (Nope Red `#EF4444`), squircle radius token (`--radius-chip: 6px`), and complete surface/border tokens.
+    - **Component 1 - Topbar** (`app/static/components/topbar.css`): Fully extracted and tokenized, 0 `!important`, 0 raw colors, 0 duplicate selectors.
+    - **Component 2 - Ribbon & Chips** (`app/static/components/chips.css`): Unified flat matte squircle geometry across all preset and library ribbon chips, 0 `!important`, 0 raw colors. Corrected active "Nope" shelf status styling.
+    - **Component 3 - Sidebar & Accordions** (`app/static/components/sidebar.css`): Extracted full sidebar drawer, filter accordions, number grids, tri-chips, status options, and preset workshop. Eradicated 417 `!important` declarations, 84 raw colors, and 32 duplicate selectors from monolithic `styles.css`.
+    - **Component 4 - Movie Cards & Poster Grid** (`app/static/components/movie-grid.css`): Extracted movie grid viewport, responsive columns, poster button card geometry, status badges, favorite mark, skeleton cards, Nope mode reticle cursor, empty states, and Zen folio pagination. Eradicated 191 `!important` declarations, 57 raw colors, 9 duplicate selectors, and 9 hex variants.
+    - **Component 5 - Movie Detail Page & Cockpit** (`app/static/components/movie-detail.css`): Consolidated 10 append-only legacy detail blocks into an authoritative, 100% tokenized stylesheet (navigation header, breadcrumb exploration trail `.detail-trail`, 270px poster column, metadata & rating, plot storytelling, director/cast credits, action cockpit with shelf track and 10-star verdict, journal note spine, enclosed personal ledger panel, and related movie suggestions). Decoupled Movie Notes and Heart Fav into independent single-click toggles restoring the active library status, suppressed redundant status badges on posters when browsing known shelves, and eradicated 1,150 `!important` declarations, 167 raw colors, 98 duplicate selectors, and 23 hex variants from `styles.css`.
+    - **Component 6 - Notes & Reader** (`app/static/components/notes.css`): Consolidated notebook index page (`.entries-page`), grid and chronological ledger views (`.entry-list`, `.entry-card`, `.entry-ledger-group`), editorial entry reader (`.entry-reader`, `.entry-reader-toolbar`, `.reader-view-control-bar`), in-place journal editor (`.reader-body-textarea`), 16:9 cinematic banner (`.entry-banner-16-9`), `@movie` mention autocomplete and hover cards, collapsible toggles, and Markdown tables. Removed tree branch ticks (`.timeline-tick`) and stark horizontal rules (`.timeline-header-line`), removed heavy ledger container borders and row borders, aligned pin/archive actions adjacent to note titles, and normalized all disparate fractional rems to a coherent typography scale (11px, 12px, 13px, 14px, 15px, 18px, 24px) matching movie detail. Eradicated 339 `!important` declarations, 224 raw colors, 19 duplicate selectors, and 51 hex color variants from `styles.css`. 100% tokenized, 0 `!important`, 0 raw colors.
+    - **Component 7 - Grey Cinema Assistant** (`app/static/components/grey.css`): Consolidated docked two-pane push split, bottom-right trigger pill, full-height drawer, header & branding, live context bar, conversation bubble stream with user/bot distinctions and verdict badges, quick shortcut skills bar, slash commands autocomplete menu, input card, and docked responsive overrides across medium and compact viewports. Completely eliminated 57 `!important` declarations, 63 raw colors, and 15 hex variants from `styles.css`. 100% tokenized, 0 `!important`, 0 raw colors, 0 duplicate selectors. Cleaned breadcrumb navigation trail (`.detail-trail-btn`) to transparent borderless styling.
+    - **Component 8 - Modals, Dialogs & System Notifications** (`app/static/components/modals.css`): Consolidated universal non-intrusive floating toasts (`.notice`, `#notice`, success/error variants, animations), search presets modal dialog (`.profile-dialog`, `#profile-dialog`, blurred backdrop scrim, form controls, primary and secondary button actions), and consolidated presets trigger button into `sidebar.css`. Eradicated **249** legacy `!important` declarations, 49 hardcoded colors, 2 duplicate selectors, and 6 hex color variants from `styles.css`. 100% tokenized, 0 `!important`, 0 raw colors, 0 duplicate selectors. Ratchet dropped `!important` count from 848 to **599**.
+    - **Component 9 - Storage & System Workspace** (`app/static/components/storage.css`): Complete Zen redesign of the Storage view. Replaced brittle inline strings with 3 generous, unclipped telemetry cards (Database Size, Personal Library, Cached Metadata), streamlined cache cleanup and trash purge action zones, and eliminated all export UI and handlers. Pruned the 440-line legacy sidebar override block from `styles.css`. Eradicated **254** legacy `!important` declarations, 34 hardcoded colors, and 11 duplicate selector instances. Ratchet dropped `!important` count from 598 to **344**. 100% tokenized, 0 `!important`, 0 raw colors, 0 duplicate selectors.
+    - **Component 10 - Canvas Toolbars, Search Scopes & Grid Controls** (`app/static/components/topbar.css`, `app/static/components/movie-grid.css`): Consolidated Discover and Library canvas header rows, unified toolbar search with quiet Zen border focus, library scope and target dual micro-pills, continuous infinite scroll sentinel/batch dividers, shelf browse view toggle, and responsive floating back-to-top pill into their respective authoritative component stylesheets. Eradicated **294** legacy `!important` declarations, 33 hardcoded colors, and 3 hex color variants from `styles.css`. 100% tokenized, 0 `!important`, 0 raw colors, 0 duplicate selectors. Ratchet dropped `!important` count from 344 down to just **50**.
   * **Guardrail**: `run.bat lint` ratchets `!important` count, duplicate selectors and hex colours; run `python scripts/lint_frontend.py --update-baseline` after each improvement. Needs visual verification per section.
 
 - [ ] **Code Health Phase 4: Split `app.js` into ES Modules**
@@ -39,6 +52,12 @@
   * **Dead Frontend Removed**: 5 never-called JS functions; 116 CSS rule blocks + 16 selector-list entries targeting 44 classes/ids that nothing renders (~700 lines). Fixed a stray `}` with orphaned declarations in `styles.css` that was silently voiding the following `.reader-tag-input:focus` rule.
   * **Config Docs Fixed**: `.env.example` now lists the variables the app actually reads (`TMDB_READ_ACCESS_TOKEN`, optional `MDBLIST_API_KEY`).
   * **Lint Tooling**: `run.bat lint` runs ruff (pyflakes + bugbear), vulture (dead code, config in `pyproject.toml`) and `scripts/lint_frontend.py` (brace balance, unused CSS classes/ids, unused JS functions, ratcheted `!important` / duplicate-selector / hex-colour counts in `scripts/frontend_lint_baseline.json`). Dev tools pinned in `requirements-dev.txt`.
+- [x] **Storage View Redesign: Inline Telemetry Strip, Self-Contained Dormant Actions & Borderless Rows (`app/web/index.html`, `app/static/styles.css`, `app/static/app.js`, `app/main.py`, `app/storage_repository.py`)**
+  * **Inline Stats Strip**: Collapsed multiple standalone stat cards into a single inline telemetry strip directly beneath the `Storage` header matching movie detail metadata typography (`font-size: 13px`, muted labels and `•` dividers in `var(--text-dim)`, with gold accents strictly on numbers: `var(--accent-primary)`).
+  * **Self-Contained Action Buttons**: Folded stale cache and trash bin item counts directly into the action buttons (`Clear Cache (>90d) · 0` and `Purge Trash · 0`), eliminating redundant cards.
+  * **Dormant Zero State**: When counts are 0, action buttons render in a dormant state at 40% opacity (`pointer-events: none; aria-disabled="true"`) and automatically activate only when actionable items exist.
+  * **Clean Borderless Rows**: Replaced boxed card containers with a clean, borderless layout separated by subtle dotted dividers (`border-top: 1px dotted var(--line)`).
+  * **Removed Legacy Reclaim Logic & UI**: Completely cleaned out obsolete manual poster reclamation endpoints, UI controls, and handlers since all discover posters stream directly via CDN and never touch disk.
 - [x] **Architectural Refinement: Lean Storage Architecture, Library-Only Poster Caching & Metadata Preservation (`app/movie_service.py`, `app/poster_cache_service.py`, `app/movie_repository.py`, `app/storage_repository.py`, `app/main.py`, `app/static/app.js`, `app/web/index.html`)**
   * **Reclaimed ~875 MB Disk Space**: Purged 11,200+ disposable discover poster `.jpg` files accumulated from casual feed scrolling, shrinking `data/posters/` from 935.43 MB down to 59.96 MB while preserving all library shelf posters and custom entry images intact.
   * **Direct CDN Streaming for Discover Browsing**: Re-engineered poster handling so untracked discover titles and search presets stream image assets directly from TMDB's free Cloudflare CDN (`image.tmdb.org`) without saving `.jpg` files to disk.
@@ -1381,3 +1400,46 @@ efreshCompactCloud where background excluded status prevented Hindi from receivi
     * **Static Non-Interactive Styling ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
       - Applied `cursor: default`, `pointer-events: none`, and eliminated all `:hover` color, border, and transform changes for both keyword chips (`.poster-keywords .tag`) and genre chips (`.dialog-genres .tag`).
       - Genre chips remain in their current position above the plot overview.
+
+- [x] **Phase 3 Frontend CSS Consolidation: Tokens Architecture & Modular Ribbon Chips Component**
+  * **Goal**: Establish CSS custom property tokens, automated native Python frontend linter (`scripts/lint_frontend.py`) with metrics ratcheting, and cleanly decouple ribbon chip styles from `styles.css` into modular `app/static/components/chips.css` with 0 `!important` declarations, 0 raw hardcoded colors, and 0 duplicate selectors.
+  * **Key Changes**:
+    * **Design System Tokens ([`tokens.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/tokens.css))**:
+      - Defined comprehensive semantic variables in `:root` covering backgrounds, surfaces, text hierarchy, signature gold/red accents, status colors, border radii, and shadows.
+    * **Frontend Linter with Ratchet ([`scripts/lint_frontend.py`](file:///f:/Movie_Excluder/movie-excluder/scripts/lint_frontend.py))**:
+      - Built zero-dependency Python script enforcing 0 violations on new component files and ratcheting down legacy metrics on the monolith. Integrated under `run.bat lint`.
+    * **Modular Chips Component ([`chips.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/components/chips.css))**:
+      - Extracted ribbon container and chip styles into clean component CSS with 100% token usage and zero `!important`.
+      - Pruned 184 duplicate lines and eliminated 96 `!important` declarations and 35 raw colors from `styles.css`.
+      - Preserved full backup safely at `app/static/styles.css.bak`.
+
+- [x] **Phase 3 Unified Accent System Sweep: Zero Yellow/Gold Color Drift**
+  * **Goal**: Establish a single source of truth for all gold, amber, and yellow accents (`--accent-primary`, `--accent-subtle`, `--accent-glow`, `--accent-border`, `--accent-text`) under `:root` in `tokens.css`, and perform a codebase-wide sweep replacing all hardcoded yellow and amber hex and RGBA values with shared tokens.
+  * **Key Changes**:
+    * **Single Master Palette ([`tokens.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/tokens.css))**:
+      - Defined Option A Zen Gold as the single master accent baseline (`--accent-primary: #DEC68B;`, `--accent-subtle: rgba(222, 198, 139, 0.10);`, `--accent-glow: rgba(222, 198, 139, 0.20);`, `--accent-border: rgba(222, 198, 139, 0.50);`, `--accent-text: #E6D5B8;`).
+    * **Comprehensive Codebase Sweep ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css) & [`chips.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/components/chips.css))**:
+      - Tokenized 300 yellow and amber declarations across `styles.css`, eliminating 297 raw color declarations and 8 hardcoded hex codes.
+      - Wired master tabs active line, sparkle icons, star ratings, and chip borders to `--accent-primary`, chip backgrounds to `--accent-subtle`, focus/glow rings to `--accent-glow`, and active text to `--accent-text`.
+      - Reduced `raw_colors_outside_root` from 1,292 to 995 and locked new ratchet baseline.
+
+- [x] **Phase 3 Unified Danger & Exclude System Sweep: Zero Red/Nope Color Drift**
+  * **Goal**: Establish a single source of truth for all red, negative, and exclude tokens (`--danger-primary`, `--danger-subtle`, `--danger-glow`, `--danger-border`, `--danger-text`) under `:root` in `tokens.css`, and perform a codebase-wide sweep eliminating raw hardcoded red and salmon hex/RGBA values.
+  * **Key Changes**:
+    * **Single Master Palette ([`tokens.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/tokens.css))**:
+      - Defined clean five-variable danger architecture: `--danger-primary: #ef4444;`, `--danger-subtle: rgba(239, 68, 68, 0.10);`, `--danger-glow: rgba(239, 68, 68, 0.20);`, `--danger-border: rgba(224, 109, 109, 0.50);`, `--danger-text: #CE8484;`.
+    * **Comprehensive Codebase Sweep ([`styles.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/styles.css))**:
+      - Tokenized 113 red, nope, and exclude declarations across `styles.css`.
+      - Reduced `raw_colors_outside_root` from 995 to 883 (-112 raw declarations) and `hex_colors` from 202 to 187 (-15 hardcoded hex definitions).
+      - Updated cache busters to `v=20261101_zen_230` and locked new ratchet baseline.
+
+- [x] **Phase 3 Modular Navigation & Topbar Component (`app/static/components/topbar.css`)**
+  * **Goal**: Decouple the top navigation header, NOPE brand crosshairs logo, and master navigation tabs (`DISCOVER`, `LIBRARY`, `NOTES`) from `styles.css` into a clean, 100% tokenized modular component stylesheet with zero `!important` declarations, zero raw colors, and zero duplicate selectors.
+  * **Key Changes**:
+    * **Modular Component Extraction ([`topbar.css`](file:///f:/Movie_Excluder/movie-excluder/app/static/components/topbar.css))**:
+      - Extracted `.site-shell`, `.topbar`, `.brand`, `.brand-wordmark`, `.brand-scope`, `.master-nav`, `.master-tab`, and `.topbar-end`.
+      - 100% tokenized: uses `var(--danger-primary)` for brand wordmark/crosshairs, `var(--shadow-brand-glow)` for ambient glow, `var(--line)` for bottom border, `var(--accent-primary)` for active tab underline indicator, and `var(--text-muted)` / `var(--text-primary)` for tab typography.
+      - Pruned 141 legacy lines from `styles.css`, reduced raw colors to 878, and locked ratchet baseline.
+
+
+

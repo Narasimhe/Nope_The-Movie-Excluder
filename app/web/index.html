@@ -11,9 +11,17 @@
   >
   <title>NOPE</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/static/tokens.css?v=20261101_zen_224">
-  <link rel="stylesheet" href="/static/topbar.css?v=20261101_zen_224">
-  <link rel="stylesheet" href="/static/styles.css?v=20261101_zen_224">
+  <link rel="stylesheet" href="/static/tokens.css?v=20261101_zen_253">
+  <link rel="stylesheet" href="/static/styles.css?v=20261101_zen_254">
+  <link rel="stylesheet" href="/static/components/topbar.css?v=20261101_zen_254">
+  <link rel="stylesheet" href="/static/components/chips.css?v=20261101_zen_254">
+  <link rel="stylesheet" href="/static/components/sidebar.css?v=20261101_zen_254">
+  <link rel="stylesheet" href="/static/components/movie-grid.css?v=20261101_zen_254">
+  <link rel="stylesheet" href="/static/components/movie-detail.css?v=20261101_zen_254">
+  <link rel="stylesheet" href="/static/components/notes.css?v=20261101_zen_254">
+  <link rel="stylesheet" href="/static/components/grey.css?v=20261101_zen_254">
+  <link rel="stylesheet" href="/static/components/modals.css?v=20261101_zen_254">
+  <link rel="stylesheet" href="/static/components/storage.css?v=20261101_zen_254">
   <script>
     (function () {
       try {
@@ -31,7 +39,7 @@
       } catch (_) {}
     })();
   </script>
-  <script src="/static/app.js?v=20261101_zen_224" defer></script>
+  <script src="/static/app.js?v=20261101_zen_254" defer></script>
 </head>
 <body>
   <div class="site-shell" id="app-shell">
@@ -655,7 +663,7 @@
         <div class="discover-canvas-header is-hidden" id="discover-canvas-header">
           <div class="discover-toolbar-row">
             <div class="discover-search-cluster">
-              <form class="search-form toolbar-search" id="movie-search">
+              <form class="toolbar-search" id="movie-search">
                 <label class="sr-only" for="search-query">Search for a movie</label>
                 <span class="search-icon" aria-hidden="true"></span>
                 <input id="search-query" name="query" type="search" placeholder="Search any movie..." autocomplete="off" required>
@@ -681,7 +689,7 @@
         <div class="library-canvas-header is-hidden" id="library-canvas-header">
           <div class="library-toolbar-row">
             <div class="library-search-cluster">
-              <form class="search-form toolbar-search library-toolbar-search" id="library-search-form" onsubmit="return false;">
+              <form class="toolbar-search library-toolbar-search" id="library-search-form" onsubmit="return false;">
                 <label class="sr-only" for="library-filter-query">Search library</label>
                 <span class="search-icon" aria-hidden="true"></span>
                 <input id="library-filter-query" type="search" placeholder="Search in Watched…" title="Search across your library" autocomplete="off">
@@ -725,7 +733,7 @@
 
               <span class="shelf-ribbon-divider" aria-hidden="true"></span>
 
-              <button type="button" class="nav-link shelf-notes-lens-btn" id="shelf-notes-lens-btn" data-view="movie-notes" title="Personal Notes (Click to toggle notes lens; double click to exit)" aria-label="Movie Notes">
+              <button type="button" class="nav-link shelf-notes-lens-btn" id="shelf-notes-lens-btn" data-view="movie-notes" title="Personal Notes (Click to toggle notes lens; click again to return)" aria-label="Movie Notes">
                 <svg class="shelf-note-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
                 </svg>
@@ -978,77 +986,38 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
         </article>
 
         <section class="storage-page is-hidden" id="storage-page" aria-labelledby="storage-title">
-          <div class="storage-page-heading">
-            <h2 id="storage-title">Storage</h2>
-          </div>
+          <header class="storage-page-header">
+            <h2 class="storage-page-title" id="storage-title">Storage & Memory</h2>
+            <p class="storage-page-subtitle">Local SQLite database telemetry, cache optimization, and storage maintenance.</p>
+          </header>
 
           <div class="storage-summary" id="storage-summary"></div>
 
           <div class="storage-sections-wrap">
             <div class="storage-card-zone">
               <div class="storage-zone-header">
-                <span class="material-symbols-outlined storage-zone-icon" aria-hidden="true">file_download</span>
-                <div>
-                  <h3 class="storage-zone-title">Data Portability & Backups</h3>
-                  <p class="storage-zone-desc">Export your personal notes and complete library metadata as open files.</p>
-                </div>
-              </div>
-              <div class="storage-zone-actions">
-                <button id="export-notes-md" class="storage-action-btn storage-action-btn--primary" type="button">
-                  <span class="material-symbols-outlined" aria-hidden="true">description</span>
-                  <span>Export Notes (.md)</span>
-                </button>
-                <button id="export-library-json" class="storage-action-btn" type="button">
-                  <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
-                  <span>Export Library (.json)</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="storage-card-zone">
-              <div class="storage-zone-header">
-                <span class="material-symbols-outlined storage-zone-icon" aria-hidden="true">cleaning_services</span>
                 <div>
                   <h3 class="storage-zone-title">Cache Maintenance</h3>
-                  <p class="storage-zone-desc">Safely prune temporary TMDB search results older than 90 days. Shelves and notes are preserved.</p>
+                  <p class="storage-zone-desc">Prune temporary TMDB discovery records older than 90 days to free storage space.</p>
                 </div>
               </div>
               <div class="storage-zone-actions">
-                <button id="cleanup-cache" class="storage-action-btn" type="button">
-                  <span class="material-symbols-outlined" aria-hidden="true">mop</span>
-                  <span>Clear Cache (>90d)</span>
+                <button id="cleanup-cache" class="storage-action-btn is-dormant" type="button" aria-disabled="true">
+                  <span>Clear Cache (>90d) · 0</span>
                 </button>
               </div>
             </div>
 
             <div class="storage-card-zone">
               <div class="storage-zone-header">
-                <span class="material-symbols-outlined storage-zone-icon" aria-hidden="true">photo_library</span>
                 <div>
-                  <h3 class="storage-zone-title">Lean Poster Storage</h3>
-                  <p class="storage-zone-desc">Reclaim disk space by purging untracked browsing posters. All active library shelf posters are preserved.</p>
+                  <h3 class="storage-zone-title">Trash Bin Purge</h3>
+                  <p class="storage-zone-desc">Permanently erase soft-deleted notes and movie links from the database.</p>
                 </div>
               </div>
               <div class="storage-zone-actions">
-                <button id="reclaim-posters-btn" class="storage-action-btn storage-action-btn--primary" type="button">
-                  <span class="material-symbols-outlined" aria-hidden="true">folder_zip</span>
-                  <span>Reclaim Poster Storage</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="storage-card-zone storage-card-zone--danger">
-              <div class="storage-zone-header">
-                <span class="material-symbols-outlined storage-zone-icon" aria-hidden="true">delete_forever</span>
-                <div>
-                  <h3 class="storage-zone-title">Permanent Purge</h3>
-                  <p class="storage-zone-desc">Hard-delete any notes or links currently retained in the trash bin.</p>
-                </div>
-              </div>
-              <div class="storage-zone-actions">
-                <button id="purge-deleted-entries" class="storage-action-btn storage-action-btn--danger danger-button" type="button">
-                  <span class="material-symbols-outlined" aria-hidden="true">delete_forever</span>
-                  <span>Purge Trash</span>
+                <button id="purge-deleted-entries" class="storage-action-btn storage-action-btn--danger is-dormant" type="button" aria-disabled="true">
+                  <span>Purge Trash · 0</span>
                 </button>
               </div>
             </div>
@@ -1200,7 +1169,7 @@ Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blo
             <!-- Tier 2: Dual Verdict Row (10-Star Rating & Favorite Heart Alignment) -->
             <div class="cockpit-rating-row">
               <div class="star-rating" id="verdict-stars" role="radiogroup" aria-label="My verdict out of 10"></div>
-              <button id="clear-verdict" class="clear-verdict-btn is-hidden" type="button" aria-label="Clear rating" title="Clear rating">✕</button>
+              <button id="clear-verdict" class="clear-verdict-btn is-disabled" type="button" aria-label="Clear rating" title="Clear rating" disabled>✕</button>
               <span class="verdict-score-badge is-hidden" id="verdict-score-badge">0.0</span>
               <button class="favorite-button" id="favorite-button" type="button" aria-label="Add to favourites" title="Toggle Favourite (F)">
                 <span aria-hidden="true">♥</span>

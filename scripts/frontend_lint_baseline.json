@@ -1,8 +1,8 @@
 {
-  "important_count": 3118,
-  "raw_colors_outside_root": 1311,
-  "duplicate_selectors": 186,
-  "hex_colors": 210,
-  "css_lines": 11549,
-  "js_lines": 12153
+  "important_count": 50,
+  "raw_colors_outside_root": 126,
+  "duplicate_selectors": 13,
+  "hex_colors": 64,
+  "css_lines": 9155,
+  "js_lines": 12068
 }

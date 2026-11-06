@@ -1,0 +1,283 @@
+/* ==========================================================================
+   NOPE Component 8: Modals, Dialogs & System Notifications
+   authoritative, 100% tokenized, 0 !important, 0 raw colors
+   ========================================================================== */
+
+/* 1. Universal Fixed Floating Toast Notifications (Top-Right, Non-Intrusive) */
+.notice,
+#notice {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: auto;
+  max-width: min(440px, calc(100vw - 48px));
+  min-width: 260px;
+  margin: 0;
+  padding: 12px 16px;
+  box-sizing: border-box;
+  border-radius: var(--radius-sm);
+  background: var(--surface-overlay);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-dropdown);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 1.4;
+  pointer-events: auto;
+  animation: toastSlideIn 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.notice.is-hidden,
+#notice.is-hidden {
+  display: none;
+}
+
+.notice.is-dismissing {
+  opacity: 0;
+  transform: translateX(12px);
+}
+
+/* Error Toast Variant */
+.notice.is-error,
+#notice.is-error {
+  border-color: var(--danger-border);
+  background: var(--surface-overlay);
+  color: var(--danger-text);
+}
+
+.notice.is-error .notice-icon {
+  color: var(--danger-primary);
+}
+
+/* Success Toast Variant */
+.notice.is-success,
+#notice.is-success {
+  border-color: var(--success);
+  background: var(--surface-overlay);
+  color: var(--success);
+}
+
+.notice.is-success .notice-icon {
+  color: var(--success);
+}
+
+.notice-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.notice-text {
+  flex: 1 1 auto;
+  font-size: 13px;
+  font-weight: 450;
+  color: inherit;
+  word-break: break-word;
+}
+
+.notice-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin-left: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: var(--radius-xs);
+  flex-shrink: 0;
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.notice-close-btn:hover {
+  color: var(--text-primary);
+  background: var(--surface-card-hover);
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* 2. Preset Workshop Modal Dialog (.profile-dialog) */
+.profile-dialog,
+#profile-dialog {
+  width: min(390px, calc(100% - 32px));
+  padding: 0;
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-modal);
+  font-family: var(--font-ui);
+}
+
+.profile-dialog::backdrop,
+#profile-dialog::backdrop {
+  background: var(--scrim);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.profile-dialog form,
+#profile-dialog form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 24px;
+  margin: 0;
+}
+
+.profile-dialog .filter-kicker {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 0 0 3px 0;
+}
+
+.profile-dialog h2,
+#profile-dialog-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.profile-dialog p:not(.filter-kicker),
+#profile-dialog-copy {
+  margin: 4px 0 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.profile-dialog label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 2px;
+  margin-bottom: -4px;
+}
+
+.profile-dialog input,
+#profile-dialog input {
+  width: 100%;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 11px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.profile-dialog input:focus,
+#profile-dialog input:focus {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.profile-dialog textarea {
+  width: 100%;
+  min-height: 70px;
+  padding: 8px 11px;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  resize: vertical;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.profile-dialog textarea:focus {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.profile-dialog-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+.profile-dialog-actions button:not(.primary-action),
+#cancel-profile {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.profile-dialog-actions button:not(.primary-action):hover,
+#cancel-profile:hover {
+  background: var(--surface-card-hover);
+  color: var(--text-primary);
+  border-color: var(--line-strong);
+}
+
+.profile-dialog-actions .primary-action,
+#profile-submit {
+  height: 32px;
+  min-height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-md);
+  background: var(--accent-primary);
+  color: var(--bg);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 140ms ease;
+}
+
+.profile-dialog-actions .primary-action:hover,
+#profile-submit:hover {
+  background: var(--accent-text);
+  border-color: var(--accent-primary);
+  color: var(--bg);
+}

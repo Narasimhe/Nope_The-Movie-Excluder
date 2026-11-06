@@ -96,7 +96,7 @@ def _get_duplicate_selectors(raw_css: str, css_clean: str) -> dict[str, list[int
 
 
 def lint_frontend(strict: bool = True) -> tuple[dict[str, int], list[str]]:
-    css_files = sorted(STATIC_DIR.glob("*.css"))
+    css_files = sorted(STATIC_DIR.rglob("*.css"))
     # Exclude backup files
     css_files = [p for p in css_files if not p.name.endswith(".bak")]
 

@@ -1,0 +1,402 @@
+/* ============================================================
+   NOPE Top Navigation Bar & Master Tabs Component Styles
+   ============================================================ */
+
+.site-shell {
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.topbar {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  width: min(1440px, calc(100% - 64px));
+  min-height: 86px;
+  margin: 0 auto;
+  border-bottom: 1px solid var(--line);
+}
+
+/* 1. Brand Logo & Crosshairs */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  color: var(--danger-primary);
+  transition: transform 160ms ease;
+}
+
+.brand:hover {
+  transform: scale(1.04);
+}
+
+.brand-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.5px;
+  color: var(--danger-primary);
+  font-family: var(--font-ui);
+  font-size: 1.5rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: var(--shadow-brand-glow);
+  transition: text-shadow 160ms ease;
+}
+
+.brand-text {
+  color: var(--danger-primary);
+}
+
+.brand-scope {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: 0 1.5px;
+  color: var(--danger-primary);
+  vertical-align: middle;
+  transform: translateY(-0.5px);
+}
+
+.brand-scope-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 8px var(--danger-primary));
+  transition: filter 160ms ease, transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center;
+}
+
+.brand:hover .brand-scope-svg {
+  filter: drop-shadow(0 0 14px var(--danger-primary));
+  transform: rotate(45deg);
+}
+
+.brand:hover .brand-wordmark {
+  text-shadow: var(--shadow-brand-glow-hover);
+}
+
+/* 2. Master Navigation Tabs */
+.master-nav {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  justify-content: center;
+  height: 100%;
+}
+
+.master-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 18px 4px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 160ms ease;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.master-tab:hover {
+  color: var(--text-primary);
+  background: transparent;
+  transform: none;
+}
+
+.master-tab.is-active {
+  color: var(--text-primary);
+  background: transparent;
+  box-shadow: none;
+  font-weight: 600;
+}
+
+.master-tab.is-active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--accent-primary);
+  box-shadow: none;
+  border-radius: 0;
+}
+
+.master-tab-icon {
+  font-size: 0.92rem;
+  line-height: 1;
+  color: currentColor;
+  opacity: 0.75;
+  transition: opacity 160ms ease, color 160ms ease;
+}
+
+.master-tab.is-active .master-tab-icon {
+  opacity: 1;
+  color: var(--accent-primary);
+  filter: none;
+}
+
+/* 3. Topbar Spacer End */
+.topbar-end {
+  min-width: 120px;
+  justify-self: end;
+}
+
+/* 4. Canvas Headers & Search Toolbars (Discover & Library) */
+.discover-canvas-header,
+.library-canvas-header {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.discover-toolbar-row,
+.library-toolbar-row,
+.discover-ribbon-row,
+.library-ribbon-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  flex-wrap: nowrap;
+  gap: 16px;
+}
+
+.discover-search-cluster,
+.library-search-cluster {
+  width: 670px;
+  max-width: 670px;
+  flex-shrink: 0;
+}
+
+.toolbar-search {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 670px;
+  height: 36px;
+  min-height: 36px;
+  margin: 0;
+  padding: 0 12px;
+  gap: 8px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--border-card);
+  background: var(--surface-workspace);
+  box-sizing: border-box;
+  transition: border-color 140ms ease;
+}
+
+.toolbar-search:focus-within {
+  border-color: var(--accent-border);
+}
+
+.toolbar-search .search-icon {
+  position: relative;
+  width: 12px;
+  height: 12px;
+  min-width: 12px;
+  border: 1.4px solid var(--text-muted);
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  opacity: 0.8;
+  transition: opacity 140ms ease, border-color 140ms ease;
+}
+
+.toolbar-search:focus-within .search-icon {
+  opacity: 1;
+  border-color: var(--accent-border);
+}
+
+.toolbar-search .search-icon::after {
+  position: absolute;
+  right: -3px;
+  bottom: -2.5px;
+  width: 5px;
+  height: 1.4px;
+  background: var(--text-muted);
+  border-radius: 1px;
+  content: "";
+  transform: rotate(45deg);
+  transition: background-color 140ms ease;
+}
+
+.toolbar-search:focus-within .search-icon::after {
+  background: var(--accent-border);
+}
+
+.toolbar-search input {
+  flex: 1 1 auto;
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  line-height: 36px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.toolbar-search input::-webkit-search-decoration,
+.toolbar-search input::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+}
+
+.toolbar-search input::placeholder {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.toolbar-search button[type="submit"] {
+  display: none;
+}
+
+/* 5. Library Search Dual Micro-Pills (Scope & Target) */
+.library-search-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex: 0 0 auto;
+}
+
+.library-search-pills .library-scope-toggle-btn,
+.library-scope-toggle-btn {
+  min-width: 82px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 24px;
+  min-height: 24px;
+  max-height: 24px;
+  padding: 0 9px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 140ms ease;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.library-search-pills .library-target-toggle-btn,
+.library-target-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 24px;
+  min-height: 24px;
+  max-height: 24px;
+  padding: 0 9px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-card);
+  border: 1px solid var(--border-card);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 140ms ease;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.library-search-pills .library-scope-toggle-btn:hover,
+.library-search-pills .library-target-toggle-btn:hover,
+.library-scope-toggle-btn:hover,
+.library-target-toggle-btn:hover {
+  background: var(--surface-card-hover);
+  border-color: var(--accent-border);
+  color: var(--text-primary);
+}
+
+.library-search-pills .library-scope-toggle-btn.is-all-shelves,
+.library-search-pills .library-target-toggle-btn.is-active-target,
+.library-scope-toggle-btn.is-all-shelves,
+.library-target-toggle-btn.is-active-target {
+  background: var(--accent-subtle);
+  border-color: var(--accent-border);
+  color: var(--accent-primary);
+}
+
+.library-target-toggle-btn.is-entity-target {
+  background: var(--accent-subtle);
+  border-color: var(--accent-border);
+  color: var(--accent-primary);
+  max-width: 150px;
+}
+
+.library-target-toggle-btn.is-entity-target #library-target-text {
+  max-width: 115px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-target-toggle-btn.is-entity-target:hover {
+  background: var(--danger-glow);
+  border-color: var(--danger-border);
+  color: var(--danger-text);
+}
+
+.library-scope-icon-wrap,
+.library-target-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+}
+
+.library-scope-toggle-btn:hover .library-scope-icon-wrap,
+.library-target-toggle-btn:hover .library-target-icon-wrap {
+  opacity: 1;
+}
+
+/* 6. Result Counters */
+.result-count,
+.shelf-movie-count {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text-muted);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 400;
+  white-space: nowrap;
+  line-height: 1;
+}
