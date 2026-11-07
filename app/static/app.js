@@ -8675,6 +8675,8 @@ function renderEntries(entries) {
       }
     });
 
+    const entryTags = entry.tags || [];
+
     if (entry.image_url) {
       const bannerThumb = document.createElement("div");
       bannerThumb.className = "entry-card-banner";
@@ -8683,6 +8685,17 @@ function renderEntries(entries) {
       bannerImg.alt = entry.title || "Note banner";
       bannerImg.loading = "lazy";
       bannerThumb.append(bannerImg);
+
+      if (entryTags.length) {
+        const tagsOverlay = document.createElement("div");
+        tagsOverlay.className = "entry-card-banner-tags";
+        entryTags.slice(0, 3).forEach((tag) => {
+          const pill = createEntryTag(tag, false);
+          tagsOverlay.append(pill);
+        });
+        bannerThumb.append(tagsOverlay);
+      }
+
       article.append(bannerThumb);
     }
 
@@ -8694,15 +8707,11 @@ function renderEntries(entries) {
     header.append(title);
     article.append(header);
 
-    const entryTags = entry.tags || [];
-    if (entryTags.length) {
+    if (!entry.image_url && entryTags.length) {
       const tagsRow = document.createElement("div");
       tagsRow.className = "entry-card-tags";
       entryTags.slice(0, 3).forEach((tag) => {
-        const pill = createEntryTag(tag);
-        pill.addEventListener("click", (event) => {
-          event.stopPropagation();
-        });
+        const pill = createEntryTag(tag, false);
         tagsRow.append(pill);
       });
       article.append(tagsRow);
