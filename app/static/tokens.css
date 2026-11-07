@@ -33,11 +33,11 @@
   --text-inverse: #09090b;
 
   /* Master Accent Palette (Single Source of Truth) */
-  --accent-primary: #DEC68B;
-  --accent-subtle: rgba(222, 198, 139, 0.04);
-  --accent-glow: rgba(222, 198, 139, 0.20);
-  --accent-border: rgba(222, 198, 139, 0.50);
-  --accent-text: #E6D5B8;
+  --accent-primary: #C8AE7D;
+  --accent-subtle: rgba(200, 174, 125, 0.03);
+  --accent-glow: rgba(200, 174, 125, 0.10);
+  --accent-border: rgba(200, 174, 125, 0.26);
+  --accent-text: #D5C29E;
 
   /* Master Danger / Exclude Palette (Single Source of Truth) */
   --danger-primary: #ef4444;

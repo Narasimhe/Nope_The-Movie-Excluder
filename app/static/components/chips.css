@@ -120,14 +120,14 @@ body.grey-docked-open .library-shelf-ribbon .ribbon-chip {
 .library-shelf-ribbon .ribbon-chip.is-active {
   background: transparent;
   border: 1px solid var(--accent-border);
-  color: var(--accent-text);
+  color: var(--text-active);
   font-weight: 400;
   box-shadow: none;
 }
 
 .profile-ribbon .ribbon-chip.is-active .ribbon-chip-text,
 .profile-ribbon .ribbon-chip.is-active > span {
-  color: var(--accent-text);
+  color: var(--text-active);
   font-weight: 400;
 }
 
@@ -177,6 +177,7 @@ body.grey-docked-open .library-shelf-ribbon .ribbon-chip {
 
 .ribbon-chip.is-active .shelf-chip-icon {
   color: var(--accent-primary);
+  opacity: 0.85;
 }
 
 .library-shelf-ribbon .ribbon-chip .shelf-chip-icon {
@@ -186,6 +187,7 @@ body.grey-docked-open .library-shelf-ribbon .ribbon-chip {
 .library-shelf-ribbon .ribbon-chip:hover .shelf-chip-icon,
 .library-shelf-ribbon .ribbon-chip.is-active .shelf-chip-icon {
   color: var(--accent-primary);
+  opacity: 0.85;
 }
 
 /* 7. Inline Update Button on Preset Chip */

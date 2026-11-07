@@ -213,7 +213,7 @@
 }
 
 .sidebar-accordion-trigger.is-open {
-  background: var(--accent-subtle);
+  background: transparent;
   color: var(--text-header);
 }
 
@@ -659,6 +659,7 @@
 
 .tri-chip.is-included .tri-chip-icon {
   color: var(--accent-primary);
+  opacity: 0.85;
   font-weight: 600;
 }
 
@@ -735,7 +736,7 @@
 .sort-chip.is-active .sort-chip-glyph,
 .status-options label:has(input:checked) .status-chip-glyph {
   color: var(--accent-primary);
-  opacity: 1;
+  opacity: 0.85;
 }
 
 /* Tri-Chip Dismiss / Unpin Button */
