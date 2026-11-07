@@ -182,7 +182,8 @@
 }
 
 .discover-search-cluster,
-.library-search-cluster {
+.library-search-cluster,
+.notes-search-cluster {
   width: 670px;
   max-width: 670px;
   flex-shrink: 0;

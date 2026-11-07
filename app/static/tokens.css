@@ -23,10 +23,10 @@
   --surface-input-focus: rgba(255, 255, 255, 0.05);
 
   /* Text & Foreground Hierarchy */
-  --text: #f5f3ee;
-  --text-primary: #ffffff;
-  --text-secondary: #e5e7eb;
-  --text-header: rgb(255 255 255 / 0.85);
+  --text: rgb(255 255 255 / 0.88);
+  --text-primary: rgb(255 255 255 / 0.88);
+  --text-secondary: rgb(255 255 255 / 0.75);
+  --text-header: rgb(255 255 255 / 0.88);
   --text-active: rgb(255 255 255 / 0.75);
   --text-muted: rgb(255 255 255 / 0.45);
   --text-dim: #6b7280;

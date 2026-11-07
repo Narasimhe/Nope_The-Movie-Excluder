@@ -12,16 +12,16 @@
   <title>NOPE</title>
   <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/static/tokens.css?v=20261101_zen_265">
-  <link rel="stylesheet" href="/static/styles.css?v=20261101_zen_265">
-  <link rel="stylesheet" href="/static/components/topbar.css?v=20261101_zen_265">
-  <link rel="stylesheet" href="/static/components/chips.css?v=20261101_zen_265">
-  <link rel="stylesheet" href="/static/components/sidebar.css?v=20261101_zen_265">
-  <link rel="stylesheet" href="/static/components/movie-grid.css?v=20261101_zen_265">
-  <link rel="stylesheet" href="/static/components/movie-detail.css?v=20261101_zen_265">
-  <link rel="stylesheet" href="/static/components/notes.css?v=20261101_zen_265">
-  <link rel="stylesheet" href="/static/components/grey.css?v=20261101_zen_265">
-  <link rel="stylesheet" href="/static/components/modals.css?v=20261101_zen_265">
-  <link rel="stylesheet" href="/static/components/storage.css?v=20261101_zen_265">
+  <link rel="stylesheet" href="/static/styles.css?v=20261101_zen_270">
+  <link rel="stylesheet" href="/static/components/topbar.css?v=20261101_zen_270">
+  <link rel="stylesheet" href="/static/components/chips.css?v=20261101_zen_270">
+  <link rel="stylesheet" href="/static/components/sidebar.css?v=20261101_zen_270">
+  <link rel="stylesheet" href="/static/components/movie-grid.css?v=20261101_zen_270">
+  <link rel="stylesheet" href="/static/components/movie-detail.css?v=20261101_zen_270">
+  <link rel="stylesheet" href="/static/components/notes.css?v=20261101_zen_270">
+  <link rel="stylesheet" href="/static/components/grey.css?v=20261101_zen_270">
+  <link rel="stylesheet" href="/static/components/modals.css?v=20261101_zen_270">
+  <link rel="stylesheet" href="/static/components/storage.css?v=20261101_zen_270">
   <script>
     (function () {
       try {
@@ -39,7 +39,7 @@
       } catch (_) {}
     })();
   </script>
-  <script src="/static/app.js?v=20261101_zen_265" defer></script>
+  <script src="/static/app.js?v=20261101_zen_266" defer></script>
 </head>
 <body>
   <div class="site-shell" id="app-shell">
@@ -133,12 +133,12 @@
                       </button>
                       <section class="filter-card is-collapsed" id="card-sort">
                         <div class="sort-chip-cloud" id="sort-chip-cloud" role="radiogroup" aria-label="Sort by">
-                          <button type="button" class="sort-chip is-active" data-value="popularity.desc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">trending_up</span><span>Most popular</span></button>
-                          <button type="button" class="sort-chip" data-value="vote_average.desc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">star</span><span>Highest rated</span></button>
-                          <button type="button" class="sort-chip" data-value="vote_count.desc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">how_to_vote</span><span>Most voted</span></button>
-                          <button type="button" class="sort-chip" data-value="primary_release_date.desc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">schedule</span><span>Newest first</span></button>
-                          <button type="button" class="sort-chip" data-value="primary_release_date.asc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">history</span><span>Oldest first</span></button>
-                          <button type="button" class="sort-chip" data-value="title.asc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">sort_by_alpha</span><span>Title A–Z</span></button>
+                          <button type="button" class="sort-chip is-active" data-value="popularity.desc"><span>Most popular</span></button>
+                          <button type="button" class="sort-chip" data-value="vote_average.desc"><span>Highest rated</span></button>
+                          <button type="button" class="sort-chip" data-value="vote_count.desc"><span>Most voted</span></button>
+                          <button type="button" class="sort-chip" data-value="primary_release_date.desc"><span>Newest first</span></button>
+                          <button type="button" class="sort-chip" data-value="primary_release_date.asc"><span>Oldest first</span></button>
+                          <button type="button" class="sort-chip" data-value="title.asc"><span>Title A–Z</span></button>
                         </div>
                         <div class="is-hidden" style="display:none !important;">
                           <label for="sort-by" class="sr-only">Sort by</label>
@@ -166,12 +166,12 @@
                       </button>
                       <section class="filter-card personal-filter-card is-collapsed" id="personal-filters">
                         <div class="status-options status-grid-2x3">
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="new_discovery" checked><span class="material-symbols-outlined status-chip-glyph" aria-hidden="true">auto_awesome</span><span>New discovery</span></label>
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="watch_later" checked><span class="material-symbols-outlined status-chip-glyph" aria-hidden="true">schedule</span><span>Watch later</span></label>
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="watched"><span class="material-symbols-outlined status-chip-glyph" aria-hidden="true">check</span><span>Watched</span></label>
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="rewatch"><span class="material-symbols-outlined status-chip-glyph" aria-hidden="true">replay</span><span>Rewatch</span></label>
-                          <label class="filter-chip"><input type="checkbox" name="included-status" value="excluded"><span class="material-symbols-outlined status-chip-glyph" aria-hidden="true">close</span><span>Nope</span></label>
-                          <label class="filter-chip"><input id="include-untracked" type="checkbox" checked><span class="material-symbols-outlined status-chip-glyph" aria-hidden="true">radio_button_unchecked</span><span>Untracked</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="new_discovery" checked><span>New discovery</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="watch_later" checked><span>Watch later</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="watched"><span>Watched</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="rewatch"><span>Rewatch</span></label>
+                          <label class="filter-chip"><input type="checkbox" name="included-status" value="excluded"><span>Nope</span></label>
+                          <label class="filter-chip"><input id="include-untracked" type="checkbox" checked><span>Untracked</span></label>
                         </div>
                         <div class="is-hidden" style="display: none !important;">
                           <label class="personal-toggle-pill">
@@ -460,10 +460,10 @@
                 </button>
                 <section class="filter-card is-collapsed" id="card-lib-sort">
                   <div class="sort-chip-cloud" id="lib-sort-cloud" role="radiogroup" aria-label="Sort order">
-                    <button type="button" class="sort-chip filter-chip is-active" data-sort="recent"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">history</span><span>Recently updated</span></button>
-                    <button type="button" class="sort-chip filter-chip" data-sort="year_desc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">schedule</span><span>Newest first</span></button>
-                    <button type="button" class="sort-chip filter-chip" data-sort="year_asc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">history</span><span>Oldest first</span></button>
-                    <button type="button" class="sort-chip filter-chip" data-sort="title_asc"><span class="material-symbols-outlined sort-chip-glyph" aria-hidden="true">sort_by_alpha</span><span>Title A–Z</span></button>
+                    <button type="button" class="sort-chip filter-chip is-active" data-sort="recent"><span>Recently updated</span></button>
+                    <button type="button" class="sort-chip filter-chip" data-sort="year_desc"><span>Newest first</span></button>
+                    <button type="button" class="sort-chip filter-chip" data-sort="year_asc"><span>Oldest first</span></button>
+                    <button type="button" class="sort-chip filter-chip" data-sort="title_asc"><span>Title A–Z</span></button>
                   </div>
                 </section>
               </div>
@@ -587,13 +587,6 @@
                     All Notes
                   </span>
                   <span class="notes-tag-count" id="notes-total-count">0</span>
-                </button>
-                <button type="button" class="notes-tag-link" id="notes-view-drafts" data-view="drafts">
-                  <span class="notes-sidebar-item-label">
-                    <svg class="notes-sidebar-item-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                    Drafts
-                  </span>
-                  <span class="notes-tag-count" id="notes-drafts-count">0</span>
                 </button>
                 <button type="button" class="notes-tag-link" id="notes-view-archive" data-view="archive">
                   <span class="notes-sidebar-item-label">
@@ -791,22 +784,26 @@
 
         <section class="entries-page is-hidden" id="entries-page" aria-labelledby="entries-title">
           <div class="entries-toolbar">
-            <form class="entry-filters" id="entry-filters" role="search">
-              <div class="entry-search-wrap">
-                <svg class="entry-search-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <div class="notes-search-cluster">
+              <form class="toolbar-search notes-toolbar-search entry-filters" id="entry-filters" role="search" onsubmit="return false;">
+                <label class="sr-only" for="entry-query">Search notes</label>
+                <span class="search-icon" aria-hidden="true"></span>
                 <input id="entry-query" type="search" placeholder="Search notes by title, content or tag…" autocomplete="off">
-              </div>
-              <select id="entry-type-filter" class="is-hidden" aria-label="Entry type" style="display:none !important;">
-                <option value="">All entries</option>
-                <option value="note">Notes</option>
-                <option value="link">Links</option>
-              </select>
-              <select id="entry-year-filter" class="is-hidden" aria-label="Year" style="display:none !important;"><option value="">Any year</option></select>
-              <select id="entry-month-filter" class="is-hidden" aria-label="Month" style="display:none !important;">
-                <option value="">Any month</option>
-              </select>
-              <button id="clear-entry-filters" type="button" class="is-hidden" style="display:none !important;">Clear</button>
-            </form>
+                <button type="button" class="toolbar-search-clear is-hidden" id="entry-query-clear" aria-label="Clear search" title="Clear search">
+                  <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+                <select id="entry-type-filter" class="is-hidden" aria-label="Entry type" style="display:none !important;">
+                  <option value="">All entries</option>
+                  <option value="note">Notes</option>
+                  <option value="link">Links</option>
+                </select>
+                <select id="entry-year-filter" class="is-hidden" aria-label="Year" style="display:none !important;"><option value="">Any year</option></select>
+                <select id="entry-month-filter" class="is-hidden" aria-label="Month" style="display:none !important;">
+                  <option value="">Any month</option>
+                </select>
+                <button id="clear-entry-filters" type="button" class="is-hidden" style="display:none !important;">Clear</button>
+              </form>
+            </div>
             <div class="entries-toolbar-actions">
               <div class="notes-view-switcher" id="notes-view-switcher" role="group" aria-label="Notes layout mode">
                 <button type="button" class="notes-view-btn is-active" id="notes-view-list" data-layout="list" title="Compact Index List">
@@ -829,60 +826,26 @@
         </section>
 
         <article class="entry-reader is-hidden" id="entry-reader" aria-labelledby="entry-reader-title">
-          <!-- View mode toolbar -->
+          <!-- Persistent single toolbar -->
           <nav class="entry-reader-toolbar entry-reader-view-toolbar" id="entry-reader-view-toolbar" aria-label="Entry reader controls">
             <button id="entry-reader-back" class="reader-back-btn" type="button">
               <svg class="reader-back-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
               <span class="reader-back-label">Notes</span>
             </button>
             <div class="reader-toolbar-actions">
-              <span class="reader-save-status" id="reader-view-save-status" aria-live="polite"></span>
-              <button class="primary-action publish-action is-hidden" id="entry-reader-publish" type="button">Publish</button>
-              <div class="reader-view-control-bar" role="group" aria-label="Note actions and navigation">
-                <button id="entry-reader-edit" class="reader-bar-btn reader-edit-btn" type="button" title="Edit post (Ctrl+E)">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                  <span>Edit</span>
-                </button>
-                <span class="reader-bar-sep" aria-hidden="true"></span>
-                <button id="entry-reader-previous" class="reader-bar-btn reader-step-btn" type="button" title="Previous note (←)">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
-                  <span>Previous</span>
-                </button>
-                <span class="reader-bar-sep reader-bar-sep-subtle" aria-hidden="true"></span>
-                <button id="entry-reader-next" class="reader-bar-btn reader-step-btn" type="button" title="Next note (→)">
-                  <span>Next</span>
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
-                </button>
-                <span class="reader-bar-sep reader-bar-sep-danger" aria-hidden="true"></span>
-                <button class="danger-button reader-bar-btn reader-delete-btn" id="entry-reader-delete" type="button" aria-label="Delete entry" title="Move note to trash">
-                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                  <span>Delete</span>
-                </button>
+              <div class="reader-view-control-bar" role="group" aria-label="Note navigation">
+                <div class="reader-control-group reader-nav-group">
+                  <button id="entry-reader-previous" class="reader-bar-btn reader-step-btn" type="button" title="Previous note (←)">
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+                    <span>Previous</span>
+                  </button>
+                  <span class="reader-dot-sep" aria-hidden="true">·</span>
+                  <button id="entry-reader-next" class="reader-bar-btn reader-step-btn" type="button" title="Next note (→)">
+                    <span>Next</span>
+                    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+                  </button>
+                </div>
               </div>
-            </div>
-          </nav>
-
-          <!-- Edit mode toolbar -->
-          <nav class="entry-reader-toolbar entry-reader-edit-toolbar" id="entry-reader-edit-toolbar" aria-label="Entry editor controls">
-            <button id="entry-reader-edit-back" class="reader-back-btn" type="button">
-              <svg class="reader-back-icon" viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
-              <span class="reader-back-label">Notes</span>
-            </button>
-            <div class="editor-stats is-hidden" id="reader-editor-stats" aria-hidden="true">
-              <span id="reader-word-count">0 words</span>
-              <span class="stats-sep">•</span>
-              <span id="reader-read-time">1 min read</span>
-            </div>
-            <div class="reader-toolbar-actions reader-edit-actions-cluster">
-              <span class="reader-save-status" id="reader-save-status" aria-live="polite"></span>
-              <button type="button" id="reader-cancel" class="cancel-action reader-cancel-btn is-hidden" style="display:none !important;">Cancel</button>
-              <button type="button" class="secondary-action reader-draft-toggle-btn" id="reader-save-draft" title="Toggle Draft status (Ctrl+Shift+S)">
-                <span id="reader-save-draft-label">Move to Drafts</span>
-              </button>
-              <button type="button" class="reader-bar-btn reader-done-btn" id="reader-save-publish" title="Return to reading view (Ctrl+E or Esc)">
-                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
-                <span>Done</span>
-              </button>
             </div>
           </nav>
 
@@ -900,7 +863,7 @@
           <header class="entry-reader-header entry-reader-edit-header" id="entry-reader-edit-header">
             <input id="reader-title-input" class="reader-title-input" maxlength="200" placeholder="Title of your film note or essay...">
             <div class="entry-reader-meta reader-edit-meta">
-              <time id="reader-edit-date">Draft</time>
+              <time id="reader-edit-date"></time>
               <div class="reader-tags-editor" id="reader-tags-editor">
                 <div class="reader-tags-chips" id="reader-tags-chips"></div>
                 <div class="reader-tag-input-wrap">
@@ -952,7 +915,6 @@
           <!-- View mode body -->
           <div class="entry-reader-body entry-reader-view-body" id="entry-reader-body"></div>
           <div class="entry-reader-links" id="entry-reader-links"></div>
-          <p class="entry-reader-created is-hidden" id="entry-reader-created"></p>
 
           <!-- Edit mode body -->
           <div class="entry-reader-edit-body" id="entry-reader-edit-body">
@@ -961,6 +923,20 @@
 Type @movie to link any film, or use ## for headings, **bold**, *italics*, > blockquotes, - bullet lists."></textarea>
             <div class="reader-movie-mention-popover is-hidden" id="reader-movie-mention-popover" role="listbox" aria-label="Movie suggestions"></div>
           </div>
+
+          <!-- End-of-post footer: metadata & secondary/destructive actions -->
+          <footer class="entry-reader-footer is-hidden" id="entry-reader-footer">
+            <div class="entry-reader-footer-meta" id="entry-reader-footer-meta"></div>
+            <div class="entry-reader-footer-actions">
+              <button class="reader-bar-btn reader-archive-btn" id="entry-reader-archive" type="button" title="Move note to archive">
+                <span>Archive</span>
+              </button>
+              <span class="reader-dot-sep" aria-hidden="true">·</span>
+              <button class="reader-bar-btn reader-delete-btn" id="entry-reader-delete" type="button" aria-label="Delete entry" title="Move note to trash">
+                <span>Delete</span>
+              </button>
+            </div>
+          </footer>
         </article>
 
         <section class="storage-page is-hidden" id="storage-page" aria-labelledby="storage-title">

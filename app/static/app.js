@@ -331,11 +331,11 @@ const elements = {
   newEntry: document.querySelector("#new-entry"),
   entryReader: document.querySelector("#entry-reader"),
   entryReaderBack: document.querySelector("#entry-reader-back"),
-  entryReaderEditBack: document.querySelector("#entry-reader-edit-back"),
-  entryReaderPublish: document.querySelector("#entry-reader-publish"),
-  entryReaderEdit: document.querySelector("#entry-reader-edit"),
   entryReaderPrevious: document.querySelector("#entry-reader-previous"),
   entryReaderNext: document.querySelector("#entry-reader-next"),
+  entryReaderFooter: document.querySelector("#entry-reader-footer"),
+  entryReaderFooterMeta: document.querySelector("#entry-reader-footer-meta"),
+  entryReaderArchive: document.querySelector("#entry-reader-archive"),
   entryReaderDelete: document.querySelector("#entry-reader-delete"),
   entryReaderType: document.querySelector("#entry-reader-type"),
   entryReaderTitle: document.querySelector("#entry-reader-title"),
@@ -364,17 +364,6 @@ const elements = {
   readerTagInput: document.querySelector("#reader-tag-input"),
   readerTagSuggestions: document.querySelector("#reader-tag-suggestions"),
   readerBodyInput: document.querySelector("#reader-body-input"),
-  readerCancel: document.querySelector("#reader-cancel"),
-  readerSaveStatus: document.querySelector("#reader-save-status"),
-  readerViewSaveStatus: document.querySelector("#reader-view-save-status"),
-  readerSaveSplit: document.querySelector("#reader-save-split"),
-  readerSaveMenuToggle: document.querySelector("#reader-save-menu-toggle"),
-  readerSaveDropdown: document.querySelector("#reader-save-dropdown"),
-  readerSaveDraft: document.querySelector("#reader-save-draft"),
-  readerSaveDraftLabel: document.querySelector("#reader-save-draft-label"),
-  readerSavePublish: document.querySelector("#reader-save-publish"),
-  readerWordCount: document.querySelector("#reader-word-count"),
-  readerReadTime: document.querySelector("#reader-read-time"),
   storagePage: document.querySelector("#storage-page"),
   storageSummary: document.querySelector("#storage-summary"),
   cleanupCache: document.querySelector("#cleanup-cache"),
@@ -7360,6 +7349,12 @@ function formatRichText(text) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+  // Markdown images: ![Alt](https://...)
+  formatted = formatted.replace(
+    /!\[([^\]]*)\]\((https?:\/\/[^\s\)]+)\)/g,
+    '<img src="$2" alt="$1" class="note-body-img" loading="lazy">',
+  );
+
   // Markdown links: [Title](https://...)
   formatted = formatted.replace(
     /\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g,
@@ -7935,6 +7930,7 @@ function populateJournalMonths(year = "", selectedMonth = "") {
 
 function resetEntryFiltersToCurrent(entryType = "") {
   elements.entryQuery.value = "";
+  document.querySelector("#entry-query-clear")?.classList.add("is-hidden");
   elements.entryTypeFilter.value = entryType;
   state.entryTagFilter = "";
   state.notesTimelineFilter = null;
@@ -8074,6 +8070,8 @@ function renderActiveEntryTag() {
       text: `🔍 “${queryVal}”${countSuffix}`,
       onClear: () => {
         if (elements.entryQuery) elements.entryQuery.value = "";
+      document.querySelector("#entry-query-clear")?.classList.add("is-hidden");
+        document.querySelector("#entry-query-clear")?.classList.add("is-hidden");
         loadEntries(1);
       },
     });
@@ -8183,12 +8181,6 @@ function updateNotesNavActive() {
       state.notesCurrentView === "archive"
     );
   }
-  if (elements.notesViewDrafts) {
-    elements.notesViewDrafts.classList.toggle(
-      "is-active",
-      state.notesCurrentView === "drafts"
-    );
-  }
   if (elements.notesTagList) {
     elements.notesTagList.querySelectorAll(".notes-tag-link").forEach((btn) => {
       const bTag = (btn.dataset.tag || "").toLowerCase();
@@ -8224,15 +8216,11 @@ async function renderNotesTags() {
     const data = await fetchJSON("/entries/tags");
     const totalEntries = data.total_entries || 0;
     const archivedEntries = data.archived_entries || 0;
-    const draftEntries = data.draft_entries || 0;
     const tags = data.tags || [];
     state.allKnownTags = tags;
 
     if (elements.notesTotalCount) {
       elements.notesTotalCount.textContent = String(totalEntries);
-    }
-    if (elements.notesDraftsCount) {
-      elements.notesDraftsCount.textContent = String(draftEntries);
     }
     if (elements.notesArchiveCount) {
       elements.notesArchiveCount.textContent = String(archivedEntries);
@@ -8513,8 +8501,6 @@ function renderEntries(entries) {
     empty.className = "entry-empty";
     empty.textContent = state.notesCurrentView === "archive"
       ? "No archived notes."
-      : state.notesCurrentView === "drafts"
-      ? "No drafts in your notebook. Start writing or ask Grey to draft one for you!"
       : "No notes match this view.";
     elements.entryList.append(empty);
     return;
@@ -8584,7 +8570,7 @@ function renderEntries(entries) {
         const pinSlot = document.createElement("span");
         pinSlot.className = "ledger-pin-slot";
         if (entry.is_pinned) {
-          pinSlot.textContent = "📌";
+          pinSlot.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.89A2 2 0 0 1 15 10.77V5a3 3 0 0 0-6 0v5.77a2 2 0 0 1-1.11 1.79l-1.78.89A2 2 0 0 0 5 15.24Z"/></svg>`;
           pinSlot.title = "Pinned note";
         }
 
@@ -8618,13 +8604,6 @@ function renderEntries(entries) {
         titleEl.textContent = entry.title;
         titleWrap.append(titleEl);
 
-        if (entry.status === "draft") {
-          const draftBadge = document.createElement("span");
-          draftBadge.className = "entry-draft-badge";
-          draftBadge.textContent = "Draft";
-          titleWrap.append(draftBadge);
-        }
-
         const entryTags = entry.tags || [];
         if (entryTags.length) {
           const tagsBox = document.createElement("div");
@@ -8646,34 +8625,23 @@ function renderEntries(entries) {
         pinBtn.type = "button";
         pinBtn.className = `card-action-btn ${entry.is_pinned ? "is-active" : ""}`;
         pinBtn.title = entry.is_pinned ? "Unpin note" : "Pin note";
-        pinBtn.textContent = "📌";
+        pinBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="17" x2="12" y2="22"/><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.89A2 2 0 0 1 15 10.77V5a3 3 0 0 0-6 0v5.77a2 2 0 0 1-1.11 1.79l-1.78.89A2 2 0 0 0 5 15.24Z"/></svg>`;
         pinBtn.addEventListener("click", async (event) => {
           event.stopPropagation();
           await toggleEntryPin(entry.entry_id);
-        });
-
-        const editBtn = document.createElement("button");
-        editBtn.type = "button";
-        editBtn.className = "card-action-btn";
-        editBtn.title = "Edit note";
-        editBtn.textContent = "✎";
-        editBtn.addEventListener("click", (event) => {
-          event.stopPropagation();
-          openEntryReader(entry, globalIndex);
-          setReaderEditMode(true);
         });
 
         const archiveBtn = document.createElement("button");
         archiveBtn.type = "button";
         archiveBtn.className = `card-action-btn ${entry.is_archived ? "is-active" : ""}`;
         archiveBtn.title = entry.is_archived ? "Restore to active notes" : "Archive note";
-        archiveBtn.textContent = entry.is_archived ? "📤" : "📥";
+        archiveBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>`;
         archiveBtn.addEventListener("click", async (event) => {
           event.stopPropagation();
           await toggleEntryArchive(entry.entry_id, entry.title, entry.is_archived);
         });
 
-        actions.append(pinBtn, editBtn, archiveBtn);
+        actions.append(pinBtn, archiveBtn);
         rightWrap.append(actions);
 
         row.append(pinSlot, dateEl, dotEl, titleWrap, rightWrap);
@@ -8699,75 +8667,7 @@ function renderEntries(entries) {
     article.className = `entry-card ${entry.is_pinned ? "is-pinned" : ""}`;
     article.dataset.entryId = entry.entry_id;
     article.dataset.entryIndex = String(index);
-
-    const header = document.createElement("header");
-    const metaRow = document.createElement("div");
-    metaRow.className = "entry-card-meta";
-
-    if (entry.status === "draft") {
-      const draftBadge = document.createElement("span");
-      draftBadge.className = "entry-draft-badge";
-      draftBadge.textContent = "📝 Draft";
-      metaRow.append(draftBadge);
-    }
-
-    const date = document.createElement("time");
-    date.className = "entry-card-time";
-    date.textContent = entryWasEdited(entry)
-      ? `Updated ${formatEntryDate(entry.updated_at)}`
-      : formatEntryDate(entry.created_at);
-
-    const actions = document.createElement("div");
-    actions.className = "entry-card-actions";
-
-    const pinBtn = document.createElement("button");
-    pinBtn.type = "button";
-    pinBtn.className = `card-action-btn ${entry.is_pinned ? "is-active" : ""}`;
-    pinBtn.title = entry.is_pinned ? "Unpin note" : "Pin note to top";
-    pinBtn.innerHTML = "📌";
-    pinBtn.addEventListener("click", async (event) => {
-      event.stopPropagation();
-      await toggleEntryPin(entry.entry_id);
-    });
-
-    const archiveBtn = document.createElement("button");
-    archiveBtn.type = "button";
-    archiveBtn.className = `card-action-btn ${entry.is_archived ? "is-active" : ""}`;
-    archiveBtn.title = entry.is_archived ? "Restore to active notes" : "Archive note";
-    archiveBtn.innerHTML = entry.is_archived ? "📤" : "📥";
-    archiveBtn.addEventListener("click", async (event) => {
-      event.stopPropagation();
-      await toggleEntryArchive(entry.entry_id, entry.title, entry.is_archived);
-    });
-
-    actions.append(pinBtn, archiveBtn);
-    metaRow.append(date, actions);
-
-    const title = document.createElement("h3");
-    title.textContent = entry.title;
-    header.append(metaRow, title);
-
-    let tagsRow = null;
-    const entryTags = entry.tags || [];
-    if (entryTags.length) {
-      tagsRow = document.createElement("div");
-      tagsRow.className = "entry-card-tags";
-      entryTags.slice(0, 3).forEach((tag) => {
-        const pill = createEntryTag(tag);
-        pill.addEventListener("click", (event) => {
-          event.stopPropagation();
-        });
-        tagsRow.append(pill);
-      });
-    }
-
-    const content = document.createElement("div");
-    content.className = "entry-card-content";
-
-    const excerpt = document.createElement("p");
-    excerpt.className = "entry-card-excerpt";
-    excerpt.textContent = createExcerptText(entry.body, 85);
-    content.append(excerpt);
+    article.tabIndex = 0;
 
     article.addEventListener("click", (event) => {
       if (!event.target.closest("button, a")) {
@@ -8786,8 +8686,35 @@ function renderEntries(entries) {
       article.append(bannerThumb);
     }
 
+    const header = document.createElement("header");
+    header.className = "entry-card-header";
+    const title = document.createElement("h3");
+    title.className = "entry-card-title";
+    title.textContent = entry.title;
+    header.append(title);
     article.append(header);
-    if (tagsRow) article.append(tagsRow);
+
+    const entryTags = entry.tags || [];
+    if (entryTags.length) {
+      const tagsRow = document.createElement("div");
+      tagsRow.className = "entry-card-tags";
+      entryTags.slice(0, 3).forEach((tag) => {
+        const pill = createEntryTag(tag);
+        pill.addEventListener("click", (event) => {
+          event.stopPropagation();
+        });
+        tagsRow.append(pill);
+      });
+      article.append(tagsRow);
+    }
+
+    const content = document.createElement("div");
+    content.className = "entry-card-content";
+
+    const excerpt = document.createElement("p");
+    excerpt.className = "entry-card-excerpt";
+    excerpt.textContent = createExcerptText(entry.body, 110);
+    content.append(excerpt);
     article.append(content);
 
     elements.entryList.append(article);
@@ -8811,10 +8738,6 @@ function buildEntryParameters(page) {
   if (state.entryTagFilter) parameters.set("tag", state.entryTagFilter);
   if (state.notesCurrentView === "archive") {
     parameters.set("archived", "true");
-  } else if (state.notesCurrentView === "drafts") {
-    parameters.set("status", "draft");
-  } else {
-    parameters.set("status", "published");
   }
   if (state.notesTimelineFilter) {
     if (state.notesTimelineFilter.year) parameters.set("year", String(state.notesTimelineFilter.year));
@@ -8883,17 +8806,9 @@ function openEntryReader(entry, index = null, { preserveScroll = false } = {}) {
   const backLabelText = entry.entry_type === "link" ? "Links" : "Notes";
   const viewBackLabel = elements.entryReaderBack?.querySelector(".reader-back-label");
   if (viewBackLabel) viewBackLabel.textContent = backLabelText;
-  const editBackLabel = elements.entryReaderEditBack?.querySelector(".reader-back-label");
-  if (editBackLabel) editBackLabel.textContent = backLabelText;
-  const isDraft = entry.status === "draft";
-  elements.entryReaderType.textContent = isDraft
-    ? `Draft ${entry.entry_type === "link" ? "Link" : "Note"}`
-    : entry.entry_type;
-  if (elements.entryReaderPublish) {
-    elements.entryReaderPublish.classList.toggle("is-hidden", !isDraft);
-  }
+  elements.entryReaderType.textContent = entry.entry_type;
   elements.entryReaderTitle.textContent = entry.title;
-  elements.entryReaderDate.textContent = formatEntryDateTime(entry.created_at || entry.updated_at);
+  elements.entryReaderDate.textContent = formatEntryDate(entry.created_at || entry.updated_at);
   elements.entryReaderDate.title = entryWasEdited(entry)
     ? `Updated ${formatEntryDateTime(entry.updated_at)}`
     : `Created ${formatEntryDateTime(entry.created_at)}`;
@@ -8916,6 +8831,12 @@ function openEntryReader(entry, index = null, { preserveScroll = false } = {}) {
 
   elements.entryReaderBody.replaceChildren();
   appendEntryBody(elements.entryReaderBody, entry.body);
+  if (!elements.entryReaderBody.childElementCount) {
+    const emptyHint = document.createElement("p");
+    emptyHint.className = "reader-body-empty-placeholder";
+    emptyHint.textContent = "Click to start writing…";
+    elements.entryReaderBody.append(emptyHint);
+  }
   appendEntryLinks(elements.entryReaderLinks, entry.url, async (removedUrl) => {
     const currentUrls = String(entry.url || "").split(/[\r\n,]+/).map((u) => u.trim()).filter(Boolean);
     const remainingUrls = currentUrls.filter((u) => u !== removedUrl);
@@ -8944,17 +8865,41 @@ function openEntryReader(entry, index = null, { preserveScroll = false } = {}) {
     }
   });
   elements.entryReaderLinks.classList.toggle("is-hidden", !entry.url);
-  elements.entryReaderCreated.classList.toggle("is-hidden", !entryWasEdited(entry));
-  elements.entryReaderCreated.textContent = entryWasEdited(entry)
-    ? `Originally created ${formatEntryDate(entry.created_at)}`
-    : "";
+  if (elements.entryReaderCreated) {
+    elements.entryReaderCreated.classList.add("is-hidden");
+    elements.entryReaderCreated.textContent = "";
+  }
   elements.entryReaderPrevious.disabled = state.entryPage === 1 && state.entryReaderIndex <= 0;
   elements.entryReaderNext.disabled = (
     state.entryPage >= state.entryTotalPages
     && state.entryReaderIndex >= state.entryResults.length - 1
   );
-  window.scrollTo({ top: 0, behavior: "auto" });
+  renderEntryReaderFooter(entry);
+  if (!preserveScroll) {
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }
   updateGreyContext();
+}
+
+/**
+ * Quiet end-of-note footer: metadata line plus the rare/destructive actions
+ * (Archive, Delete), deliberately kept far away from the editing surface.
+ */
+function renderEntryReaderFooter(entry) {
+  const footer = elements.entryReaderFooter;
+  if (!footer) return;
+  footer.classList.toggle("is-hidden", !entry);
+  if (!entry) return;
+  const parts = [`Created ${formatEntryDate(entry.created_at || entry.updated_at)}`];
+  if (entryWasEdited(entry)) parts.push(`Edited ${formatEntryDate(entry.updated_at)}`);
+  if (elements.entryReaderFooterMeta) {
+    elements.entryReaderFooterMeta.textContent = parts.join(" · ");
+  }
+  if (elements.entryReaderArchive) {
+    const label = entry.is_archived ? "Unarchive" : "Archive";
+    elements.entryReaderArchive.textContent = label;
+    elements.entryReaderArchive.title = entry.is_archived ? "Restore to active notes" : "Move note to archive";
+  }
 }
 
 function closeEntryReader() {
@@ -9078,18 +9023,6 @@ async function loadStorage() {
     }
   } catch (error) {
     feedback(elements.storageFeedback, error.message, "error");
-  }
-}
-
-function updateReaderBlogStats() {
-  const bodyText = elements.readerBodyInput?.value || "";
-  const words = bodyText.trim().split(/\s+/).filter(Boolean).length;
-  if (elements.readerWordCount) {
-    elements.readerWordCount.textContent = `${words} ${words === 1 ? "word" : "words"}`;
-  }
-  if (elements.readerReadTime) {
-    const minutes = Math.max(1, Math.ceil(words / 200));
-    elements.readerReadTime.textContent = `${minutes} min read`;
   }
 }
 
@@ -9275,42 +9208,23 @@ async function uploadBannerFile(file) {
     const data = await response.json();
     state.readerBannerUrl = data.url;
     renderReaderBannerEditor();
-    setReaderSaveStatus("Banner uploaded", "saved", 2200);
+    showNotice("Banner uploaded.", "success");
     scheduleReaderAutoSave();
   } catch (err) {
-    setReaderSaveStatus("", "saved", 0);
-    showNotice(err.message);
+    showNotice(err.message, "error");
   }
 }
 
 let readerAutoSaveTimer = null;
-let readerSaveStatusClearTimer = null;
 let readerIsAutoSaving = false;
-
-function setReaderSaveStatus(text, kind = "saved", autoHideMs = 2200) {
-  clearTimeout(readerSaveStatusClearTimer);
-  [elements.readerSaveStatus, elements.readerViewSaveStatus].forEach((el) => {
-    if (!el) return;
-    el.textContent = text;
-    el.dataset.kind = kind;
-  });
-  if (text && autoHideMs > 0) {
-    readerSaveStatusClearTimer = setTimeout(() => {
-      [elements.readerSaveStatus, elements.readerViewSaveStatus].forEach((el) => {
-        if (el) el.textContent = "";
-      });
-    }, autoHideMs);
-  }
-}
 
 function scheduleReaderAutoSave() {
   if (!state.readerEditing) return;
   clearTimeout(readerAutoSaveTimer);
   const titleVal = elements.readerTitleInput?.value?.trim() || "";
   if (!titleVal) return;
-  setReaderSaveStatus("Saving…", "pending", 0);
   readerAutoSaveTimer = setTimeout(() => {
-    saveReaderEntry(state.editingEntryStatus || "published", {
+    saveReaderEntry("published", {
       exitEditMode: false,
       isAutoSave: true,
     });
@@ -9321,46 +9235,57 @@ function openEntryReaderForNew() {
   state.entryReaderEntry = null;
   state.entryReaderIndex = -1;
   setAuxiliaryView("entry-reader");
-  setReaderEditMode(true, true);
+  renderEntryReaderFooter(null);
+  setReaderEditMode(true, true, { focusTarget: "title" });
   window.scrollTo({ top: 0, behavior: "auto" });
   updateGreyContext();
 }
 
-function updateReaderDraftToggleUI() {
-  const isDraft = state.editingEntryStatus === "draft";
-  const draftLabel = elements.readerSaveDraftLabel || elements.readerSaveDraft;
-  if (draftLabel) {
-    draftLabel.textContent = isDraft ? "📝 Draft" : "Move to Drafts";
-  }
-  elements.readerSaveDraft?.classList.toggle("is-draft-active", isDraft);
-  if (elements.readerSaveDraft) {
-    elements.readerSaveDraft.title = isDraft
-      ? "Currently in Drafts — click to move to All Notes"
-      : "Move this note to Drafts";
-  }
+let readerBaselineSnapshot = null;
+
+function captureReaderBaseline() {
+  readerBaselineSnapshot = {
+    title: (elements.readerTitleInput?.value || "").trim(),
+    body: (elements.readerBodyInput?.value || "").trim(),
+    bannerUrl: state.readerBannerUrl || null,
+    tags: [...(state.readerTags || [])].sort().join(","),
+  };
 }
 
-function setReaderEditMode(isEditing, isNew = false) {
+function readerHasDirtyChanges() {
+  if (!readerBaselineSnapshot) return true;
+  const currentTitle = (elements.readerTitleInput?.value || "").trim();
+  const currentBody = (elements.readerBodyInput?.value || "").trim();
+  const currentBanner = state.readerBannerUrl || null;
+  const currentTags = [...(state.readerTags || [])].sort().join(",");
+  return (
+    currentTitle !== readerBaselineSnapshot.title ||
+    currentBody !== readerBaselineSnapshot.body ||
+    currentBanner !== readerBaselineSnapshot.bannerUrl ||
+    currentTags !== readerBaselineSnapshot.tags
+  );
+}
+
+function setReaderEditMode(isEditing, isNew = false, { focusTarget = "body" } = {}) {
   state.readerEditing = isEditing;
   const savedScroll = window.scrollY;
   elements.entryReader.classList.toggle("is-editing", isEditing);
 
   if (isEditing) {
     state.editingEntryId = isNew ? null : (state.entryReaderEntry?.entry_id || null);
-    state.editingEntryStatus = isNew ? "published" : (state.entryReaderEntry?.status || "published");
+    state.editingEntryStatus = "published";
     state.readerBannerUrl = isNew ? null : (state.entryReaderEntry?.image_url || null);
     elements.readerTitleInput.value = isNew ? "" : (state.entryReaderEntry?.title || "");
     elements.readerBodyInput.value = isNew ? "" : (state.entryReaderEntry?.body || "");
     elements.readerEditDate.textContent = isNew
-      ? formatEntryDateTime(new Date().toISOString())
-      : formatEntryDateTime(state.entryReaderEntry?.created_at || state.entryReaderEntry?.updated_at);
+      ? formatEntryDate(new Date().toISOString())
+      : formatEntryDate(state.entryReaderEntry?.created_at || state.entryReaderEntry?.updated_at);
 
     state.readerTags = (state.entryReaderEntry?.tags || []).map((t) => typeof t === "string" ? t : t.name);
     renderReaderTagChips();
     renderReaderBannerEditor();
-    updateReaderBlogStats();
     autoResizeReaderBody();
-    updateReaderDraftToggleUI();
+    captureReaderBaseline();
 
     if (isNew) {
       setTimeout(() => {
@@ -9370,13 +9295,21 @@ function setReaderEditMode(isEditing, isNew = false) {
         } else {
           elements.readerBodyInput.focus({ preventScroll: true });
         }
-      }, 60);
+      }, 30);
     } else {
       setTimeout(() => {
         autoResizeReaderBody();
-        elements.readerBodyInput.focus({ preventScroll: true });
+        if (focusTarget === "title" && elements.readerTitleInput) {
+          elements.readerTitleInput.focus({ preventScroll: true });
+          const len = elements.readerTitleInput.value.length;
+          elements.readerTitleInput.setSelectionRange(len, len);
+        } else if (focusTarget === "tag" && elements.readerTagInput) {
+          elements.readerTagInput.focus({ preventScroll: true });
+        } else if (elements.readerBodyInput) {
+          elements.readerBodyInput.focus({ preventScroll: true });
+        }
         window.scrollTo({ top: savedScroll, behavior: "instant" });
-      }, 60);
+      }, 30);
     }
   } else {
     if (state.entryReaderEntry) {
@@ -9398,21 +9331,22 @@ async function saveReaderEntry(
   const title = elements.readerTitleInput.value.trim();
   if (!title) {
     if (!isAutoSave) {
-      setReaderSaveStatus("Enter a title first", "error", 2500);
+      showNotice("Please enter a title for your note.", "error");
       elements.readerTitleInput.focus();
     }
     return;
   }
   if (readerIsAutoSaving && isAutoSave) return;
+  const isDirty = readerHasDirtyChanges();
+  if (!isDirty && state.editingEntryId) {
+    if (exitEditMode) {
+      setReaderEditMode(false);
+    }
+    return;
+  }
   readerIsAutoSaving = true;
   const body = elements.readerBodyInput.value.trim();
   const editing = Boolean(state.editingEntryId);
-  const isSavingDraft = targetStatus === "draft";
-  const activeBtn = isSavingDraft ? elements.readerSaveDraft : elements.readerSavePublish;
-  setReaderSaveStatus("Saving…", "pending", 0);
-  if (!isAutoSave && activeBtn) {
-    activeBtn.disabled = true;
-  }
   try {
     const existingUrl = state.editingEntryId && state.entryReaderEntry ? (state.entryReaderEntry.url || null) : null;
     const entryType = existingUrl && !body ? "link" : "note";
@@ -9422,7 +9356,6 @@ async function saveReaderEntry(
       body: body || null,
       url: existingUrl,
       tags: state.readerTags,
-      status: targetStatus,
       image_url: state.readerBannerUrl || null,
     };
     const response = await fetchJSON(
@@ -9435,9 +9368,13 @@ async function saveReaderEntry(
     const updated = response.entry;
     state.entryReaderEntry = updated;
     state.editingEntryId = updated.entry_id;
-    state.editingEntryStatus = updated.status;
+    state.editingEntryStatus = "published";
     state.readerBannerUrl = updated.image_url || null;
-    setReaderSaveStatus(isSavingDraft ? "Draft saved" : "Saved", "saved", 2200);
+    captureReaderBaseline();
+    if (!isAutoSave) {
+      showNotice("Note saved.", "success");
+    }
+    renderEntryReaderFooter(updated);
     renderNotesTags().catch(() => {});
     renderNotesTimeline().catch(() => {});
     const idx = state.entryResults.findIndex((e) => e.entry_id === updated.entry_id);
@@ -9449,18 +9386,32 @@ async function saveReaderEntry(
     }
     if (exitEditMode) {
       setReaderEditMode(false);
-    } else {
-      updateReaderDraftToggleUI();
     }
     updateGreyContext();
   } catch (error) {
-    setReaderSaveStatus("Save failed", "error", 3000);
-    showNotice(error.message);
+    showNotice(error.message, "error");
   } finally {
     readerIsAutoSaving = false;
-    if (activeBtn) {
-      activeBtn.disabled = false;
+  }
+}
+
+async function finishReaderInlineEdit({ closeIfEmptyNew = false } = {}) {
+  if (!state.readerEditing) return;
+  closeReaderMovieMentionPopover();
+  const titleVal = elements.readerTitleInput?.value?.trim() || "";
+  const bodyVal = elements.readerBodyInput?.value?.trim() || "";
+  if (!titleVal && !bodyVal && !state.editingEntryId) {
+    clearTimeout(readerAutoSaveTimer);
+    readerAutoSaveTimer = null;
+    if (closeIfEmptyNew) {
+      closeEntryReader();
     }
+    return;
+  }
+  if (titleVal) {
+    await saveReaderEntry("published", { exitEditMode: true });
+  } else if (state.editingEntryId) {
+    setReaderEditMode(false);
   }
 }
 
@@ -9526,8 +9477,7 @@ window.addEventListener("keydown", (event) => {
     if (!event.defaultPrevented) {
       if (state.readerEditing && !elements.entryReader?.classList.contains("is-hidden")) {
         event.preventDefault();
-        const targetStatus = state.editingEntryStatus === "draft" ? "draft" : "published";
-        saveReaderEntry(targetStatus);
+        saveReaderEntry("published", { exitEditMode: false });
         return;
       }
       if (document.activeElement === elements.notes) {
@@ -9543,10 +9493,9 @@ window.addEventListener("keydown", (event) => {
       if (!elements.entryReader?.classList.contains("is-hidden")) {
         event.preventDefault();
         if (state.readerEditing) {
-          closeReaderMovieMentionPopover();
-          elements.readerSavePublish?.click();
+          finishReaderInlineEdit({ closeIfEmptyNew: true });
         } else if (state.entryReaderEntry) {
-          setReaderEditMode(true);
+          setReaderEditMode(true, false, { focusTarget: "body" });
         }
         return;
       }
@@ -9945,46 +9894,49 @@ elements.notesPanel.addEventListener("toggle", () => {
 });
 
 elements.newEntry.addEventListener("click", () => openEntryReaderForNew());
-elements.entryReaderBack.addEventListener("click", () => closeEntryReader());
-elements.entryReaderEditBack?.addEventListener("click", async () => {
-  if (readerAutoSaveTimer) {
-    await saveReaderEntry(state.editingEntryStatus || "published", {
-      exitEditMode: false,
-      isAutoSave: true,
-    });
+elements.entryReaderBack.addEventListener("click", async () => {
+  if (state.readerEditing) {
+    await finishReaderInlineEdit({ closeIfEmptyNew: false });
   }
   closeEntryReader();
 });
-elements.readerCancel.addEventListener("click", () => {
-  clearTimeout(readerAutoSaveTimer);
-  readerAutoSaveTimer = null;
-  if (!state.editingEntryId) {
-    closeEntryReader();
-  } else {
-    setReaderEditMode(false);
+elements.entryReaderTitle?.addEventListener("click", () => {
+  if (!state.readerEditing && state.entryReaderEntry) {
+    setReaderEditMode(true, false, { focusTarget: "title" });
   }
 });
-elements.readerSaveDraft.addEventListener("click", () => {
-  const nextStatus = state.editingEntryStatus === "draft" ? "published" : "draft";
-  state.editingEntryStatus = nextStatus;
-  updateReaderDraftToggleUI();
-  saveReaderEntry(nextStatus, { exitEditMode: false });
-});
-elements.readerSavePublish.addEventListener("click", async () => {
-  const titleVal = elements.readerTitleInput?.value?.trim() || "";
-  const bodyVal = elements.readerBodyInput?.value?.trim() || "";
-  if (!titleVal && !bodyVal && !state.editingEntryId) {
-    closeEntryReader();
+elements.entryReaderBody?.addEventListener("click", (event) => {
+  if (state.readerEditing || !state.entryReaderEntry) return;
+  if (event.target.closest("a, button, summary, .movie-mention-link, .note-toggle-summary")) {
     return;
   }
-  if (titleVal) {
-    await saveReaderEntry(state.editingEntryStatus || "published", { exitEditMode: true });
-  } else {
-    setReaderEditMode(false);
+  const selection = window.getSelection ? String(window.getSelection()) : "";
+  if (selection.trim().length > 0) return;
+  setReaderEditMode(true, false, { focusTarget: "body" });
+});
+document.addEventListener("mousedown", (event) => {
+  if (!state.readerEditing || elements.entryReader?.classList.contains("is-hidden")) return;
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  if (
+    target.closest(
+      "#entry-reader-edit-header, #entry-banner-edit, #entry-reader-edit-body, #entry-reader-view-toolbar, #grey-container, #grey-toggle"
+    )
+  ) {
+    return;
   }
+  const titleVal = elements.readerTitleInput?.value?.trim() || "";
+  if (!titleVal && !state.editingEntryId) return;
+  finishReaderInlineEdit({ closeIfEmptyNew: false });
 });
 elements.readerTitleInput?.addEventListener("input", () => {
   scheduleReaderAutoSave();
+});
+elements.readerTitleInput?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.ctrlKey && !event.metaKey) {
+    event.preventDefault();
+    elements.readerBodyInput?.focus();
+  }
 });
 
 let mentionSearchTimer = null;
@@ -10018,7 +9970,6 @@ function insertReaderMovieMention(movie) {
   textarea.setSelectionRange(nextCaret, nextCaret);
   closeReaderMovieMentionPopover();
   autoResizeReaderBody();
-  updateReaderBlogStats();
   scheduleReaderAutoSave();
 }
 
@@ -10192,7 +10143,6 @@ function checkReaderMovieMentionTrigger() {
 
 elements.readerBodyInput.addEventListener("input", () => {
   autoResizeReaderBody();
-  updateReaderBlogStats();
   scheduleReaderAutoSave();
   checkReaderMovieMentionTrigger();
 });
@@ -10217,7 +10167,7 @@ elements.readerBodyInput.addEventListener("keydown", (event) => {
   if (!pop || pop.classList.contains("is-hidden") || !mentionActiveItems.length) {
     if (event.key === "Escape" && state.readerEditing) {
       event.preventDefault();
-      elements.readerSavePublish?.click();
+      finishReaderInlineEdit({ closeIfEmptyNew: true });
     }
     return;
   }
@@ -10310,20 +10260,13 @@ elements.readerRemoveBannerBtn?.addEventListener("click", () => {
   el?.addEventListener("keydown", (event) => {
     if ((event.ctrlKey || event.metaKey) && (event.key === "s" || event.key === "S")) {
       event.preventDefault();
-      if (event.shiftKey) {
-        const nextStatus = state.editingEntryStatus === "draft" ? "published" : "draft";
-        state.editingEntryStatus = nextStatus;
-        updateReaderDraftToggleUI();
-        saveReaderEntry(nextStatus, { exitEditMode: false });
-      } else {
-        saveReaderEntry(state.editingEntryStatus || "published", { exitEditMode: false });
-      }
+      saveReaderEntry("published", { exitEditMode: false });
     } else if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
       event.preventDefault();
-      saveReaderEntry(state.editingEntryStatus || "published", { exitEditMode: true });
+      finishReaderInlineEdit({ closeIfEmptyNew: true });
     } else if (event.key === "Escape" && el !== elements.readerTagInput) {
       event.preventDefault();
-      elements.readerSavePublish?.click();
+      finishReaderInlineEdit({ closeIfEmptyNew: true });
     }
   });
 });
@@ -10333,10 +10276,25 @@ elements.entryFilters.addEventListener("submit", (event) => {
 });
 if (elements.entryQuery) {
   let entrySearchTimer = null;
+  const entryQueryClear = document.querySelector("#entry-query-clear");
+  const syncEntryQueryClear = () => {
+    if (entryQueryClear) {
+      entryQueryClear.classList.toggle("is-hidden", !elements.entryQuery.value);
+    }
+  };
   elements.entryQuery.addEventListener("input", () => {
+    syncEntryQueryClear();
     clearTimeout(entrySearchTimer);
     entrySearchTimer = setTimeout(() => loadEntries(1), 220);
   });
+  if (entryQueryClear) {
+    entryQueryClear.addEventListener("click", () => {
+      elements.entryQuery.value = "";
+      syncEntryQueryClear();
+      elements.entryQuery.focus();
+      loadEntries(1);
+    });
+  }
 }
 elements.entryYearFilter.addEventListener("change", () => {
   populateJournalMonths(elements.entryYearFilter.value);
@@ -10354,16 +10312,6 @@ elements.clearEntryFilters.addEventListener("click", () => {
 if (elements.notesViewAll) {
   elements.notesViewAll.addEventListener("click", () => {
     state.notesCurrentView = "all";
-    state.entryTagFilter = "";
-    state.notesTimelineFilter = null;
-    updateNotesNavActive();
-    loadEntries(1);
-  });
-}
-
-if (elements.notesViewDrafts) {
-  elements.notesViewDrafts.addEventListener("click", () => {
-    state.notesCurrentView = "drafts";
     state.entryTagFilter = "";
     state.notesTimelineFilter = null;
     updateNotesNavActive();
@@ -10411,6 +10359,7 @@ window.addEventListener("keydown", (event) => {
   if (event.target && /^(?:input|textarea|select)$/i.test(event.target.tagName)) {
     if (event.key === "Escape" && event.target === elements.entryQuery) {
       elements.entryQuery.value = "";
+      document.querySelector("#entry-query-clear")?.classList.add("is-hidden");
       elements.entryQuery.blur();
       loadEntries(1);
     }
@@ -10454,6 +10403,7 @@ window.addEventListener("keydown", (event) => {
       state.entryTagFilter = "";
       state.notesTimelineFilter = null;
       if (elements.entryQuery) elements.entryQuery.value = "";
+      document.querySelector("#entry-query-clear")?.classList.add("is-hidden");
       updateNotesNavActive();
       loadEntries(1);
       return;
@@ -10480,37 +10430,36 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
-elements.entryReaderBack.addEventListener("click", closeEntryReader);
-if (elements.entryReaderPublish) {
-  elements.entryReaderPublish.addEventListener("click", async () => {
-    if (!state.entryReaderEntry || state.entryReaderEntry.status !== "draft") return;
-    try {
-      elements.entryReaderPublish.disabled = true;
-      elements.entryReaderPublish.textContent = "Publishing…";
-      const response = await fetchJSON(`/entries/${state.entryReaderEntry.entry_id}/publish`, {
-        method: "PUT",
-      });
-      const published = response.entry;
-      state.entryReaderEntry = published;
-      renderNotesTags().catch(() => {});
-      openEntryReader(published, state.entryReaderIndex, { preserveScroll: true });
-      setReaderSaveStatus("Published", "saved", 2200);
-    } catch (err) {
-      showNotice(err.message);
-    } finally {
-      elements.entryReaderPublish.disabled = false;
-      elements.entryReaderPublish.textContent = "Publish";
-    }
-  });
-}
-elements.entryReaderEdit.addEventListener("click", () => {
-  if (state.entryReaderEntry) setReaderEditMode(true);
-});
-elements.entryReaderPrevious.addEventListener("click", () => {
+elements.entryReaderPrevious.addEventListener("click", async () => {
+  if (state.readerEditing) {
+    await finishReaderInlineEdit({ closeIfEmptyNew: false });
+  }
   navigateEntryReader(-1).catch((error) => showNotice(error.message));
 });
-elements.entryReaderNext.addEventListener("click", () => {
+elements.entryReaderNext.addEventListener("click", async () => {
+  if (state.readerEditing) {
+    await finishReaderInlineEdit({ closeIfEmptyNew: false });
+  }
   navigateEntryReader(1).catch((error) => showNotice(error.message));
+});
+elements.entryReaderArchive?.addEventListener("click", async () => {
+  if (state.readerEditing) {
+    await finishReaderInlineEdit({ closeIfEmptyNew: false });
+  }
+  const entry = state.entryReaderEntry;
+  if (!entry) return;
+  try {
+    const response = await fetchJSON(`/entries/${entry.entry_id}/archive`, { method: "PUT" });
+    const updated = response.entry;
+    state.entryReaderEntry = updated;
+    renderEntryReaderFooter(updated);
+    const actionWord = updated.is_archived ? "moved to archive" : "restored to active notes";
+    showNotice(`"${updated.title || "Note"}" ${actionWord}.`);
+    await loadEntries(state.entryPage);
+    await Promise.all([renderNotesTags(), renderNotesTimeline()]);
+  } catch (error) {
+    showNotice(error.message);
+  }
 });
 elements.entryReaderDelete.addEventListener("click", () => {
   deleteEntry(state.entryReaderEntry).catch((error) => showNotice(error.message));
@@ -10574,19 +10523,17 @@ function updateGreyContext() {
   if (!elements.greyContextView || !elements.greyContextDetail) return;
 
   if (state.readerEditing && !elements.entryReader?.classList.contains("is-hidden")) {
-    const isDraft = state.editingEntryStatus === "draft";
-    elements.greyContextView.textContent = isDraft ? "Draft" : "Journal";
+    elements.greyContextView.textContent = "Journal";
     const title = elements.readerTitleInput?.value?.trim() || "Untitled Note";
     elements.greyContextDetail.textContent = title;
-    if (elements.greyStatusText) elements.greyStatusText.textContent = isDraft ? "Writing draft note" : "Writing journal note";
+    if (elements.greyStatusText) elements.greyStatusText.textContent = "Writing journal note";
     return;
   }
 
   if (state.entryReaderEntry && !elements.entryReader?.classList.contains("is-hidden")) {
-    const isDraft = state.entryReaderEntry.status === "draft";
-    elements.greyContextView.textContent = isDraft ? "Draft" : "Journal";
+    elements.greyContextView.textContent = "Journal";
     elements.greyContextDetail.textContent = state.entryReaderEntry.title || "Untitled";
-    if (elements.greyStatusText) elements.greyStatusText.textContent = isDraft ? "Reading draft note" : "Reading journal entry";
+    if (elements.greyStatusText) elements.greyStatusText.textContent = "Reading journal entry";
     return;
   }
 
@@ -11300,7 +11247,6 @@ async function sendGreyMessage(query) {
               state.readerBannerUrl = r.entry.image_url || null;
               renderReaderTagChips();
               renderReaderBannerEditor();
-              updateReaderBlogStats();
             }
           }).catch(() => {});
         }

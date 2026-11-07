@@ -98,7 +98,6 @@ class GeneralEntryRequest(BaseModel):
     body: str | None = None
     url: str | None = None
     tags: list[str] = Field(default_factory=list)
-    status: str = "published"
     image_url: str | None = None
 
 
@@ -1231,11 +1230,9 @@ def list_general_entries(
     month: int | None = None,
     archived: bool = False,
     per_page: int = 6,
-    status: str | None = "published",
     date_field: str = "created_at",
 ):
     try:
-        repo_status = None if status == "all" else status
         return general_entry_repository.list_entries(
             page=page,
             per_page=per_page,
@@ -1245,7 +1242,6 @@ def list_general_entries(
             year=year,
             month=month,
             is_archived=archived,
-            status=repo_status,
             date_field=date_field,
         )
     except ValueError as error:
@@ -1269,7 +1265,6 @@ def create_general_entry(request: GeneralEntryRequest):
             request.body,
             request.url,
             request.tags,
-            status=request.status,
             **call_kwargs,
         )
     except ValueError as error:
@@ -1370,21 +1365,6 @@ def toggle_entry_archive(entry_id: int):
     return {"message": "Archive state updated", "entry": entry}
 
 
-@app.put(
-    "/entries/{entry_id}/publish",
-    tags=["notes and links"],
-    summary="Publish a draft note or link",
-)
-def publish_general_entry(entry_id: int):
-    try:
-        entry = general_entry_repository.publish_entry(entry_id)
-    except ValueError as error:
-        raise HTTPException(status_code=400, detail=str(error)) from error
-    if entry is None:
-        raise HTTPException(status_code=404, detail="Entry was not found.")
-    return {"message": "Entry published", "entry": entry}
-
-
 @app.get(
     "/entries/{entry_id}",
     tags=["notes and links"],
@@ -1414,7 +1394,6 @@ def update_general_entry(
             request.body,
             request.url,
             request.tags,
-            status=request.status,
             image_url=request.image_url,
         )
     except ValueError as error:

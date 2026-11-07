@@ -386,15 +386,15 @@ class GreyService:
                         "status": jr["status"],
                     }
                     all_active_notes.append(note_item)
-                    if jr["status"] == "published":
-                        journal_notes_list.append(note_item)
-                        if len(journal_digest) < 8:
-                            raw_tags = jr["tag_names"] or ""
-                            tags = [t for t in raw_tags.split("||") if t]
-                            journal_digest.append({
-                                "title": jr["title"],
-                                "tags": tags,
-                            })
+                    # Every note is auto-published; Grey learns from all of them.
+                    journal_notes_list.append(note_item)
+                    if len(journal_digest) < 8:
+                        raw_tags = jr["tag_names"] or ""
+                        tags = [t for t in raw_tags.split("||") if t]
+                        journal_digest.append({
+                            "title": jr["title"],
+                            "tags": tags,
+                        })
 
                 result = {
                     "high_rated": favorites,

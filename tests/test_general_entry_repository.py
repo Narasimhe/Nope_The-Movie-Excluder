@@ -164,35 +164,19 @@ class GeneralEntryRepositoryTests(unittest.TestCase):
             0,
         )
 
-    def test_draft_workflow_creation_filtering_and_publishing(self) -> None:
-        published = self.repository.create_entry("note", "Published Note", status="published")
-        draft = self.repository.create_entry("note", "Draft Essay", status="draft")
+    def test_every_note_is_auto_published_and_listed(self) -> None:
+        first = self.repository.create_entry("note", "First Note")
+        second = self.repository.create_entry("note", "Second Essay")
 
-        self.assertEqual(published["status"], "published")
-        self.assertEqual(draft["status"], "draft")
+        self.assertEqual(first["status"], "published")
+        self.assertEqual(second["status"], "published")
 
-        # Default listing only returns published entries
-        pub_list = self.repository.list_entries()
-        self.assertEqual(pub_list["total_results"], 1)
-        self.assertEqual(pub_list["results"][0]["title"], "Published Note")
-
-        # Draft listing returns drafts
-        draft_list = self.repository.list_entries(status="draft")
-        self.assertEqual(draft_list["total_results"], 1)
-        self.assertEqual(draft_list["results"][0]["title"], "Draft Essay")
-
-        # Tags summary includes draft count
-        summary = self.repository.get_tags_summary()
-        self.assertEqual(summary["draft_entries"], 1)
-        self.assertEqual(summary["total_entries"], 1)
-
-        # Publish the draft
-        promoted = self.repository.publish_entry(draft["entry_id"])
-        self.assertIsNotNone(promoted)
-        self.assertEqual(promoted["status"], "published")
-
-        # Now published count is 2
+        # Default listing returns every active note (no draft staging)
         self.assertEqual(self.repository.list_entries()["total_results"], 2)
+
+        summary = self.repository.get_tags_summary()
+        self.assertEqual(summary["total_entries"], 2)
+        self.assertNotIn("draft_entries", summary)
 
 
 if __name__ == "__main__":

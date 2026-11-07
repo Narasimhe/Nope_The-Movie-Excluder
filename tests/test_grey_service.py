@@ -90,8 +90,8 @@ def test_grey_create_draft_action_is_pruned():
 
                 result = service.chat("Draft a comparison between Blade Runner and Dark City")
                 assert "I've drafted a breakdown" in result["text"]
-                # Database is protected — no drafts created by Grey
-                entries = repo.list_entries(status="draft")
+                # Database is protected — no notes created by Grey
+                entries = repo.list_entries()
                 assert entries["total_results"] == 0
 
 
@@ -101,21 +101,19 @@ def test_grey_ingests_published_journal_digest_and_on_demand_excerpt():
         with patch.object(database, "DATABASE_PATH", temp_db):
             initialize_database()
             repo = GeneralEntryRepository()
-            # Create a published essay
+            # Create an essay
             repo.create_entry(
                 "note",
                 "The Desolation of Settlers",
                 "Settlers strips away Martian romanticism into claustrophobic domestic dread.",
                 tags=["sci-fi", "minimalism"],
-                status="published",
             )
-            # Create a draft essay (should NOT be in taste dossier)
+            # A rough note is also auto-published and must reach Grey's memory
             repo.create_entry(
                 "note",
                 "Unpublished Ramblings",
-                "Just rough thoughts that shouldn't leak into memory yet.",
-                tags=["draft"],
-                status="draft",
+                "Just rough thoughts.",
+                tags=["wip"],
             )
 
             service = GreyService(db_path=str(temp_db))
@@ -146,7 +144,7 @@ def test_grey_ingests_published_journal_digest_and_on_demand_excerpt():
 
                 # Compact 1-line note title index has the published essay title
                 assert "The Desolation of Settlers" in system_instruction
-                assert "Unpublished Ramblings" not in system_instruction
+                assert "Unpublished Ramblings" in system_instruction
 
                 # Full note content was loaded in READ-ONLY mode without loading the 85-line editor manual
                 assert "Title: The Desolation of Settlers" in system_instruction
@@ -280,7 +278,6 @@ def test_grey_update_entry_action_is_pruned():
                 title="Watchlist",
                 body="- Red Riding\n- Payback",
                 tags=["watchlist"],
-                status="published",
             )
             entry_id = initial_note["entry_id"]
 
@@ -589,7 +586,6 @@ def test_grey_note_discussion_is_strictly_read_only():
                 title="Watchlist 1",
                 body=">> Thief (1981)\n- **Cast:** James Caan\n- **Synopsis:** Master safecracker.",
                 tags=["watchlist"],
-                status="draft",
             )
             target_entry_id = entry["entry_id"]
 
@@ -767,7 +763,6 @@ def test_grey_on_demand_tool_call_fetches_note_and_shelf():
                 title="Spoof Movies",
                 body="• Top Secret! (1984)\n• Airplane! (1980)",
                 tags=["parody", "comedy"],
-                status="published",
             )
             service = GreyService(db_path=str(temp_db))
             service.api_key = "test_key"

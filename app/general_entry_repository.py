@@ -24,12 +24,10 @@ class GeneralEntryRepository:
         body: str | None = None,
         url: str | None = None,
         tags: list[str] | None = None,
-        status: str = "published",
         image_url: str | None = None,
     ) -> dict[str, Any]:
         values = self._clean_values(entry_type, title, body, url)
         cleaned_tags = self._clean_tags(tags)
-        cleaned_status = "draft" if str(status).strip().lower() == "draft" else "published"
         cleaned_image_url = self._clean_image_url(image_url)
         with get_connection() as connection:
             cursor = connection.execute(
@@ -39,12 +37,11 @@ class GeneralEntryRepository:
                     title,
                     body,
                     url,
-                    status,
                     image_url
                 )
-                VALUES (?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?)
                 """,
-                (*values, cleaned_status, cleaned_image_url),
+                (*values, cleaned_image_url),
             )
             entry_id = cursor.lastrowid
             self._replace_tags(connection, entry_id, cleaned_tags)
@@ -77,19 +74,15 @@ class GeneralEntryRepository:
         body: str | None = None,
         url: str | None = None,
         tags: list[str] | None = None,
-        status: str | None = None,
         image_url: Any = _UNSET,
     ) -> dict[str, Any] | None:
         self._validate_entry_id(entry_id)
         values = self._clean_values(entry_type, title, body, url)
         cleaned_tags = self._clean_tags(tags)
-        status_sql = ""
+        extra_sql = ""
         extra_params: list[Any] = []
-        if status in ("published", "draft"):
-            status_sql += ", status = ?"
-            extra_params.append(status)
         if image_url is not _UNSET:
-            status_sql += ", image_url = ?"
+            extra_sql += ", image_url = ?"
             extra_params.append(self._clean_image_url(image_url))
 
         with get_connection() as connection:
@@ -99,7 +92,7 @@ class GeneralEntryRepository:
                 SET entry_type = ?,
                     title = ?,
                     body = ?,
-                    url = ?{status_sql},
+                    url = ?{extra_sql},
                     updated_at = STRFTIME(
                         '%Y-%m-%d %H:%M:%f',
                         'now'
@@ -111,23 +104,6 @@ class GeneralEntryRepository:
             )
             if cursor.rowcount:
                 self._replace_tags(connection, entry_id, cleaned_tags)
-        if cursor.rowcount == 0:
-            return None
-        return self.get_entry(entry_id)
-
-    def publish_entry(self, entry_id: int) -> dict[str, Any] | None:
-        self._validate_entry_id(entry_id)
-        with get_connection() as connection:
-            cursor = connection.execute(
-                """
-                UPDATE general_entries
-                SET status = 'published',
-                    updated_at = STRFTIME('%Y-%m-%d %H:%M:%f', 'now')
-                WHERE entry_id = ?
-                  AND is_deleted = 0
-                """,
-                (entry_id,),
-            )
         if cursor.rowcount == 0:
             return None
         return self.get_entry(entry_id)
@@ -209,7 +185,6 @@ class GeneralEntryRepository:
         year: int | None = None,
         month: int | None = None,
         is_archived: bool = False,
-        status: str | None = "published",
         date_field: str = "updated_at",
     ) -> dict[str, Any]:
         self._validate_page(page)
@@ -217,10 +192,6 @@ class GeneralEntryRepository:
         col = "created_at" if date_field == "created_at" else "updated_at"
         clauses = ["is_deleted = 0", f"is_archived = {1 if is_archived else 0}"]
         parameters: list[Any] = []
-
-        if status and status in ("published", "draft"):
-            clauses.append("status = ?")
-            parameters.append(status)
 
         if query is not None:
             cleaned_query = " ".join(query.split())
@@ -472,7 +443,7 @@ class GeneralEntryRepository:
     def get_tags_summary(self) -> dict[str, Any]:
         with get_connection() as connection:
             total_row = connection.execute(
-                "SELECT COUNT(*) AS total FROM general_entries WHERE is_deleted = 0 AND is_archived = 0 AND status = 'published'"
+                "SELECT COUNT(*) AS total FROM general_entries WHERE is_deleted = 0 AND is_archived = 0"
             ).fetchone()
             total_entries = total_row["total"] if total_row else 0
 
@@ -481,18 +452,12 @@ class GeneralEntryRepository:
             ).fetchone()
             archived_entries = archive_row["total"] if archive_row else 0
 
-            draft_row = connection.execute(
-                "SELECT COUNT(*) AS total FROM general_entries WHERE is_deleted = 0 AND status = 'draft'"
-            ).fetchone()
-            draft_entries = draft_row["total"] if draft_row else 0
-
             untagged_row = connection.execute(
                 """
                 SELECT COUNT(*) AS total
                 FROM general_entries entries
                 WHERE entries.is_deleted = 0
                   AND entries.is_archived = 0
-                  AND entries.status = 'published'
                   AND NOT EXISTS (
                       SELECT 1 FROM general_entry_tag_links links
                       WHERE links.entry_id = entries.entry_id
@@ -507,7 +472,7 @@ class GeneralEntryRepository:
                 FROM general_entry_tags tags
                 JOIN general_entry_tag_links links ON tags.tag_id = links.tag_id
                 JOIN general_entries entries ON entries.entry_id = links.entry_id
-                WHERE entries.is_deleted = 0 AND entries.is_archived = 0 AND entries.status = 'published'
+                WHERE entries.is_deleted = 0 AND entries.is_archived = 0
                 GROUP BY tags.tag_id, tags.name
                 ORDER BY count DESC, tags.name COLLATE NOCASE ASC
                 """
@@ -518,7 +483,6 @@ class GeneralEntryRepository:
                 "total_entries": total_entries,
                 "archived_entries": archived_entries,
                 "untagged_entries": untagged_entries,
-                "draft_entries": draft_entries,
                 "tags": tags,
             }
 
@@ -534,7 +498,6 @@ class GeneralEntryRepository:
                 FROM general_entries
                 WHERE is_deleted = 0
                   AND is_archived = 0
-                  AND status = 'published'
                 GROUP BY year, month
                 ORDER BY year DESC, month DESC
                 """

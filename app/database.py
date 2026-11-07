@@ -403,6 +403,12 @@ def _create_general_entries_table(connection: sqlite3.Connection) -> None:
         connection.execute(
             "ALTER TABLE general_entries ADD COLUMN status TEXT NOT NULL DEFAULT 'published' CHECK (status IN ('published', 'draft'))"
         )
+    # Drafts are retired: every note is auto-published. Promote any legacy drafts
+    # so they appear in All Notes and in Grey's memory. The column is kept (always
+    # 'published') to avoid a destructive table rebuild.
+    connection.execute(
+        "UPDATE general_entries SET status = 'published' WHERE status = 'draft'"
+    )
     if "image_url" not in entry_cols:
         connection.execute(
             "ALTER TABLE general_entries ADD COLUMN image_url TEXT"
