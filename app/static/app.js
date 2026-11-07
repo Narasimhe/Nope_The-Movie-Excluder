@@ -206,6 +206,7 @@ const elements = {
   shell: document.querySelector("#app-shell"),
   form: document.querySelector("#movie-search"),
   query: document.querySelector("#search-query"),
+  queryClear: document.querySelector("#search-query-clear"),
   grid: document.querySelector("#movie-grid"),
   gridViewport: document.querySelector("#movie-grid-viewport"),
   empty: document.querySelector("#empty-state"),
@@ -233,8 +234,6 @@ const elements = {
   mobileView: document.querySelector("#mobile-view"),
   discoverWorkspace: document.querySelector("#discovery-workspace"),
   refreshFeed: document.querySelector("#refresh-feed"),
-  nopeModeToggle: document.querySelector("#nope-mode-toggle"),
-  nopeUndoCounter: document.querySelector("#nope-undo-counter"),
   notesSearchContainer: document.querySelector("#notes-search-container"),
   notesSearchInput: document.querySelector("#notes-search-input"),
   clearNotesSearch: document.querySelector("#clear-notes-search"),
@@ -384,6 +383,7 @@ const elements = {
   footerViews: [...document.querySelectorAll("[data-footer-view]")],
   libraryFiltersWorkspace: document.querySelector("#library-filters-workspace"),
   libraryFilterQuery: document.querySelector("#library-filter-query"),
+  libraryFilterQueryClear: document.querySelector("#library-filter-query-clear"),
   resetLibraryFilters: document.querySelector("#reset-library-filters"),
   librarySearchScope: document.querySelector("#library-search-scope"),
   scopeBtnAll: document.querySelector("#scope-btn-all"),
@@ -479,8 +479,6 @@ const state = {
   totalResults: 0,
   pageLoader: null,
   paginationExact: true,
-  nopeMode: false,
-  nopeUndoStack: [],
   filtersCollapsed: false,
   searchStateTimer: null,
   editingEntryId: null,
@@ -678,16 +676,6 @@ function setActiveView(view) {
     elements.mobileView.value = view;
   }
 
-  // Nope Mode is ONLY available in Discover view
-  if (!isDiscover) {
-    if (state.nopeMode) {
-      toggleNopeMode(false);
-    }
-    elements.nopeModeToggle?.classList.add("is-hidden");
-  } else {
-    elements.nopeModeToggle?.classList.remove("is-hidden");
-  }
-
   if (view && !state.isPopStateNav && view !== "filmography") {
     navigateToHash(`#${view}`, { replace: true });
   }
@@ -708,197 +696,6 @@ function setActiveView(view) {
   }
 }
 
-function toggleNopeMode(forceState) {
-  // Disallow Nope Mode outside of Discover view
-  if (state.currentView !== "discover") {
-    state.nopeMode = false;
-    elements.nopeModeToggle?.classList.remove("is-active");
-    elements.nopeModeToggle?.setAttribute("aria-pressed", "false");
-    elements.grid?.classList.remove("is-nope-mode");
-    state.nopeUndoStack = [];
-    updateNopeUndoCounter();
-    return;
-  }
-
-  state.nopeMode = typeof forceState === "boolean" ? forceState : !state.nopeMode;
-  elements.nopeModeToggle?.classList.toggle("is-active", state.nopeMode);
-  elements.nopeModeToggle?.setAttribute("aria-pressed", String(state.nopeMode));
-  elements.grid?.classList.toggle("is-nope-mode", state.nopeMode);
-
-  if (!state.nopeMode) {
-    state.nopeUndoStack = [];
-    updateNopeUndoCounter();
-  }
-}
-
-function updateNopeUndoCounter() {
-  if (!elements.nopeUndoCounter) return;
-  const count = state.nopeUndoStack.length;
-  if (count > 0 && state.nopeMode) {
-    elements.nopeUndoCounter.textContent = `Undo (${count})`;
-    elements.nopeUndoCounter.classList.remove("is-hidden");
-  } else {
-    elements.nopeUndoCounter.classList.add("is-hidden");
-  }
-}
-
-function clearNopeUndo() {
-  state.nopeUndoStack = [];
-  updateNopeUndoCounter();
-}
-
-async function handleLiberateMovie(movie, article) {
-  const movieId = getMovieId(movie);
-  const title = movie.title || movie.original_title || "Untitled movie";
-  const badge = article.querySelector(".status-badge");
-
-  // Determine what prior status the movie had
-  const undoIndex = state.nopeUndoStack.findLastIndex ? state.nopeUndoStack.findLastIndex(item => item.movieId === movieId) : -1;
-  let priorStatus = "untracked";
-  if (undoIndex !== -1) {
-    priorStatus = state.nopeUndoStack[undoIndex].previousStatus;
-    state.nopeUndoStack.splice(undoIndex, 1);
-    updateNopeUndoCounter();
-  } else if (movie._priorStatus) {
-    priorStatus = movie._priorStatus;
-  }
-
-  // Optimistic DOM update
-  article.classList.remove("is-noped");
-  const liberatePosterBtn = article.querySelector(".poster-button");
-  if (liberatePosterBtn) {
-    updateCardStatusBadge(liberatePosterBtn, priorStatus);
-  }
-
-  try {
-    if (priorStatus === "untracked") {
-      await fetchJSON(`/movies/${movieId}/status`, { method: "DELETE" });
-      movie.user_data = null;
-      clearDiscoveryCache();
-    } else {
-      const response = await fetchJSON(`/movies/${movieId}/status`, {
-        method: "PUT",
-        body: JSON.stringify({ status: priorStatus }),
-      });
-      movie.user_data = response.user_movie_data;
-      clearDiscoveryCache();
-    }
-  } catch (error) {
-    // Rollback on failure
-    article.classList.add("is-noped");
-    const rollbackLiberatePosterBtn = article.querySelector(".poster-button");
-    if (rollbackLiberatePosterBtn) {
-      updateCardStatusBadge(rollbackLiberatePosterBtn, "excluded");
-    }
-    if (!movie.user_data) movie.user_data = {};
-    movie.user_data.status = "excluded";
-    showNotice(`Could not liberate "${title}": ${error.message}`);
-  }
-}
-
-async function handleQuickNope(movie, article) {
-  if (state.currentView !== "discover" || !state.nopeMode) return;
-
-  const movieId = getMovieId(movie);
-  const currentStatus = getStatus(movie) || "untracked";
-  const title = movie.title || movie.original_title || "Untitled movie";
-
-  // If already noped, click liberates it from Nope jail!
-  if (currentStatus === "excluded" || article.classList.contains("is-noped")) {
-    await handleLiberateMovie(movie, article);
-    return;
-  }
-
-  // Remember prior status before noping
-  const priorStatus = currentStatus;
-  movie._priorStatus = priorStatus;
-
-  // Push to undo stack (max 3)
-  state.nopeUndoStack.push({
-    movieId,
-    previousStatus: priorStatus,
-    title,
-    userData: movie.user_data ? { ...movie.user_data } : null,
-  });
-  if (state.nopeUndoStack.length > 3) {
-    state.nopeUndoStack.shift();
-  }
-  updateNopeUndoCounter();
-
-  // Optimistic UI update
-  article.classList.add("is-noped");
-  const excludePosterBtn = article.querySelector(".poster-button");
-  if (excludePosterBtn) {
-    updateCardStatusBadge(excludePosterBtn, "excluded");
-  }
-  if (!movie.user_data) {
-    movie.user_data = {};
-  }
-  movie.user_data.status = "excluded";
-
-  try {
-    const response = await fetchJSON(`/movies/${movieId}/status`, {
-      method: "PUT",
-      body: JSON.stringify({ status: "excluded" }),
-    });
-    movie.user_data = response.user_movie_data;
-    clearDiscoveryCache();
-  } catch (error) {
-    // Rollback on failure
-    article.classList.remove("is-noped");
-    const rollbackExcludePosterBtn = article.querySelector(".poster-button");
-    if (rollbackExcludePosterBtn) {
-      updateCardStatusBadge(rollbackExcludePosterBtn, priorStatus);
-    }
-    movie.user_data.status = priorStatus;
-    state.nopeUndoStack = state.nopeUndoStack.filter((item) => item.movieId !== movieId);
-    updateNopeUndoCounter();
-    showNotice(`Could not nope "${title}": ${error.message}`);
-  }
-}
-
-async function handleNopeUndo() {
-  if (!state.nopeMode || state.nopeUndoStack.length === 0) return;
-
-  const lastItem = state.nopeUndoStack.pop();
-  updateNopeUndoCounter();
-
-  const { movieId, previousStatus, title, userData } = lastItem;
-  const article = elements.grid?.querySelector(`.movie-card[data-movie-id="${movieId}"]`);
-  const restoreStatus = (previousStatus && previousStatus !== "untracked") ? previousStatus : "untracked";
-
-  if (article) {
-    article.classList.remove("is-noped");
-    const badge = article.querySelector(".status-badge");
-    if (badge) {
-      badge.dataset.status = previousStatus;
-      badge.textContent = previousStatus === "untracked" ? "Untracked" : (STATUS_LABELS[previousStatus] || previousStatus);
-    }
-  }
-
-  const movie = state.movies.find((m) => getMovieId(m) === movieId);
-
-  try {
-    if (restoreStatus === "untracked") {
-      await fetchJSON(`/movies/${movieId}/status`, { method: "DELETE" });
-      if (movie) {
-        movie.user_data = null;
-      }
-    } else {
-      const response = await fetchJSON(`/movies/${movieId}/status`, {
-        method: "PUT",
-        body: JSON.stringify({ status: restoreStatus }),
-      });
-      if (movie) {
-        movie.user_data = response.user_movie_data;
-      }
-    }
-    clearDiscoveryCache();
-  } catch (error) {
-    showNotice(`Could not undo "${title}": ${error.message}`);
-  }
-}
-
 function updateMovieCardDOM(movieId, userData) {
   if (!movieId) return;
   const card = elements.grid?.querySelector(`.movie-card[data-movie-id="${movieId}"]`);
@@ -912,12 +709,6 @@ function updateMovieCardDOM(movieId, userData) {
     if (favMark) {
       favMark.remove();
     }
-  }
-
-  if (state.currentView === "discover") {
-    card.classList.toggle("is-noped", status === "excluded");
-  } else {
-    card.classList.remove("is-noped");
   }
 }
 
@@ -2098,27 +1889,20 @@ function updateFilterPillBadges() {
   }
   document.querySelector("#pill-genres")?.classList.toggle("has-filters", genres > 0);
 
-  // Rating badge
+  // Rating & Votes badge / active state
   const minRating = elements.minimumRating?.value?.trim();
   const maxRating = elements.maximumRating?.value?.trim();
   const ratingCount = minRating || maxRating ? 1 : 0;
-  const badgeRating = document.querySelector("#badge-rating") || document.querySelector("#badge-quality");
-  if (badgeRating) {
-    badgeRating.textContent = String(ratingCount);
-    badgeRating.classList.toggle("is-hidden", ratingCount === 0);
-  }
-  document.querySelector("#pill-rating")?.classList.toggle("has-filters", ratingCount > 0);
-  document.querySelector("#pill-quality")?.classList.toggle("has-filters", ratingCount > 0);
-
-  // Votes badge
   const minVotes = elements.minimumVotes?.value?.trim();
   const votesCount = minVotes ? 1 : 0;
-  const badgeVotes = document.querySelector("#badge-votes");
-  if (badgeVotes) {
-    badgeVotes.textContent = String(votesCount);
-    badgeVotes.classList.toggle("is-hidden", votesCount === 0);
+  const ratingAndVotesCount = ratingCount + votesCount;
+  const badgeRating = document.querySelector("#badge-rating") || document.querySelector("#badge-quality");
+  if (badgeRating) {
+    badgeRating.textContent = String(ratingAndVotesCount);
+    badgeRating.classList.toggle("is-hidden", ratingAndVotesCount === 0);
   }
-  document.querySelector("#pill-votes")?.classList.toggle("has-filters", votesCount > 0);
+  document.querySelector("#pill-rating")?.classList.toggle("has-filters", ratingAndVotesCount > 0);
+  document.querySelector("#pill-quality")?.classList.toggle("has-filters", ratingAndVotesCount > 0);
 
   // Sort badge
   const sortBy = elements.sortBy?.value;
@@ -2313,10 +2097,24 @@ function renderActiveFilterTags() {
   const maxRating = elements.maximumRating?.value?.trim();
   if (minRating || maxRating) {
     chips.push({
-      label: `⭐ ${minRating || '0'}–${maxRating || '10'}`,
+      label: `Rating: ≥ ${minRating || '1'}`,
       onRemove: () => {
         if (elements.minimumRating) elements.minimumRating.value = "";
         if (elements.maximumRating) elements.maximumRating.value = "";
+        updateFilterPillBadges();
+        renderActiveFilterTags();
+        runDiscoverySearch();
+      },
+    });
+  }
+
+  // Votes
+  const minVotes = elements.minimumVotes?.value?.trim();
+  if (minVotes) {
+    chips.push({
+      label: `Votes: ≥ ${minVotes}`,
+      onRemove: () => {
+        if (elements.minimumVotes) elements.minimumVotes.value = "";
         updateFilterPillBadges();
         renderActiveFilterTags();
         runDiscoverySearch();
@@ -2707,6 +2505,7 @@ async function setAdvancedFilters(filters = {}) {
   setPickerValues("include-languages", mergedFilters.include_original_languages);
   setPickerValues("exclude-languages", mergedFilters.exclude_original_languages);
   setPickerValues("include-countries", mergedFilters.include_origin_countries);
+  setPickerValues("exclude-countries", mergedFilters.exclude_origin_countries);
   elements.genreLogic.value = mergedFilters.genre_logic || "or";
   elements.minimumRating.value = mergedFilters.minimum_rating ?? "";
   elements.maximumRating.value = mergedFilters.maximum_rating ?? "";
@@ -3011,25 +2810,15 @@ function createMovieCard(movie) {
 
   // Native tooltip removed so custom frosted hover preview takes precedence
   posterButton.removeAttribute("title");
-  if (status === "excluded" && state.currentView === "discover") {
-    article.classList.add("is-noped");
-  }
 
   posterButton.append(createPoster(movie));
-  posterButton.addEventListener("click", (event) => {
+  posterButton.addEventListener("click", () => {
     hidePosterNotePreview();
-    if (state.nopeMode && state.currentView === "discover") {
-      event.preventDefault();
-      event.stopPropagation();
-      handleQuickNope(movie, article);
-      return;
-    }
     openMovieDetails(movieId);
   });
 
   let hoverRatingsTimer = null;
   posterButton.addEventListener("mouseenter", () => {
-    if (state.nopeMode && state.currentView === "discover") return;
     schedulePosterNotePreview(posterButton, movie);
     clearTimeout(hoverRatingsTimer);
     hoverRatingsTimer = setTimeout(() => {
@@ -3041,7 +2830,6 @@ function createMovieCard(movie) {
     hidePosterNotePreview();
   });
   posterButton.addEventListener("focus", () => {
-    if (state.nopeMode && state.currentView === "discover") return;
     schedulePosterNotePreview(posterButton, movie);
     clearTimeout(hoverRatingsTimer);
     hoverRatingsTimer = setTimeout(() => {
@@ -3109,7 +2897,6 @@ function hasActiveShelfFilters() {
 
 function renderMovies(movies, emptyContext = "library", total = null) {
   hidePosterNotePreview();
-  clearNopeUndo();
   elements.grid.replaceChildren();
   const count = total ?? movies.length;
   const formattedCount = typeof count === "number" ? count.toLocaleString() : count;
@@ -3563,18 +3350,22 @@ async function activateDiscoverView({ pushHistory = false } = {}) {
 }
 
 function updateLibraryFilterBadges() {
-  const setBadge = (el, count) => {
-    if (!el) return;
-    el.textContent = String(count);
-    el.classList.toggle("is-hidden", count <= 0);
+  const setBadge = (el, count, pillId) => {
+    if (el) {
+      el.textContent = String(count);
+      el.classList.toggle("is-hidden", count <= 0);
+    }
+    if (pillId) {
+      document.querySelector(pillId)?.classList.toggle("has-filters", count > 0);
+    }
   };
-  setBadge(elements.badgeLibGenres, state.libSelectedGenres.size);
+  setBadge(elements.badgeLibGenres, state.libSelectedGenres.size, "#pill-lib-genres");
   const yearCount = (elements.libYearFrom?.value ? 1 : 0) + (elements.libYearTo?.value ? 1 : 0);
-  setBadge(elements.badgeLibYear, yearCount);
-  setBadge(elements.badgeLibKeywords, (state.selectedEntities.libKeywords || []).length);
+  setBadge(elements.badgeLibYear, yearCount, "#pill-lib-year");
+  setBadge(elements.badgeLibKeywords, (state.selectedEntities.libKeywords || []).length, "#pill-lib-keywords");
   const peopleCount = (state.selectedEntities.libDirectors || []).length + (state.selectedEntities.libActors || []).length;
-  setBadge(elements.badgeLibPeople, peopleCount);
-  setBadge(elements.badgeLibLanguages, state.libSelectedLanguages.size);
+  setBadge(elements.badgeLibPeople, peopleCount, "#pill-lib-people");
+  setBadge(elements.badgeLibLanguages, state.libSelectedLanguages.size, "#pill-lib-languages");
 
   const hasAnyLibFilter = Boolean(
     state.libSelectedGenres.size > 0 ||
@@ -4378,6 +4169,7 @@ function reloadCurrentLibraryView() {
 function resetLibraryFilters({ silent = false } = {}) {
   const wasSearching = state.isSearchingLibrary;
   if (elements.libraryFilterQuery) elements.libraryFilterQuery.value = "";
+  elements.libraryFilterQueryClear?.classList.add("is-hidden");
   if (elements.libYearFrom) elements.libYearFrom.value = "";
   if (elements.libYearTo) elements.libYearTo.value = "";
   if (elements.libSortCloud) {
@@ -4604,8 +4396,14 @@ function setupLibraryFilters() {
     });
   }
 
+  const syncLibQueryClear = () => {
+    const hasText = Boolean((elements.libraryFilterQuery?.value || "").trim());
+    elements.libraryFilterQueryClear?.classList.toggle("is-hidden", !hasText);
+  };
+
   if (elements.libraryFilterQuery) {
     elements.libraryFilterQuery.addEventListener("input", () => {
+      syncLibQueryClear();
       syncLibraryTargetBtn();
       clearTimeout(librarySearchDebounce);
       librarySearchDebounce = setTimeout(searchPersonalLibrary, 250);
@@ -4615,6 +4413,20 @@ function setupLibraryFilters() {
         clearTimeout(librarySearchDebounce);
         markLibrarySearchClean();
         searchPersonalLibrary();
+      }
+    });
+  }
+
+  if (elements.libraryFilterQueryClear) {
+    elements.libraryFilterQueryClear.addEventListener("click", () => {
+      if (elements.libraryFilterQuery) {
+        elements.libraryFilterQuery.value = "";
+        syncLibQueryClear();
+        syncLibraryTargetBtn();
+        clearTimeout(librarySearchDebounce);
+        markLibrarySearchClean();
+        searchPersonalLibrary();
+        elements.libraryFilterQuery.focus();
       }
     });
   }
@@ -5667,6 +5479,7 @@ function renderProfileRibbon() {
       if (e.target.closest(".chip-update-btn")) return;
       if (elements.query) {
         elements.query.value = "";
+        elements.queryClear?.classList.add("is-hidden");
       }
       const isAlreadyActive = Number(elements.profileSelect.value) === Number(prof.id);
       if (isAlreadyActive) {
@@ -6886,12 +6699,9 @@ function createRelatedMovieCard(movie) {
 
   const status = getStatus(movie);
   if (status && status !== "untracked") {
+    button.dataset.status = status;
     const badge = getStatusBadgeElement(status);
     if (badge) button.append(badge);
-
-    if (status === "excluded") {
-      button.classList.add("is-noped");
-    }
   }
 
   // Ratings and votes rendered exclusively in clean hover preview popover
@@ -9671,7 +9481,13 @@ elements.form.addEventListener("submit", (event) => {
 
 if (elements.query) {
   let queryClearDebounce = null;
+  const syncDiscoverQueryClear = () => {
+    const hasText = Boolean((elements.query?.value || "").trim());
+    elements.queryClear?.classList.toggle("is-hidden", !hasText);
+  };
+
   elements.query.addEventListener("input", () => {
+    syncDiscoverQueryClear();
     if ((state.mode === "search" || state.currentView === "discover") && !elements.query.value.trim()) {
       elements.empty.classList.add("is-hidden");
       showLoadingCards();
@@ -9685,22 +9501,24 @@ if (elements.query) {
   });
 
   elements.query.addEventListener("search", () => {
+    syncDiscoverQueryClear();
     window.clearTimeout(queryClearDebounce);
     if (!elements.query.value.trim() && (state.mode === "search" || state.currentView === "discover")) {
       activateDiscoverView();
     }
   });
-}
 
-if (elements.nopeModeToggle) {
-  elements.nopeModeToggle.addEventListener("click", () => toggleNopeMode());
-}
-
-if (elements.nopeUndoCounter) {
-  elements.nopeUndoCounter.addEventListener("click", (event) => {
-    event.stopPropagation();
-    handleNopeUndo();
-  });
+  if (elements.queryClear) {
+    elements.queryClear.addEventListener("click", () => {
+      elements.query.value = "";
+      syncDiscoverQueryClear();
+      window.clearTimeout(queryClearDebounce);
+      if (state.mode === "search" || state.currentView === "discover") {
+        activateDiscoverView();
+      }
+      elements.query.focus();
+    });
+  }
 }
 
 window.addEventListener("keydown", (event) => {
@@ -9782,20 +9600,6 @@ window.addEventListener("keydown", (event) => {
       setReaderEditMode(true);
       return;
     }
-  }
-
-  if (!isInput && !isModalOpen && (event.key === "n" || event.key === "N") && !event.ctrlKey && !event.metaKey && !event.altKey) {
-    if (state.currentView === "discover") {
-      event.preventDefault();
-      toggleNopeMode();
-    }
-    return;
-  }
-
-  if (state.nopeMode && state.currentView === "discover" && !isInput && (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
-    event.preventDefault();
-    handleNopeUndo();
-    return;
   }
 });
 

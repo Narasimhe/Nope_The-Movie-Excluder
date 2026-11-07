@@ -26,20 +26,22 @@
   --text: #f5f3ee;
   --text-primary: #ffffff;
   --text-secondary: #e5e7eb;
-  --text-muted: #9ca3af;
+  --text-header: rgb(255 255 255 / 0.85);
+  --text-active: rgb(255 255 255 / 0.75);
+  --text-muted: rgb(255 255 255 / 0.45);
   --text-dim: #6b7280;
   --text-inverse: #09090b;
 
   /* Master Accent Palette (Single Source of Truth) */
   --accent-primary: #DEC68B;
-  --accent-subtle: rgba(222, 198, 139, 0.10);
+  --accent-subtle: rgba(222, 198, 139, 0.04);
   --accent-glow: rgba(222, 198, 139, 0.20);
   --accent-border: rgba(222, 198, 139, 0.50);
   --accent-text: #E6D5B8;
 
   /* Master Danger / Exclude Palette (Single Source of Truth) */
   --danger-primary: #ef4444;
-  --danger-subtle: rgba(239, 68, 68, 0.10);
+  --danger-subtle: rgba(239, 68, 68, 0.05);
   --danger-glow: rgba(239, 68, 68, 0.20);
   --danger-border: rgba(224, 109, 109, 0.50);
   --danger-text: #CE8484;

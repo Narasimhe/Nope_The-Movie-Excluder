@@ -1217,8 +1217,8 @@
   transform: translateY(-3px) scale(1.02);
 }
 
-.related-card.is-noped img,
-.related-card.is-noped .poster-fallback {
+.related-card[data-status="excluded"] img,
+.related-card[data-status="excluded"] .poster-fallback {
   opacity: 0.52;
   filter: grayscale(45%);
 }

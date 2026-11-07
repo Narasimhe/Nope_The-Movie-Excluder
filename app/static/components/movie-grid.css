@@ -214,33 +214,6 @@ body[data-active-view="favorites"] .movie-card .status-badge {
   max-width: calc(100% - 26px);
 }
 
-/* 4. Nope Mode Reticle & Dim States */
-.movie-grid.is-nope-mode,
-.movie-grid.is-nope-mode .poster-button,
-.movie-grid.is-nope-mode .movie-card {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28' fill='none' stroke='%23ef4444' stroke-width='1.75'%3E%3Ccircle cx='14' cy='14' r='10' stroke-dasharray='2 2'/%3E%3Ccircle cx='14' cy='14' r='5'/%3E%3Cline x1='14' y1='1' x2='14' y2='7'/%3E%3Cline x1='14' y1='21' x2='14' y2='27'/%3E%3Cline x1='1' y1='14' x2='7' y2='14'/%3E%3Cline x1='21' y1='14' x2='27' y2='14'/%3E%3Ccircle cx='14' cy='14' r='1.5' fill='%23ef4444'/%3E%3C/svg%3E") 14 14, crosshair;
-}
-
-.movie-grid.is-nope-mode .movie-card:not(.is-noped) .poster-button:hover,
-.movie-grid.is-nope-mode .movie-card:not(.is-noped) .poster-button:focus-visible {
-  transform: translateY(-4px) scale(1.03);
-  box-shadow: 0 14px 30px var(--shadow-modal), 0 0 0 1px var(--danger-border);
-  border-color: var(--danger-border);
-  filter: brightness(0.68) contrast(1.1);
-}
-
-.movie-grid.is-nope-mode .movie-card.is-noped .poster-button {
-  filter: brightness(0.42) contrast(1.05) grayscale(0.3);
-  border-color: var(--danger-glow);
-}
-
-.movie-grid.is-nope-mode .movie-card.is-noped .poster-button:hover,
-.movie-grid.is-nope-mode .movie-card.is-noped .poster-button:focus-visible {
-  transform: translateY(-4px) scale(1.03);
-  box-shadow: 0 14px 30px var(--shadow-modal), 0 0 0 1px var(--status-watched-border);
-  border-color: var(--status-watched);
-  filter: brightness(0.58) contrast(1.1) grayscale(0.15);
-}
 
 /* 5. Skeleton Loading State */
 .skeleton-card {
